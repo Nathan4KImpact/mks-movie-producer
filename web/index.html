@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MKS Movie Producer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0b10; --panel:#16131b; --panel2:#1d1924; --line:#2c2634; --text:#ece6da; --muted:#a39a8c;
+  --gold:#d8b46a; --gold2:#f0d491; --red:#d0614f; --green:#6fbf8a; --blue:#7aa6d8;
+  --r:10px; --serif:'Cinzel',Georgia,serif; --sans:'Inter',system-ui,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#2a1f14 0%,var(--bg) 60%) fixed;color:var(--text);font:14px/1.5 var(--sans)}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,11,16,.92);backdrop-filter:blur(8px);z-index:10}
+header h1{font:700 19px var(--serif);letter-spacing:.08em;margin:0;color:var(--gold2);text-transform:uppercase;white-space:nowrap}
+.marque{display:flex;gap:12px;align-items:center;cursor:pointer}.marque img{width:46px;height:46px;object-fit:contain}.marque .meta{font-size:11px;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+nav{display:flex;gap:4px}
+nav button{background:none;border:0;color:var(--muted);font:500 14px var(--sans);padding:8px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+nav button.on,nav button:hover{color:var(--text);background:var(--panel2)}
+.sp{flex:1}
+main{padding:24px;max-width:1500px;margin:0 auto}
+h2{font:700 22px var(--serif);letter-spacing:.05em;color:var(--gold2);margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 20px}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:8px;cursor:pointer;font:500 13px var(--sans);white-space:nowrap}
+.btn:hover{border-color:var(--gold)}
+.btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1408;border:0;font-weight:600}
+.btn.ia{border-color:#4a3d6a;background:#221b33}
+.btn.small{padding:4px 9px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px}
+.card h3{font:700 15px var(--serif);margin:0;letter-spacing:.04em}
+.card .id{color:var(--gold);font:600 12px var(--sans);letter-spacing:.1em}
+.bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:12px}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:var(--panel2);color:var(--muted)}
+.pill.ok{background:#1d3326;color:var(--green)}.pill.wait{background:#3a2a17;color:var(--gold2)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:16px;position:sticky;top:62px;z-index:5}
+.shot{display:grid;grid-template-columns:44px 260px 1fr;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.shot.cardrow{grid-template-columns:44px 1fr;background:#120f16;border-style:dashed}
+.num{font:700 13px var(--serif);color:var(--gold);text-align:center;padding-top:4px}
+.thumb{width:260px;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;position:relative}
+.thumb img,.thumb video{width:100%;height:100%;object-fit:cover}
+.thumb .tag{position:absolute;top:6px;left:6px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.fields .full{grid-column:1/-1}
+label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+textarea,input,select{width:100%;background:#0f0d13;border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 9px;font:13px/1.45 var(--sans);resize:vertical}
+textarea:focus,input:focus,select:focus{outline:none;border-color:var(--gold)}
+textarea.vo{min-height:64px;font-size:14px}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.dirty{box-shadow:0 0 0 1px var(--gold) inset}
+#jobs{position:fixed;right:16px;bottom:16px;width:min(560px,calc(100vw - 32px));z-index:20}
+.job{background:#0b0a0e;border:1px solid var(--line);border-radius:var(--r);margin-top:8px;overflow:hidden}
+.job .hd{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--panel);cursor:pointer}
+.job pre{margin:0;max-height:220px;overflow:auto;padding:8px 12px;font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfc6b8;white-space:pre-wrap}
+.job.min pre{display:none}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:30}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(900px,94vw);max-height:88vh;overflow:auto;padding:20px}
+.prompt{background:#0f0d13;border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;font-size:12.5px}
+.prompt .k{color:var(--gold);font-weight:600}
+video.player{width:100%;border-radius:10px;background:#000}
+.list a{color:var(--gold2)}
+.warn{color:var(--gold2)} .err{color:var(--red)} .okc{color:var(--green)}
+@media (max-width:900px){.shot{grid-template-columns:1fr}.thumb{width:100%}.fields{grid-template-columns:1fr}.mini{grid-template-columns:1fr 1fr}}
+.guide{display:flex;gap:14px;align-items:center;margin:0 auto;max-width:1500px;padding:12px 24px 0}
+.guide .in{flex:1;display:flex;gap:14px;align-items:center;background:linear-gradient(90deg,#2a2112,#16131b);border:1px solid #4a3a1c;border-radius:var(--r);padding:10px 14px}
+.guide .pin{font:700 12px var(--sans);color:#1b1408;background:var(--gold);border-radius:99px;padding:3px 10px;white-space:nowrap}
+.guide b{color:var(--gold2)}
+.steps{display:flex;gap:4px;margin:6px 0}
+.steps i{flex:1;height:5px;border-radius:3px;background:var(--panel2)}
+.steps i.on{background:var(--gold)}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.md{max-width:1000px;line-height:1.65}
+.md h1{font:700 26px var(--serif);color:var(--gold2)} .md h2{font:700 20px var(--serif);color:var(--gold2);margin-top:32px;border-bottom:1px solid var(--line);padding-bottom:6px} .md h3{font:700 16px var(--serif);color:var(--gold);margin-top:22px}
+.md table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px} .md th,.md td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top} .md th{background:var(--panel2);color:var(--gold2)}
+.md code{background:#0f0d13;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px} .md pre{background:#0f0d13;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer;font:500 13px var(--sans)}
+.tabs button.on{color:#1b1408;background:var(--gold);border-color:var(--gold)}
+.ep{display:grid;grid-template-columns:60px 1fr 210px;gap:14px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.ep .n{font:700 18px var(--serif);color:var(--gold)}
+.ep .r{color:var(--muted);font-size:13px}
+.prof{display:grid;grid-template-columns:1.2fr 1fr 1.2fr 1.4fr 1.6fr auto;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--line)}
+@media (max-width:900px){.ep{grid-template-columns:1fr}.prof{grid-template-columns:1fr 1fr}}
+.rendu{padding:6px 8px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;flex-direction:column;border:1px solid transparent}
+.rendu:hover{background:var(--panel2)} .rendu.on{background:#2a2112;border-color:#4a3a1c;color:var(--gold2)}
+@media (max-width:1100px){#main > div[style*="260px 1fr 330px"]{grid-template-columns:1fr !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="marque" onclick="go('projet')" title="Projet en cours — cliquer pour changer">
+    <img id="logo" src="/api/logo" alt="">
+    <div><h1 id="nomProjet">…</h1><div id="sousProjet" class="meta"></div></div>
+  </div>
+  <nav>
+    <button data-v="assistant" class="on">Assistant</button>
+    <button data-v="saison">Production</button>
+    <button data-v="plan">Plan</button>
+    <button data-v="bible">Bible</button>
+    <button data-v="rendus">Rendus</button>
+    <button data-v="nouveau">Nouvel épisode</button>
+    <button data-v="projet">Projet</button>
+    <button data-v="reglages">Réglages</button>
+  </nav>
+  <div class="sp"></div>
+  <span class="meta" style="letter-spacing:.12em;text-transform:uppercase;font-size:10px;margin-right:6px;white-space:nowrap">MKS Movie Producer</span>
+  <button class="btn small" onclick="ouvrir('rendus')">Dossier Rendus</button>
+  <button class="btn small" onclick="ouvrir('flow')">Dossier Flow</button>
+</header>
+<div class="guide" id="guide"></div>
+<main id="main"></main>
+<div id="jobs"></div>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const api = async (u, o={}) => { const r = await fetch(u, {headers:{'Content-Type':'application/json'}, ...o}); const j = await r.json(); if(!r.ok) throw new Error(j.erreur||r.status); return j; };
+const esc = s => (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let CONFIG = null, PROJET = null, INFOS = null, EP = null, DIRTY = false;
+const MOUV = ['in','out','left','right','up','down','still'];
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
+function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); }
+async function ouvrir(d){ await api('/api/ouvrir',{method:'POST',body:JSON.stringify({dossier:d})}); }
+
+// ---------------------------------------------------------------- saison
+async function saison(){
+  const eps = await api('/api/episodes');
+  $('#main').innerHTML = `<h2>Saison 1</h2><p class="sub">État de chaque épisode. Clique sur un épisode pour l'éditer, générer sa fiche Flow ou le monter.</p>
+  <div class="grid">${eps.map(e => e.erreur ? `<div class="card"><h3>${e.ep}</h3><span class="err">${esc(e.erreur)}</span></div>` : `
+    <div class="card">
+      <div class="row"><span class="id">${esc(e.id)}</span><div class="sp"></div>${e.rendus.length?'<span class="pill ok">monté</span>':(e.medias===e.plans?'<span class="pill wait">prêt à monter</span>':'<span class="pill">en préparation</span>')}</div>
+      <h3>${esc(e.title)}</h3>
+      <div class="bar"><i style="width:${Math.round(100*e.medias/Math.max(1,e.plans))}%"></i></div>
+      <div class="meta"><span>${e.medias}/${e.plans} images</span><span>${e.videos} vidéos</span><span>~${e.minutes} min</span><span>${e.rendus.length} rendu(s)</span></div>
+      <div class="row"><button class="btn gold" onclick="go('episode','${e.ep}')">Ouvrir</button>
+        <button class="btn" onclick="action('monter',['${e.ep}'])">Monter</button>
+        <button class="btn" onclick="fiche('${e.ep}')">Fiche Flow</button></div>
+    </div>`).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------- épisode
+async function episode(ep){
+  EP = await api('/api/episode/'+ep); EP._ep = ep;
+  await chargerProjet();
+  const mus = ['', ...(PROJET.musiques||[])];
+  let n = 0;
+  $('#main').innerHTML = `
+  <h2>${esc(EP.id)} — <input id="titre" value="${esc(EP.title)}" style="display:inline;width:auto;min-width:380px;font:700 20px var(--serif);background:none;border:0;color:var(--gold2)"></h2>
+  <p class="sub">${EP.shots.filter(s=>!s.card).length} plans · les images se rangent dans Flow\\${ep}\\ sous leur clé (ex. ${ep}-01.png)</p>
+  <div class="toolbar">
+    <button class="btn gold" onclick="sauver()">Enregistrer</button>
+    <button class="btn" onclick="sauver().then(()=>action('monter',['${ep}']))">Enregistrer et monter</button>
+    <label style="margin:0;text-transform:none;letter-spacing:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="neuf" style="width:auto"> depuis zéro</label>
+    <button class="btn" onclick="fiche('${ep}')">Fiche Flow</button>
+    <button class="btn" onclick="recharger()">Rafraîchir les images</button>
+    <div class="sp"></div>
+    <button class="btn ia" onclick="sauver().then(()=>action('prompts',['${ep}', prompt('Consignes pour la réécriture des prompts (facultatif) :')||'']))">IA · réécrire les prompts</button>
+    <button class="btn ia" onclick="action('verifier',['${ep}'])">IA · relire les images</button>
+  </div>
+  <div id="shots">${EP.shots.map((s,i)=> s.card ? `
+    <div class="shot cardrow" data-i="${i}"><div class="num">◆</div>
+      <div class="fields"><div><label>Carton</label><input data-f="card" value="${esc(s.card)}"></div>
+      <div><label>Sous-titre</label><input data-f="sub" value="${esc(s.sub)}"></div>
+      <div><label>Durée (s)</label><input data-f="dur" type="number" value="${s.dur??6}"></div></div></div>` : `
+    <div class="shot" data-i="${i}">
+      <div class="num">${++n}<br><span style="font:11px var(--sans);color:var(--muted)">${esc(s.k)}</span></div>
+      <div><div class="thumb">${s._media ? (s._type==='video' ? `<video src="${s._media}" muted loop onmouseenter="this.play()" onmouseleave="this.pause()"></video><span class="pill ok tag">vidéo</span>` : `<img loading="lazy" src="${s._media}">`) : `image manquante<br>${esc(s.k)}.png`}</div>
+        <div class="row" style="margin-top:6px"><button class="btn small" onclick="copier(${i})">Copier le prompt</button></div></div>
+      <div class="fields">
+        <div class="full"><label>Narration</label><textarea class="vo" data-f="vo">${esc(s.vo)}</textarea></div>
+        <div class="full"><label>Prompt image ${(PROJET.personnages||[]).filter(x=>(s.p||'').includes('['+x.tag+']')).map(x=>`<span class="pill wait">${esc(x.tag)}</span>`).join(' ')}</label><textarea data-f="p" rows="2">${esc(s.p)}</textarea></div>
+        <div class="full mini">
+          <div><label>Mouvement</label><select data-f="m">${MOUV.map(m=>`<option ${m===(s.m||'in')?'selected':''}>${m}</option>`).join('')}</select></div>
+          <div><label>Titre à l'écran</label><input data-f="title" value="${esc(s.title)}"></div>
+          <div><label>Musique (démarre ici)</label><select data-f="mus">${mus.map(m=>`<option value="${m}" ${m===(s.mus||'')?'selected':''}>${m?m.replace(/_/g,' '):'—'}</option>`).join('')}</select></div>
+          <div><label>Durée mini (s)</label><input data-f="min" type="number" step="0.5" value="${s.min??''}"></div>
+        </div>
+        <div class="full"><label>Prompt vidéo (si plan animé)</label><input data-f="vid_prompt" value="${esc(s.vid_prompt)}"></div>
+      </div>
+    </div>`).join('')}</div>`;
+  const sale = () => { DIRTY = true; $('.toolbar .gold').classList.add('dirty'); };
+  $('#shots').addEventListener('input', sale); $('#titre').addEventListener('input', sale);
+}
+function lireForm(){
+  EP.title = $('#titre').value;
+  document.querySelectorAll('#shots [data-i]').forEach(row => {
+    const s = EP.shots[+row.dataset.i];
+    row.querySelectorAll('[data-f]').forEach(el => {
+      const f = el.dataset.f; let v = el.value;
+      if(['min','dur'].includes(f)){ if(v==='') { delete s[f]; return; } v = +v; }
+      if(v==='' && f!=='vo') delete s[f]; else s[f] = v;
+    });
+  });
+}
+async function sauver(){ lireForm(); const e = JSON.parse(JSON.stringify(EP)); const ep = e._ep; delete e._ep;
+  await api('/api/episode/'+ep, {method:'PUT', body:JSON.stringify(e)}); DIRTY=false; toast('Épisode enregistré'); }
+async function recharger(){ if(DIRTY) await sauver(); episode(EP._ep); }
+function copier(i){ const s = EP.shots[i]; let p = (s.p||'');
+  (PROJET.personnages||[]).forEach(x => { p = p.split('['+x.tag+']').join(x.description||x.nom); });
+  navigator.clipboard.writeText((PROJET.style_image||'') + p); toast('Prompt copié — à coller dans le générateur d\'images'); }
+
+// ---------------------------------------------------------------- fiche
+async function fiche(ep){
+  const r = await api('/api/fiche/'+ep);
+  const blocs = r.texte.split(/\r?\n--- /).slice(1);
+  modal(`<h2>Fiche Flow ${ep}</h2><p class="sub">Enregistrée dans ${esc(r.chemin)}</p>
+    <div class="row" style="margin-bottom:10px"><button class="btn" onclick="ouvrir('fiches')">Ouvrir le dossier</button></div>
+    ${blocs.map(b => { const [tete, ...rest] = b.split(/\r?\n/); const pr = (rest.find(l=>l.startsWith('PROMPT :'))||'').slice(9);
+      return `<div class="prompt"><div class="row"><span class="k">${esc(tete)}</span><div class="sp"></div><button class="btn small" onclick='navigator.clipboard.writeText(${JSON.stringify(pr)});toast("Copié")'>Copier</button></div><div>${esc(pr)}</div></div>`; }).join('')}`);
+}
+
+// ---------------------------------------------------------------- rendus
+let RENDU = null;
+const taillePlayer = () => { try { return +localStorage.getItem('ua_player') || 70; } catch(e){ return 70; } };
+async function rendus(sel){
+  const [liste, plan] = await Promise.all([api('/api/rendus'), api('/api/plan')]);
+  const P = Object.fromEntries(plan.map(p=>[p.code, p]));
+  if(!liste.length){ $('#main').innerHTML = '<h2>Rendus</h2><p>Aucun rendu pour le moment. Monte un épisode depuis l\'onglet Production.</p>'; return; }
+  const groupes = {}; liste.forEach(r => (groupes[r.ep||'autres'] ||= []).push(r));
+  RENDU = liste.find(r=>r.f===sel) || liste.filter(r=>r.ep===P[Object.keys(P).find(k=>P[k].n===5)]?.code).pop() || liste[liste.length-1];
+  $('#main').innerHTML = `
+  <div style="display:grid;grid-template-columns:260px 1fr 330px;gap:16px;align-items:start">
+    <div class="card" style="padding:12px;max-height:calc(100vh - 210px);overflow:auto;position:sticky;top:150px">
+      <h3>Rendus</h3>
+      ${Object.entries(groupes).map(([ep, rs]) => `
+        <div style="margin-top:8px"><div class="row"><span class="id">${esc(rs[0].id||ep)}</span>${P[ep]?.n===6?'<span class="pill ok">validé</span>':''}</div>
+        ${rs.map(r=>`<div class="rendu ${r.f===RENDU.f?'on':''}" onclick="choisirRendu('${encodeURIComponent(r.f)}')">${esc(r.f.replace((r.id||'')+'_','').replace(ep+'_',''))}<span class="meta">${r.date} · ${r.mo} Mo</span></div>`).join('')}</div>`).join('')}
+    </div>
+    <div>
+      <div id="cadre" style="width:${taillePlayer()}%;margin:0 auto">
+        <video class="player" id="player" controls src="/rendus/${encodeURIComponent(RENDU.f)}" style="max-height:calc(100vh - 260px)"></video>
+      </div>
+      <div class="row" style="justify-content:center;margin-top:10px;gap:12px">
+        <span class="meta">Taille du lecteur</span>
+        <input type="range" min="35" max="100" value="${taillePlayer()}" style="width:220px;accent-color:var(--gold)" oninput="$('#cadre').style.width=this.value+'%';try{localStorage.setItem('ua_player',this.value)}catch(e){}">
+        <button class="btn small" onclick="$('#player').requestFullscreen()">Plein écran</button>
+      </div>
+    </div>
+    <div class="card" id="infos" style="position:sticky;top:150px;max-height:calc(100vh - 210px);overflow:auto"></div>
+  </div>`;
+  infosRendu(P);
+}
+function infosRendu(P){
+  const r = RENDU, p = P[r.ep] || {};
+  $('#infos').innerHTML = `
+    <span class="id">${esc(r.id)}${p.num?' · ÉPISODE '+esc(p.num):''}</span>
+    <h3 style="font-size:18px">${esc(p.titre||r.titre||r.f)}</h3>
+    ${p.titre_saison?`<div class="meta">Saison ${p.saison} — ${esc(p.titre_saison)} · livre p. ${esc(p.pages)}</div>`:''}
+    ${p.resume?`<p style="margin:6px 0">${esc(p.resume)}</p>`:''}
+    <div style="border-top:1px solid var(--line);padding-top:8px">
+      <label>Fichier</label><div style="word-break:break-all">${esc(r.f)}</div>
+      <div class="meta">${r.date} · ${r.mo} Mo</div>
+    </div>
+    ${p.code?`<div style="border-top:1px solid var(--line);padding-top:8px"><label>Étape</label>${barre(p.n)}<div>${esc(p.etape)}</div><div class="meta">${esc(p.suite)}</div></div>
+    <div class="row" style="margin-top:6px">
+      ${p.n===6?`<span class="pill ok">validé</span><button class="btn small" onclick="valider('${p.code}',false)">Annuler la validation</button>`:`<button class="btn gold" onclick="valider('${p.code}',true)">Valider ${esc(p.code)}</button>`}
+      <button class="btn small" onclick="go('episode','${p.code}')">Corriger les plans</button>
+    </div>`:'<p class="meta">Bande-annonce ou fichier hors plan : pas de validation.</p>'}`;
+}
+async function choisirRendu(f){ rendus(decodeURIComponent(f)); }
+async function valider(ep, v){ await api('/api/valider',{method:'POST',body:JSON.stringify({ep, valide:v})}); toast(v?ep+' validé':'Validation annulée'); rendus(RENDU&&RENDU.f); guide(); }
+
+// ---------------------------------------------------------------- nouvel épisode (IA)
+async function nouveau(code){
+  let pages = '?'; try { pages = (await api('/api/livre')).pages; } catch(e){}
+  const cles = await api('/api/cles'); CONFIG = await api('/api/reglages'); const plan = await api('/api/plan');
+  const p = plan.find(x=>x.code===code) || plan.find(x=>x.n===0) || {};
+  const prof = CONFIG.ia.profils.find(x=>x.id===CONFIG.ia.par_tache.ecrire) || {};
+  $('#main').innerHTML = `<h2>Nouvel épisode</h2><p class="sub">L'IA (${esc(prof.nom)} · ${esc(prof.modele)}) écrit l'épisode à partir des pages du livre (${pages} pages au total), dans le format et le ton de la série. Tu le relis ensuite dans l'éditeur. Tu peux aussi le demander à Claude dans le chat.</p>
+  ${cles[prof.id] ? '' : `<p class="warn">⚠ Pas de clé pour ce modèle : Réglages › Modèles IA.</p>`}
+  <div class="card" style="max-width:860px">
+    ${p.code ? `<div class="meta"><span class="pill wait">Plan ${esc(p.num)}</span><span>${esc(p.resume)}</span></div>` : ''}
+    <div class="fields">
+      <div><label>Code épisode</label><input id="n_ep" value="${esc(p.code||'')}" placeholder="E107"></div>
+      <div><label>Titre</label><input id="n_titre" value="${esc(p.titre||'')}"></div>
+      <div><label>Pages du livre</label><input id="n_pages" value="${esc((p.pages||'').replace('–','-'))}"></div>
+      <div><label>&nbsp;</label><button class="btn" onclick="apercu()">Voir le texte de ces pages</button></div>
+      <div class="full"><label>Consignes (facultatif)</label><textarea id="n_cons" rows="3">${p.resume?esc('Résumé prévu dans la bible : '+p.resume):''}</textarea></div>
+    </div>
+    <div class="row"><button class="btn gold" onclick="action('ecrire',[$('#n_ep').value.trim(),$('#n_titre').value.trim(),$('#n_pages').value.trim(),$('#n_cons').value.trim()])">Écrire l'épisode</button></div>
+    <pre id="apercu" style="white-space:pre-wrap;max-height:360px;overflow:auto;color:var(--muted);font-size:12px"></pre>
+  </div>`;
+}
+async function apercu(){ const p = $('#n_pages').value.trim(); if(!p) return;
+  $('#apercu').textContent = 'Lecture…'; try { $('#apercu').textContent = (await api('/api/livre?pages='+encodeURIComponent(p))).texte; } catch(e){ $('#apercu').textContent = e.message; } }
+
+// ---------------------------------------------------------------- réglages
+async function reglages(){
+  CONFIG = await api('/api/reglages'); const cles = await api('/api/cles'); const ia = CONFIG.ia;
+  const optProf = sel => ia.profils.map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.nom)}</option>`).join('');
+  $('#main').innerHTML = `<h2>Réglages du poste</h2><p class="sub">Propres à cet ordinateur (fichier reglages.json du logiciel). Les clés API vont dans le Gestionnaire d'identification Windows, jamais dans les fichiers du projet. Les réglages du projet (voix, style, personnages…) sont dans l'onglet Projet.</p>
+  <div class="card" style="margin-bottom:16px"><h3>Modèles IA</h3>
+    <div id="profils">${ia.profils.map((p,i)=>`
+    <div class="prof" data-i="${i}">
+      <div><label>Nom</label><input data-k="nom" value="${esc(p.nom)}"></div>
+      <div><label>Fournisseur</label><select data-k="fournisseur"><option value="anthropic" ${p.fournisseur==='anthropic'?'selected':''}>Anthropic (Claude)</option><option value="openai_compatible" ${p.fournisseur==='openai_compatible'?'selected':''}>Compatible OpenAI</option></select></div>
+      <div><label>Modèle</label><input data-k="modele" value="${esc(p.modele)}"></div>
+      <div><label>URL (compatible OpenAI)</label><input data-k="url_base" value="${esc(p.url_base||'')}" placeholder="—"></div>
+      <div><label>Clé API · <span class="${cles[p.id]?'okc':'warn'}">${p.sans_cle?'pas nécessaire':(cles[p.id]?'enregistrée':'absente')}</span></label>
+        <div class="row" style="flex-wrap:nowrap"><input type="password" id="cle_${i}" placeholder="${p.sans_cle?'aucune clé requise':(cles[p.id]?'•••••• (remplacer)':'coller la clé')}" autocomplete="off"><button class="btn small" onclick="sauverCle(${i})">OK</button></div></div>
+      <div class="row" style="flex-wrap:nowrap"><button class="btn small" onclick="testerIA('${p.id}')">Tester</button><button class="btn small" title="Supprimer" onclick="supProfil(${i})">✕</button></div>
+    </div>`).join('')}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="ajoutProfil()">+ Ajouter un modèle</button>
+      <label style="margin:0;text-transform:none;letter-spacing:0;display:flex;gap:6px;align-items:center;color:var(--muted)"><input type="checkbox" id="partage" checked style="width:auto"> une clé saisie vaut pour tous les modèles du même fournisseur</label></div>
+    <h3 style="margin-top:14px">Quel modèle pour quelle étape</h3>
+    <div class="fields">${Object.entries(CONFIG._taches).map(([t,nom])=>`<div><label>${esc(nom)}</label><select id="t_${t}">${optProf(ia.par_tache[t])}</select></div>`).join('')}</div>
+    <p class="meta">Clés : console.anthropic.com (Claude) · openrouter.ai/keys · platform.openai.com. Ollama (local) ne demande pas de clé.</p>
+  </div>
+  <div class="row" style="margin-top:16px"><button class="btn gold" onclick="sauverConfig()">Enregistrer les réglages</button></div>`;
+}
+function lireProfils(){
+  document.querySelectorAll('#profils .prof').forEach(row => { const p = CONFIG.ia.profils[+row.dataset.i];
+    row.querySelectorAll('[data-k]').forEach(el => { const v = el.value.trim(); if(v) p[el.dataset.k] = v; else delete p[el.dataset.k]; }); });
+}
+async function sauverConfig(){
+  lireProfils(); const c = CONFIG;
+  Object.keys(c._taches).forEach(t => c.ia.par_tache[t] = $('#t_'+t).value);
+  await api('/api/reglages', {method:'PUT', body:JSON.stringify(c)}); toast('Réglages enregistrés'); guide();
+}
+async function sauverCle(i){
+  lireProfils(); await api('/api/reglages', {method:'PUT', body:JSON.stringify(CONFIG)});
+  const p = CONFIG.ia.profils[i]; const cle = $('#cle_'+i).value.trim();
+  if(!cle && !confirm('Supprimer la clé de « '+p.nom+' » ?')) return;
+  const r = await api('/api/cle', {method:'POST', body:JSON.stringify({profil:p.id, cle, partager:$('#partage').checked})});
+  toast(cle ? 'Clé enregistrée ('+r.ou+')' : 'Clé supprimée'); reglages(); guide();
+}
+async function testerIA(pid){
+  lireProfils(); await api('/api/reglages', {method:'PUT', body:JSON.stringify(CONFIG)});
+  toast('Test en cours…');
+  try { const r = await api('/api/test_ia', {method:'POST', body:JSON.stringify({profil:pid})}); modal(`<h2>Test réussi</h2><p>Réponse du modèle : <b>${esc(r.reponse)}</b> en ${r.secondes} s.</p>`); }
+  catch(e){ modal(`<h2>Échec du test</h2><p class="err">${esc(e.message)}</p><p class="meta">Vérifie la clé, le nom exact du modèle et l'URL.</p>`); }
+}
+function ajoutProfil(){ lireProfils(); const id = 'modele-'+Date.now().toString(36);
+  CONFIG.ia.profils.push({id, nom:'Nouveau modèle', fournisseur:'openai_compatible', url_base:'https://api.openai.com/v1', modele:'A_RENSEIGNER'});
+  api('/api/reglages',{method:'PUT',body:JSON.stringify(CONFIG)}).then(reglages); }
+function supProfil(i){ lireProfils(); const p = CONFIG.ia.profils[i];
+  if(Object.values(CONFIG.ia.par_tache).includes(p.id)) return toast('Ce modèle est utilisé par une étape : change d\'abord l\'affectation');
+  if(!confirm('Supprimer « '+p.nom+' » ?')) return; CONFIG.ia.profils.splice(i,1);
+  api('/api/reglages',{method:'PUT',body:JSON.stringify(CONFIG)}).then(reglages); }
+
+// ---------------------------------------------------------------- assistant
+const ETAPES = ['Script','Fiche Flow','Images','Images','Montage','Validation','Terminé'];
+function barre(n){ return `<div class="steps">${[1,2,3,4,5,6].map(i=>`<i class="${n>=i?'on':''}"></i>`).join('')}</div>`; }
+function bouton(a, gold=true){
+  if(!a) return '';
+  const lib = {nouveau:'Écrire le script', fiche:'Ouvrir la fiche de prompts', monter:'Monter l\'épisode', valider:'Regarder et valider', bible:'Générer la bible et le plan (IA)', projet:'Ajouter les sources'}[a.type];
+  return `<button class="btn ${gold?'gold':''}" onclick='faire(${JSON.stringify(a)})'>${lib}</button>`;
+}
+function faire(a){
+  if(a.type==='nouveau') go('nouveau', a.ep);
+  else if(a.type==='fiche') fiche(a.ep);
+  else if(a.type==='monter') action('monter',[a.ep]);
+  else if(a.type==='valider') go('rendus');
+  else if(a.type==='projet') go('projet');
+  else if(a.type==='bible') genererBible();
+}
+async function genererBible(){
+  const c = prompt('L\'IA va lire les sources du projet et écrire la bible et le plan des épisodes (l\'ancienne version est gardée en .ancien).\nConsignes (facultatif) :');
+  if(c===null) return; action('bible',[c]);
+}
+async function guide(){
+  try { const r = await api('/api/assistant'); const c = r.courant;
+    $('#guide').innerHTML = c ? `<div class="in"><span class="pin">Étape actuelle</span>
+      <div style="flex:1"><b>${c.code&&c.code!=='—'?esc(c.code)+' · ':''}${esc(c.titre)}</b> — ${esc(c.etape)}<br><span class="meta" style="font-size:13px">Prochaine étape : ${esc(c.suite)}</span></div>
+      ${bouton(c.action)}</div>` : `<div class="in"><span class="pin">Terminé</span><div>Les 49 épisodes sont validés.</div></div>`;
+  } catch(e){ $('#guide').innerHTML = ''; }
+}
+async function assistant(){
+  const r = await api('/api/assistant'); const c = r.courant;
+  const manque = r.verifications.filter(v=>!v.ok);
+  $('#main').innerHTML = `<h2>Assistant de production</h2>
+  <p class="sub">${r.valides} épisode(s) validé(s) sur ${r.total}. L'Assistant suit le plan de la bible, épisode par épisode, et te dit quoi faire ensuite.</p>
+  <div class="grid" style="grid-template-columns:2fr 1fr">
+    <div class="card"><h3>À faire maintenant</h3>
+      ${c ? `<div class="row"><span class="id">${esc(c.code)} · ÉPISODE ${esc(c.num)}</span><span class="pill wait">${esc(c.etape)}</span></div>
+      <h3 style="font-size:20px">${esc(c.titre)}</h3>${barre(c.n)}
+      <p>${esc(c.suite)}</p><div class="row">${bouton(c.action)}${c.n>0?`<button class="btn" onclick="go('episode','${c.code}')">Ouvrir l'épisode</button>`:''}</div>` : '<p>Tout est terminé.</p>'}
+      <h3 style="margin-top:12px">Ensuite</h3>
+      ${r.suivants.slice(1).map(p=>`<div class="check"><span class="id" style="width:60px">${esc(p.code)}</span><div style="flex:1"><b>${esc(p.titre)}</b> — ${esc(p.etape)}<br><span class="meta">${esc(p.suite)}</span></div>${bouton(p.action,false)}</div>`).join('')}
+    </div>
+    <div class="card"><h3>Installation et outils</h3>
+      ${r.verifications.map(v=>`<div class="check"><span class="${v.ok?'okc':'warn'}">${v.ok?'✔':'●'}</span><div>${esc(v.titre)}${v.ok?'':`<br><span class="meta">${esc(v.aide)}</span>`}</div></div>`).join('')}
+      ${manque.length?'':'<p class="okc">Tout est prêt.</p>'}
+    </div>
+  </div>
+  <h3 style="margin:22px 0 10px;font:700 16px var(--serif);color:var(--gold2)">Avancement par saison</h3>
+  <div class="grid">${r.saisons.map(s=>`<div class="card"><span class="id">SAISON ${s.saison}</span><h3>${esc(s.titre)}</h3>
+    <div class="bar"><i style="width:${Math.round(100*s.faits/s.total)}%"></i></div><div class="meta">${s.faits}/${s.total} épisodes validés</div>
+    <div class="row"><button class="btn small" onclick="go('plan','${s.saison}')">Voir les épisodes</button></div></div>`).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------- plan des 49 épisodes
+async function plan(saisonSel){
+  const pl = await api('/api/plan'); const S = +(saisonSel||1);
+  const titres = [...new Map(pl.map(p=>[p.saison,p.titre_saison])).entries()];
+  await chargerProjet();
+  if(!pl.length){ $('#main').innerHTML = `<h2>Plan des épisodes</h2><p>Pas encore de plan.</p><button class="btn gold" onclick="genererBible()">Générer la bible et le plan avec l'IA</button>`; return; }
+  $('#main').innerHTML = `<h2>Plan des ${pl.length} épisodes</h2><p class="sub">${PROJET.saisons} saison(s) × ${PROJET.episodes_par_saison} épisodes × ${PROJET.duree_min} minutes, d'après la bible. L'étape de chaque épisode est calculée à partir des fichiers du projet.</p>
+  <div class="tabs">${titres.map(([n,t])=>`<button class="${n===S?'on':''}" onclick="go('plan','${n}')">S${n} · ${esc(t)}</button>`).join('')}</div>
+  ${pl.filter(p=>p.saison===S).map(p=>`<div class="ep">
+    <div class="n">${esc(p.num)}<br><span class="meta">${esc(p.code)}</span></div>
+    <div><b style="font:700 15px var(--serif)">${esc(p.titre)}</b> ${p.pages?`<span class="meta">· livre p. ${esc(p.pages)}</span>`:''}
+      <div class="r">${esc(p.resume)}</div>${barre(p.n)}<div class="meta">${esc(p.etape)} — ${esc(p.suite)}</div></div>
+    <div class="row" style="justify-content:flex-end">${p.n>0?`<button class="btn small" onclick="go('episode','${p.code}')">Ouvrir</button>`:''}${bouton(p.action,false)}</div>
+  </div>`).join('')}`;
+}
+
+// ---------------------------------------------------------------- bible
+function md2html(t){
+  const inl = x => esc(x).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>');
+  const L = t.split('\n'); let h = '', i = 0;
+  while(i < L.length){ const l = L[i];
+    if(l.startsWith('```')){ let c=[]; i++; while(i<L.length && !L[i].startsWith('```')) c.push(L[i++]); h += `<pre>${esc(c.join('\n'))}</pre>`; i++; continue; }
+    const m = l.match(/^(#{1,3}) (.*)/); if(m){ const id = m[2].toLowerCase().replace(/[^a-z0-9]+/g,'-'); h += `<h${m[1].length} id="${id}">${inl(m[2])}</h${m[1].length}>`; i++; continue; }
+    if(l.startsWith('|')){ const rows=[]; while(i<L.length && L[i].startsWith('|')) rows.push(L[i++]);
+      const cells = r => r.slice(1,-1).split(' | ').map(c=>c.trim()); const hd = cells(rows[0]);
+      h += `<table><tr>${hd.map(c=>`<th>${inl(c)}</th>`).join('')}</tr>${rows.slice(2).map(r=>`<tr>${cells(r).map(c=>`<td>${inl(c)}</td>`).join('')}</tr>`).join('')}</table>`; continue; }
+    if(/^\s*([-*]|\d+\.) /.test(l)){ const items=[]; while(i<L.length && /^\s*([-*]|\d+\.) /.test(L[i])) items.push(L[i++].replace(/^\s*([-*]|\d+\.) /,''));
+      h += `<ul>${items.map(x=>`<li>${inl(x)}</li>`).join('')}</ul>`; continue; }
+    if(l.trim()) h += `<p>${inl(l)}</p>`; i++; }
+  return h;
+}
+async function bible(mode){
+  const r = await api('/api/bible');
+  if(mode==='edit'){
+    $('#main').innerHTML = `<h2>Bible — édition</h2><p class="sub">Format Markdown : # titre, ## section, | tableaux |, - listes, **gras**.</p>
+      <textarea id="bibleTxt" style="min-height:65vh;font:13px/1.5 ui-monospace,Consolas,monospace">${esc(r.texte)}</textarea>
+      <div class="row" style="margin-top:10px"><button class="btn gold" onclick="api('/api/bible',{method:'PUT',body:JSON.stringify({texte:$('#bibleTxt').value})}).then(()=>{toast('Bible enregistrée');bible()})">Enregistrer</button><button class="btn" onclick="bible()">Annuler</button></div>`;
+    return; }
+  const tdm = [...r.texte.matchAll(/^## (.*)$/gm)].map(m=>m[1]);
+  $('#main').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="tabs" style="margin:0;flex:1">${tdm.map(t=>`<button onclick="document.getElementById('${t.toLowerCase().replace(/[^a-z0-9]+/g,'-')}').scrollIntoView({behavior:'smooth'})">${esc(t)}</button>`).join('')}</div>
+    <button class="btn small" onclick="bible('edit')">Modifier</button><button class="btn small ia" onclick="genererBible()">IA · régénérer</button></div>
+  <div class="md">${r.texte.trim()?md2html(r.texte):'<p>La bible est vide. Écris-la (Modifier) ou génère-la à partir des sources (IA).</p>'}</div>`;
+}
+
+// ---------------------------------------------------------------- projet
+async function chargerProjet(){
+  INFOS = await api('/api/projet'); PROJET = INFOS.projet;
+  $('#nomProjet').textContent = PROJET.nom; $('#sousProjet').textContent = PROJET.sous_titre || INFOS.logiciel;
+  document.title = PROJET.nom + ' — ' + INFOS.logiciel;
+  $('#logo').src = '/api/logo?t=' + Date.now();
+  document.documentElement.style.setProperty('--gold', PROJET.couleur || '#d8b46a');
+  return PROJET;
+}
+async function projet(){
+  await chargerProjet(); const src = await api('/api/sources'); const pj = PROJET;
+  const persos = pj.personnages || [];
+  $('#main').innerHTML = `
+  <div class="grid" style="grid-template-columns:minmax(320px,1fr) 2fr">
+    <div class="card" style="align-items:center;text-align:center">
+      <img src="/api/logo?t=${Date.now()}" style="width:180px;height:180px;object-fit:contain">
+      <h3 style="font-size:20px">${esc(pj.nom)}</h3><div class="meta">${esc(pj.sous_titre||'')}</div>
+      <div class="meta" style="word-break:break-all">${esc(INFOS.racine)}</div>
+      <div class="row" style="justify-content:center">
+        <button class="btn small" onclick="regenLogo(false)">Régénérer le logo</button>
+        <label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
+      </div>
+      <div class="row" style="justify-content:center">
+        <button class="btn small" onclick="ouvrir('projet')">Ouvrir le dossier</button>
+        <button class="btn small" onclick="exporter(false)">Exporter (zip, sans rendus)</button>
+        <button class="btn small" onclick="exporter(true)">Exporter avec rendus</button>
+      </div>
+      <p class="meta">Pour continuer sur un autre poste : copie ce dossier (ou le zip), installe le logiciel, puis Projet › Ouvrir un dossier. L'avancement est recalculé à partir des fichiers.</p>
+    </div>
+    <div class="card"><h3>Paramètres du projet</h3>
+      <div class="fields">
+        <div><label>Nom du projet (bannière)</label><input id="p_nom" value="${esc(pj.nom)}"></div>
+        <div><label>Sous-titre</label><input id="p_sous" value="${esc(pj.sous_titre||'')}"></div>
+        <div class="mini full">
+          <div><label>Saisons</label><input id="p_s" type="number" min="1" value="${pj.saisons}"></div>
+          <div><label>Épisodes / saison</label><input id="p_e" type="number" min="1" value="${pj.episodes_par_saison}"></div>
+          <div><label>Durée (min)</label><input id="p_d" type="number" min="1" value="${pj.duree_min}"></div>
+          <div><label>Couleur</label><input id="p_c" type="color" value="${esc(pj.couleur||'#d8b46a')}" style="height:36px;padding:2px"></div>
+        </div>
+        <div><label>Voix (Edge TTS)</label><input id="p_vn" value="${esc(pj.voix.nom)}" list="voixListe"></div>
+        <div class="mini"><div><label>Débit</label><input id="p_vd" value="${esc(pj.voix.debit)}"></div><div><label>Hauteur</label><input id="p_vh" value="${esc(pj.voix.hauteur)}"></div>
+          <div><label>Vol. musique</label><input id="p_vol" type="number" step="0.01" value="${pj.volume_musique}"></div><div><label>Livre (PDF)</label><input id="p_livre" value="${esc(pj.livre||'')}" placeholder="sources/…pdf"></div></div>
+        <div class="full"><label>Style ajouté à chaque prompt image (anglais)</label><textarea id="p_sty" rows="2">${esc(pj.style_image)}</textarea></div>
+        <div class="full"><label>Règles de la série pour l'IA (ton, narration, direction artistique)</label><textarea id="p_reg" rows="5">${esc(pj.regles_ia||'')}</textarea></div>
+      </div>
+      <datalist id="voixListe"><option>fr-FR-HenriNeural</option><option>fr-FR-DeniseNeural</option><option>fr-FR-RemyMultilingualNeural</option><option>fr-FR-VivienneMultilingualNeural</option><option>fr-CA-AntoineNeural</option><option>fr-BE-GerardNeural</option><option>en-US-GuyNeural</option><option>en-US-AndrewNeural</option><option>en-GB-RyanNeural</option></datalist>
+      <h3 style="margin-top:6px">Personnages récurrents <span class="meta">(le tag [TAG] dans un prompt est remplacé par la description)</span></h3>
+      <div id="persos">${persos.map((x,i)=>`<div class="prof" style="grid-template-columns:110px 1fr 2fr 1.3fr auto" data-i="${i}">
+        <div><label>Tag</label><input data-k="tag" value="${esc(x.tag)}"></div><div><label>Nom</label><input data-k="nom" value="${esc(x.nom)}"></div>
+        <div><label>Description (anglais)</label><input data-k="description" value="${esc(x.description||'')}"></div>
+        <div><label>Image de référence</label><input data-k="reference" value="${esc(x.reference||'')}"></div>
+        <div class="row" style="flex-wrap:nowrap"><label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Image<input type="file" accept="image/*" style="display:none" onchange="envoyerRef(${i},this.files[0])"></label><button class="btn small" onclick="supPerso(${i})">✕</button></div></div>`).join('')}</div>
+      <div class="row"><button class="btn small" onclick="ajoutPerso()">+ Personnage</button><div class="sp"></div><button class="btn gold" onclick="sauverProjet()">Enregistrer le projet</button></div>
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
+    <div class="card"><h3>Sources du projet <span class="meta">(livre, script, notes, documents de référence — lues par l'IA)</span></h3>
+      ${src.length?src.map(s=>`<div class="check"><span class="okc">■</span><div style="flex:1">${esc(s.nom)}${s.livre?' <span class="pill wait">livre</span>':''}</div><span class="meta">${s.mo} Mo</span></div>`).join(''):'<p class="meta">Aucune source pour l\'instant.</p>'}
+      <div class="row" style="margin-top:8px"><label class="btn gold" style="margin:0;text-transform:none;letter-spacing:0">Ajouter des fichiers<input type="file" multiple style="display:none" onchange="envoyerSources(this.files)"></label>
+        <button class="btn small" onclick="ouvrir('sources')">Ouvrir le dossier sources</button></div>
+      <p class="meta">PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain… ainsi que des images de référence.</p>
+    </div>
+    <div class="card"><h3>Projets sur ce poste</h3>
+      ${INFOS.projets.map(x=>`<div class="check"><span class="${x.chemin===INFOS.racine?'okc':''}">${x.chemin===INFOS.racine?'●':'○'}</span><div style="flex:1"><b>${esc(x.nom)}</b><br><span class="meta" style="word-break:break-all">${esc(x.chemin)}${x.existe?'':' — introuvable'}</span></div>
+        ${x.chemin===INFOS.racine?'<span class="pill ok">actif</span>':`<button class="btn small" onclick="ouvrirProjet('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">Ouvrir</button><button class="btn small" onclick="oublier('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">✕</button>`}</div>`).join('')}
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="choisirDossier(c=>ouvrirProjet(c),'Ouvrir un dossier de projet')">Ouvrir un dossier existant…</button><button class="btn gold" onclick="nouveauProjet()">Nouveau projet…</button></div>
+    </div>
+  </div>`;
+}
+function lirePersos(){ document.querySelectorAll('#persos .prof').forEach(row=>{ const x = PROJET.personnages[+row.dataset.i];
+  row.querySelectorAll('[data-k]').forEach(el=>{ x[el.dataset.k] = el.value.trim(); }); x.tag = (x.tag||'').toUpperCase().replace(/[^A-Z0-9_]/g,''); }); }
+async function sauverProjet(silencieux){
+  lirePersos(); const pj = PROJET;
+  pj.nom = $('#p_nom').value.trim()||pj.nom; pj.sous_titre = $('#p_sous').value.trim();
+  pj.saisons = +$('#p_s').value; pj.episodes_par_saison = +$('#p_e').value; pj.duree_min = +$('#p_d').value; pj.couleur = $('#p_c').value;
+  pj.voix = {nom:$('#p_vn').value.trim(), debit:$('#p_vd').value.trim(), hauteur:$('#p_vh').value.trim()};
+  pj.volume_musique = +$('#p_vol').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
+  await api('/api/projet',{method:'PUT',body:JSON.stringify(pj)}); if(!silencieux) toast('Projet enregistré'); await chargerProjet();
+}
+async function ajoutPerso(){ await sauverProjet(true); PROJET.personnages = [...(PROJET.personnages||[]), {tag:'PERSO'+((PROJET.personnages||[]).length+1), nom:'', description:'', reference:''}]; await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); projet(); }
+async function supPerso(i){ await sauverProjet(true); PROJET.personnages.splice(i,1); await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); projet(); }
+async function envoyer(dest, f){ const r = await fetch('/api/fichier?dest='+encodeURIComponent(dest), {method:'PUT', body:f}); const j = await r.json(); if(!r.ok) throw new Error(j.erreur); return j; }
+async function envoyerSources(fs){ for(const f of fs){ toast('Envoi de '+f.name+'…'); await envoyer('sources/'+f.name, f); } toast(fs.length+' fichier(s) ajouté(s)'); projet(); guide(); }
+async function envoyerRef(i, f){ await sauverProjet(true); const x = PROJET.personnages[i]; const ext = f.name.split('.').pop().toLowerCase();
+  const dest = 'Characters/'+(x.tag||'perso').toLowerCase()+'_reference.'+ext; await envoyer(dest, f); x.reference = dest;
+  await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); toast('Image de référence enregistrée'); projet(); }
+async function envoyerLogo(f){ const ext = f.name.split('.').pop().toLowerCase(); await envoyer('logo.'+ext, f); toast('Logo importé'); projet(); }
+async function regenLogo(g){ await api('/api/projet/logo',{method:'POST',body:JSON.stringify({generique:g})}); toast('Logo régénéré'); projet(); }
+function exporter(r){ action('exporter', r?['--rendus']:[]); toast('Export lancé : le zip arrivera dans le dossier _exports du projet'); }
+async function ouvrirProjet(c, init){
+  const r = await api('/api/projet/ouvrir',{method:'POST',body:JSON.stringify({chemin:c, initialiser:!!init})});
+  if(r.a_initialiser){ if(confirm('Ce dossier n\'est pas encore un projet. L\'initialiser comme projet (création de projet.json) ?')) return ouvrirProjet(c, true); return; }
+  toast('Projet ouvert'); await chargerProjet(); go('assistant');
+}
+async function oublier(c){ if(!confirm('Retirer ce projet de la liste ? (aucun fichier supprimé)')) return; await api('/api/projet/oublier',{method:'POST',body:JSON.stringify({chemin:c})}); projet(); }
+async function choisirDossier(cb, titre, depart){
+  const m = document.createElement('div'); m.className='modal'; document.body.appendChild(m);
+  async function vue(ch){ const r = await api('/api/parcourir?chemin='+encodeURIComponent(ch||''));
+    m.innerHTML = `<div class="box"><h2>${esc(titre)}</h2>
+      <div class="row"><input id="dossierSaisi" value="${esc(r.chemin)}" placeholder="Coller un chemin, ex. D:\\Projets\\MaSerie"><button class="btn small" onclick="this.closest('.modal')._vue($('#dossierSaisi').value)">Aller</button></div>
+      ${r.est_projet?'<p class="okc">Ce dossier contient un projet.</p>':''}
+      <div style="max-height:50vh;overflow:auto;margin:10px 0">${r.parent!==undefined&&r.chemin?`<div class="rendu" onclick="this.closest('.modal')._vue('${esc((r.parent||'').replace(/\\/g,'\\\\'))}')">⬆ Dossier parent</div>`:''}
+        ${r.dossiers.map(d=>`<div class="rendu" onclick="this.closest('.modal')._vue('${esc(d.replace(/\\/g,'\\\\'))}')">📁 ${esc(d.split(/[\\/]/).filter(Boolean).pop()||d)}</div>`).join('')}</div>
+      <div class="row"><button class="btn gold" onclick="this.closest('.modal')._ok($('#dossierSaisi').value)">Choisir ce dossier</button><button class="btn" onclick="this.closest('.modal').remove()">Annuler</button></div></div>`; }
+  m._vue = vue; m._ok = c => { m.remove(); cb(c); }; vue(depart||INFOS?.racine||'');
+}
+async function nouveauProjet(){
+  modal(`<h2>Nouveau projet</h2><p class="sub">Même logiciel, nouvelles données : un dossier de projet est créé avec sa structure, son logo et son plan vide. Ajoute ensuite les sources, puis l'Assistant te guide.</p>
+   <div class="fields">
+    <div><label>Nom du projet</label><input id="n_nom" placeholder="Ex. Les Actes des Apôtres"></div>
+    <div><label>Sous-titre</label><input id="n_sous" placeholder="Mini-série · d'après …"></div>
+    <div class="full"><label>Créer dans le dossier</label><div class="row" style="flex-wrap:nowrap"><input id="n_parent" value="${esc((INFOS.racine||'').replace(/[\\/][^\\/]*$/,''))}"><button class="btn small" onclick="choisirDossier(c=>$('#n_parent').value=c,'Dossier parent du nouveau projet',$('#n_parent').value)">Parcourir…</button></div></div>
+    <div class="mini full"><div><label>Saisons</label><input id="n_s" type="number" value="1" min="1"></div><div><label>Épisodes / saison</label><input id="n_e" type="number" value="7" min="1"></div>
+      <div><label>Durée (min)</label><input id="n_d" type="number" value="7" min="1"></div><div><label>Couleur</label><input id="n_c" type="color" value="#d8b46a" style="height:36px;padding:2px"></div></div>
+    <div><label>Voix</label><input id="n_v" value="fr-FR-HenriNeural" list="voixListe2"><datalist id="voixListe2"><option>fr-FR-HenriNeural</option><option>fr-FR-DeniseNeural</option><option>fr-FR-RemyMultilingualNeural</option><option>en-US-GuyNeural</option></datalist></div>
+    <div><label>Narrateur (facultatif)</label><input id="n_nar" placeholder="Ex. Le Voyant, Luc l'évangéliste…"></div>
+    <div class="full"><label>Style visuel (anglais)</label><textarea id="n_sty" rows="2">Cinematic film still, photorealistic, vivid colors, dramatic lighting, high detail, 16:9, no text. </textarea></div>
+    <div class="full"><label>Règles de la série pour l'IA (ton, public, narration)</label><textarea id="n_reg" rows="3" placeholder="Ex. Tu es scénariste de … Ton : … Narration à la première personne par …"></textarea></div>
+   </div><div class="row" style="margin-top:10px"><button class="btn gold" onclick="creerProjet()">Créer le projet</button></div>`);
+}
+async function creerProjet(){
+  const d = {nom:$('#n_nom').value.trim(), sous_titre:$('#n_sous').value.trim(), parent:$('#n_parent').value.trim(),
+    saisons:$('#n_s').value, episodes_par_saison:$('#n_e').value, duree_min:$('#n_d').value, couleur:$('#n_c').value,
+    voix:$('#n_v').value.trim(), narrateur:$('#n_nar').value.trim(), style_image:$('#n_sty').value, regles_ia:$('#n_reg').value};
+  if(!d.nom) return toast('Donne un nom au projet');
+  try { await api('/api/projet/nouveau',{method:'POST',body:JSON.stringify(d)}); document.querySelectorAll('.modal').forEach(m=>m.remove()); toast('Projet créé'); await chargerProjet(); go('projet'); }
+  catch(e){ toast(e.message); }
+}
+
+// ---------------------------------------------------------------- tâches
+const NOMS = {monter:'Montage', etat:'Vérification', fiche:'Fiche', ecrire:'IA · écriture', prompts:'IA · prompts', verifier:'IA · relecture images', bible:'IA · bible et plan', exporter:'Export du projet'};
+async function action(cmd, args){
+  if(cmd==='monter' && $('#neuf')?.checked) args = [...args, '--neuf'];
+  if(cmd==='ecrire' && (!args[0]||!args[1]||!args[2])) return toast('Code, titre et pages sont nécessaires');
+  const j = await api('/api/action', {method:'POST', body:JSON.stringify({cmd, args})}); suivre(j.id, `${NOMS[cmd]} ${args[0]||''}`);
+}
+function suivre(id, titre){
+  const el = document.createElement('div'); el.className = 'job';
+  el.innerHTML = `<div class="hd"><b>${esc(titre)}</b><span class="pill wait">en cours</span><div class="sp"></div><span class="meta">▾</span></div><pre></pre>`;
+  el.querySelector('.hd').onclick = () => el.classList.toggle('min');
+  $('#jobs').appendChild(el);
+  const t = setInterval(async () => {
+    const j = await api('/api/job/'+id); const pre = el.querySelector('pre');
+    pre.textContent = j.log.split('\n').slice(-60).join('\n'); pre.scrollTop = pre.scrollHeight;
+    if(j.etat !== 'en cours'){ clearInterval(t); const p = el.querySelector('.pill'); p.textContent = j.etat; p.className = 'pill ' + (j.etat==='terminé'?'ok':'');
+      if(j.etat==='terminé'){ toast(titre + ' : terminé'); setTimeout(()=>el.classList.add('min'), 4000); if(location.hash.startsWith('#saison')||!location.hash) saison(); } }
+  }, 1500);
+}
+function modal(html){ const m = document.createElement('div'); m.className='modal'; m.innerHTML = `<div class="box">${html}<div class="row" style="margin-top:14px"><button class="btn" onclick="this.closest('.modal').remove()">Fermer</button></div></div>`; m.onclick = e => { if(e.target===m) m.remove(); }; document.body.appendChild(m); }
+function toast(t){ const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;top:76px;transform:translateX(-50%);background:var(--gold);color:#1b1408;padding:8px 16px;border-radius:8px;font-weight:600;z-index:40'; document.body.appendChild(d); setTimeout(()=>d.remove(), 2200); }
+window.onbeforeunload = () => DIRTY ? true : undefined;
+
+// démarrage
+const [v, a] = (location.hash.slice(1)||'assistant').split('/'); chargerProjet().then(()=>go(['assistant','saison','plan','bible','rendus','nouveau','reglages','episode','projet'].includes(v)?v:'assistant', a));
+</script>
+</body>
+</html>

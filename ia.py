@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""MKS Movie Producer — étapes « IA » : bible et plan, écriture d'épisodes, réécriture des prompts, relecture des images.
+
+Chaque étape utilise le profil de modèle choisi dans Réglages (reglages.json > ia > par_tache) :
+Claude (API Anthropic) ou tout service compatible OpenAI (OpenAI, OpenRouter, Mistral, Gemini, Ollama local…).
+Les clés sont gérées par cles.py (Gestionnaire d'identification Windows), jamais dans les fichiers du projet.
+"""
+import base64, json, os, re, shutil, sys
+
+ICI = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ICI)
+from contexte import projet, chemin, reglages, regles_ia, remplacer_tags
+
+
+# ---------------------------------------------------------------- appel modèle
+def appeler(systeme, message, images=None, max_tokens=16000, tache=None, pid=None):
+    """images : liste de chemins d'images à joindre (vision). tache : ecrire | prompts | verifier."""
+    from cles import profil, lire_cle
+    conf = profil(reglages(), tache, pid)
+    four = conf["fournisseur"]
+    cle = lire_cle(conf)
+    if not cle and not conf.get("sans_cle"):
+        raise RuntimeError(f"Clé API absente pour « {conf['nom']} » : renseigne-la dans Réglages.")
+    images = images or []
+
+    def b64(p):
+        ext = os.path.splitext(p)[1].lower().strip(".")
+        mt = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(ext, "image/png")
+        return mt, base64.b64encode(open(p, "rb").read()).decode()
+
+    if four == "anthropic":
+        import anthropic
+        client = anthropic.Anthropic(api_key=cle)
+        contenu = []
+        for p in images:
+            mt, d = b64(p)
+            contenu.append({"type": "image", "source": {"type": "base64", "media_type": mt, "data": d}})
+        contenu.append({"type": "text", "text": message})
+        texte = []
+        with client.messages.stream(model=conf["modele"], max_tokens=max_tokens, system=systeme,
+                                    messages=[{"role": "user", "content": contenu}]) as flux:
+            for morceau in flux.text_stream:
+                texte.append(morceau)
+        return "".join(texte)
+
+    if four == "openai_compatible":
+        from openai import OpenAI
+        client = OpenAI(api_key=cle or "local", base_url=conf.get("url_base"))
+        contenu = [{"type": "text", "text": message}]
+        for p in images:
+            mt, d = b64(p)
+            contenu.append({"type": "image_url", "image_url": {"url": f"data:{mt};base64,{d}"}})
+        r = client.chat.completions.create(model=conf["modele"], max_tokens=max_tokens,
+                                           messages=[{"role": "system", "content": systeme},
+                                                     {"role": "user", "content": contenu}])
+        return r.choices[0].message.content
+
+    raise RuntimeError(f"Fournisseur inconnu : {four}")
+
+
+def extraire_json(texte):
+    m = re.search(r"```(?:json)?\s*(\{.*\})\s*```", texte, re.S)
+    brut = m.group(1) if m else texte[texte.find("{"): texte.rfind("}") + 1]
+    return json.loads(brut)
+
+
+# ---------------------------------------------------------------- sources du projet
+EXT_TEXTE = (".txt", ".md", ".srt", ".fountain", ".json", ".csv")
+
+
+def chemin_livre():
+    pj = projet()
+    if pj.get("livre") and os.path.exists(chemin(pj["livre"])):
+        return chemin(pj["livre"])
+    for d in (chemin("sources"), chemin()):
+        if os.path.isdir(d):
+            for f in sorted(os.listdir(d)):
+                if f.lower().endswith(".pdf"):
+                    return os.path.join(d, f)
+    return ""
+
+
+def lire_livre(pages):
+    """pages : '45-52' (numéros de pages du PDF, à partir de 1)."""
+    from pypdf import PdfReader
+    pdf = chemin_livre()
+    if not pdf:
+        raise RuntimeError("Aucun livre PDF dans le projet (Projet > Sources).")
+    lecteur = PdfReader(pdf)
+    pages = pages.replace("–", "-").replace("—", "-").replace(" ", "")
+    a, b = (int(x) for x in pages.split("-")) if "-" in pages else (int(pages), int(pages))
+    b = min(b, len(lecteur.pages))
+    return "\n".join((lecteur.pages[i].extract_text() or "") for i in range(a - 1, b))
+
+
+def nb_pages_livre():
+    from pypdf import PdfReader
+    pdf = chemin_livre()
+    return len(PdfReader(pdf).pages) if pdf else 0
+
+
+def lire_document(p):
+    ext = os.path.splitext(p)[1].lower()
+    if ext == ".pdf":
+        from pypdf import PdfReader
+        return "\n".join((pg.extract_text() or "") for pg in PdfReader(p).pages)
+    if ext == ".docx":
+        import zipfile
+        x = zipfile.ZipFile(p).read("word/document.xml").decode("utf-8", "ignore")
+        return re.sub(r"<[^>]+>", " ", x.replace("</w:p>", "\n"))
+    if ext in EXT_TEXTE:
+        return open(p, encoding="utf-8", errors="ignore").read()
+    return ""
+
+
+def texte_sources(limite=180000):
+    """Texte de tous les documents de sources/ (livre, scripts, notes), tronqué à `limite` caractères."""
+    morceaux, d = [], chemin("sources")
+    fichiers = [chemin_livre()] if chemin_livre() else []
+    if os.path.isdir(d):
+        fichiers += [os.path.join(d, f) for f in sorted(os.listdir(d)) if os.path.join(d, f) not in fichiers]
+    for f in fichiers:
+        try:
+            t = lire_document(f)
+        except Exception as ex:
+            t = f"(illisible : {ex})"
+        if t.strip():
+            morceaux.append(f"=== {os.path.basename(f)} ===\n{t}")
+    tout = "\n\n".join(morceaux)
+    return tout[:limite] + ("\n[… tronqué …]" if len(tout) > limite else "")
+
+
+# ---------------------------------------------------------------- bible et plan
+def generer_bible(consignes=""):
+    """Écrit bible/bible.md et bible/plan.json à partir des sources et de la structure du projet."""
+    pj = projet()
+    S, E = int(pj.get("saisons", 1)), int(pj.get("episodes_par_saison", 7))
+    systeme = (f"Tu es showrunner. Tu prépares la bible et le plan de « {pj['nom']} » ({pj.get('sous_titre', '')}), "
+               f"{S} saison(s) × {E} épisode(s) de {pj.get('duree_min', 7)} minutes. Tu restes fidèle aux sources. "
+               "Réponds UNIQUEMENT avec un JSON : {\"bible_md\": \"...markdown...\", \"plan\": [ {\"code\":\"E101\", "
+               "\"saison\":1, \"titre_saison\":\"...\", \"num\":\"1.1\", \"titre\":\"...\", \"resume\":\"...\", \"pages\":\"5-6\"} ] }. "
+               "La bible contient : concept, ton, règles éditoriales, direction artistique (prompt de style en anglais), "
+               "personnages récurrents (apparence précise), lieux, architecture des saisons, pipeline. "
+               f"Le plan contient exactement {S * E} épisodes, codes E<saison><numéro sur 2 chiffres>.")
+    msg = f"Consignes : {consignes or 'aucune'}\n\nSOURCES DU PROJET :\n{texte_sources()}"
+    r = extraire_json(appeler(systeme, msg, tache="ecrire", max_tokens=32000))
+    os.makedirs(chemin("bible"), exist_ok=True)
+    for f in ("bible.md", "plan.json"):
+        if os.path.exists(chemin("bible", f)):
+            shutil.copy(chemin("bible", f), chemin("bible", f + ".ancien"))
+    open(chemin("bible", "bible.md"), "w", encoding="utf-8").write(r["bible_md"])
+    json.dump(r["plan"], open(chemin("bible", "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return {"episodes": len(r["plan"])}
+
+
+# ---------------------------------------------------------------- épisodes
+def _exemple():
+    """Un épisode existant sert de modèle de format et de ton."""
+    d = chemin("episodes")
+    if os.path.isdir(d):
+        for f in sorted(os.listdir(d), reverse=True):
+            if f.endswith(".json"):
+                e = json.load(open(os.path.join(d, f), encoding="utf-8"))
+                if len(e.get("shots", [])) > 10:
+                    for s in e["shots"]:
+                        s.pop("img_url", None); s.pop("vid_url", None)
+                    return json.dumps(e, ensure_ascii=False, indent=1)
+    return "(pas encore d'épisode : respecte le format décrit)"
+
+
+def _bible():
+    try:
+        return open(chemin("bible", "bible.md"), encoding="utf-8").read()[:40000]
+    except Exception:
+        return ""
+
+
+def ecrire_episode(ep, titre, pages="", consignes=""):
+    """Écrit episodes/<ep>.json (pages du livre si fournies, sinon les sources). Sauvegarde l'ancienne version."""
+    texte = lire_livre(pages) if pages and chemin_livre() else texte_sources(60000)
+    msg = (f"Écris l'épisode {ep} intitulé « {titre} ».\n\nBible de la série :\n{_bible()}\n\n"
+           f"Exemple d'épisode existant (format et ton) :\n{_exemple()}\n\n"
+           f"Passage à adapter{' (pages ' + pages + ')' if pages else ''} :\n{texte}\n\nConsignes supplémentaires : {consignes or 'aucune'}")
+    e = extraire_json(appeler(regles_ia(ep), msg, tache="ecrire"))
+    e["id"] = e.get("id") or ep
+    e.setdefault("title", titre)
+    _sauver(ep, e)
+    return e
+
+
+def ameliorer_prompts(ep, consignes=""):
+    """Réécrit les prompts image d'un épisode (même structure, mêmes clés)."""
+    e = json.load(open(chemin("episodes", ep + ".json"), encoding="utf-8"))
+    msg = (f"Réécris uniquement les champs \"p\" (et \"vid_prompt\" s'il y en a) de cet épisode pour qu'ils respectent "
+           f"parfaitement la direction artistique. Ne change ni les clés ni la narration.\nConsignes : {consignes or 'aucune'}\n\n"
+           f"Bible :\n{_bible()[:15000]}\n\n" + json.dumps(e, ensure_ascii=False, indent=1))
+    e2 = extraire_json(appeler(regles_ia(ep), msg, tache="prompts"))
+    _sauver(ep, e2)
+    return e2
+
+
+def verifier_images(ep):
+    """Fait relire chaque image par le modèle (vision). Rapport dans Flow/<ep>/verification.txt."""
+    from moteur import trouver_media
+    pj = projet()
+    e = json.load(open(chemin("episodes", ep + ".json"), encoding="utf-8"))
+    lignes = []
+    for s in e["shots"]:
+        if s.get("card"):
+            continue
+        src, video = trouver_media(ep, s, None, telecharger=False)
+        if not src or video or str(src).startswith("http"):
+            lignes.append(f"{s.get('k')} : {'vidéo' if video else 'absente'}"); continue
+        p, _ = remplacer_tags(s.get("p", ""), pj)
+        rep = appeler("Tu es directeur artistique. Réponds en une ligne en français : « OK » ou « À REFAIRE : raison ».",
+                      f"Narration : {s.get('vo')}\nPrompt demandé : {p}\nStyle de la série : {pj.get('style_image')}\n"
+                      f"L'image correspond-elle à la scène et à la direction artistique (pas de texte parasite, "
+                      f"pas de visage déformé) ?", images=[src], max_tokens=300, tache="verifier")
+        lignes.append(f"{s.get('k')} : {rep.strip()}")
+        print(lignes[-1], file=sys.stderr, flush=True)
+    out = chemin("Flow", ep, "verification.txt")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    open(out, "w", encoding="utf-8-sig").write("\r\n".join(lignes))
+    return out
+
+
+def _sauver(ep, e):
+    d = chemin("episodes")
+    os.makedirs(os.path.join(d, "anciennes"), exist_ok=True)
+    p = os.path.join(d, ep + ".json")
+    if os.path.exists(p):
+        n = 1
+        while os.path.exists(os.path.join(d, "anciennes", f"{ep}_{n}.json")):
+            n += 1
+        shutil.copy(p, os.path.join(d, "anciennes", f"{ep}_{n}.json"))
+    json.dump(e, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

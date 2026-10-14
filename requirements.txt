@@ -1,0 +1,6 @@
+edge-tts
+pypdf
+anthropic
+openai
+mcp
+keyring

@@ -1,0 +1,11 @@
+__pycache__/
+reglages.json
+poste.json
+.cles.json
+config.json
+config.ancien.json
+musique/
+polices/
+travail/
+cache/
+*.log

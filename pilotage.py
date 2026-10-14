@@ -1,0 +1,548 @@
+#!/usr/bin/env python3
+"""MKS Movie Producer — interface web de pilotage (locale).
+
+Lancement : double-clic sur PILOTAGE.bat  ->  http://localhost:8765
+Le serveur n'écoute que sur 127.0.0.1 : rien n'est accessible depuis le réseau.
+Le projet affiché est le « projet actif » (menu Projets) ; tout son état est recalculé à partir de ses fichiers.
+"""
+import json, mimetypes, os, re, string, subprocess, sys, threading, time, urllib.parse, uuid, webbrowser
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+
+ICI = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ICI)
+import contexte as cx
+
+PORT = int(os.environ.get("ATELIER_PORT", "8765"))
+EP_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
+IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG")
+VID_EXT = (".mp4", ".mov", ".webm")
+DOSSIERS_ECRITURE = ("sources/", "Characters/", "musique/", "Flow/", "bible/")
+JOBS = {}
+ETAPES = ["À écrire", "Script écrit", "Fiche prête", "Images en cours", "Prêt à monter", "Monté", "Validé"]
+
+
+# ---------------------------------------------------------------- épisodes
+def chemin_ep(ep):
+    if not EP_RE.match(ep):
+        raise ValueError("nom d'épisode invalide")
+    return cx.chemin("episodes", ep + ".json")
+
+
+def media_local(ep, k):
+    d = cx.chemin("Flow", ep)
+    for ext in VID_EXT:
+        if os.path.exists(os.path.join(d, k + ext)):
+            return k + ext, "video"
+    for ext in IMG_EXT:
+        if os.path.exists(os.path.join(d, k + ext)):
+            return k + ext, "image"
+    return None, None
+
+
+def fichiers_rendus():
+    d = cx.chemin("Rendus")
+    return sorted(f for f in os.listdir(d) if f.lower().endswith(".mp4")) if os.path.isdir(d) else []
+
+
+def etat_episode(ep, rendus=None):
+    e = json.load(open(chemin_ep(ep), encoding="utf-8"))
+    plans = [s for s in e["shots"] if not s.get("card")]
+    ok = vid = 0
+    for s in plans:
+        f, t = media_local(ep, s.get("k", ""))
+        if f or s.get("img_url") or s.get("vid_url"):
+            ok += 1
+        if t == "video" or (not f and s.get("vid_url")):
+            vid += 1
+    mots = sum(len(s.get("vo", "").split()) for s in plans)
+    rendus = [f for f in (rendus if rendus is not None else fichiers_rendus())
+              if f.startswith(e["id"] + "_") or f.startswith(ep + "_")]
+    return {"ep": ep, "id": e["id"], "title": e.get("title", ""), "plans": len(plans), "medias": ok,
+            "videos": vid, "videos_prevues": sum(1 for s in plans if s.get("vid_prompt") or s.get("vid_url")),
+            "mots": mots, "minutes": round(mots / 115, 1), "rendus": rendus}
+
+
+def liste_episodes():
+    d = cx.chemin("episodes")
+    out, rendus = [], fichiers_rendus()
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if f.endswith(".json"):
+            try:
+                out.append(etat_episode(f[:-5], rendus))
+            except Exception as ex:
+                out.append({"ep": f[:-5], "erreur": str(ex)})
+    return out
+
+
+def lire_episode(ep):
+    e = json.load(open(chemin_ep(ep), encoding="utf-8"))
+    for s in e["shots"]:
+        if s.get("card"):
+            continue
+        f, t = media_local(ep, s.get("k", ""))
+        if f:
+            s["_media"] = f"/flow/{ep}/{urllib.parse.quote(f)}"; s["_type"] = t
+        elif s.get("vid_url"):
+            s["_media"] = s["vid_url"]; s["_type"] = "video"
+        elif s.get("img_url"):
+            s["_media"] = s["img_url"]; s["_type"] = "image"
+    return e
+
+
+def sauver_episode(ep, e):
+    from ia import _sauver
+    for s in e.get("shots", []):
+        for k in [k for k in s if k.startswith("_")]:
+            s.pop(k)
+    _sauver(ep, e)
+
+
+# ---------------------------------------------------------------- suivi, plan, assistant
+def suivi():
+    try:
+        return json.load(open(cx.chemin("suivi.json"), encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def plan_brut():
+    try:
+        return json.load(open(cx.chemin("bible", "plan.json"), encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def etape_episode(code, pl=None, rendus=None, sv=None):
+    pl = pl or {}
+    if not os.path.exists(cx.chemin("episodes", code + ".json")):
+        pages = f" (livre p. {pl['pages']})" if pl.get("pages") else ""
+        return {"n": 0, "etape": ETAPES[0], "suite": f"Écrire le script{pages} : onglet Nouvel épisode, ou demande-le à Claude.",
+                "action": {"type": "nouveau", "ep": code}}
+    info = etat_episode(code, rendus)
+    fiche = os.path.exists(cx.chemin("Prompts_Flow", f"{code}_fiche_Flow.txt"))
+    valide = (sv if sv is not None else suivi()).get(code, {}).get("valide")
+    if info["medias"] < info["plans"]:
+        if not fiche:
+            return {"n": 1, "etape": ETAPES[1], "suite": "Relire le script dans l'éditeur, puis générer la fiche de prompts.",
+                    "action": {"type": "fiche", "ep": code}}
+        n = 2 if info["medias"] == 0 else 3
+        return {"n": n, "etape": f"{ETAPES[n]} ({info['medias']}/{info['plans']})",
+                "suite": f"Générer les {info['plans'] - info['medias']} images manquantes avec la fiche et les ranger dans Flow\\{code}\\. "
+                         f"Plans vidéo prévus : {info['videos_prevues']}.", "action": {"type": "fiche", "ep": code}}
+    if not info["rendus"]:
+        return {"n": 4, "etape": ETAPES[4], "suite": "Toutes les images sont là : lancer le montage.",
+                "action": {"type": "monter", "ep": code}}
+    if not valide:
+        return {"n": 5, "etape": ETAPES[5], "suite": f"Regarder {info['rendus'][-1]} et le valider (ou corriger les plans puis remonter).",
+                "action": {"type": "valider", "ep": code}}
+    return {"n": 6, "etape": ETAPES[6], "suite": "Épisode terminé.", "action": None}
+
+
+def plan_complet():
+    plan, rendus, sv = plan_brut(), fichiers_rendus(), suivi()
+    for p in plan:
+        try:
+            p.update(etape_episode(p["code"], p, rendus, sv))
+        except Exception as ex:
+            p.update({"n": 0, "etape": "erreur", "suite": str(ex), "action": None})
+    return plan
+
+
+def sources():
+    d = cx.chemin("sources")
+    out = []
+    if os.path.isdir(d):
+        for f in sorted(os.listdir(d)):
+            p = os.path.join(d, f)
+            if os.path.isfile(p):
+                out.append({"nom": f, "mo": round(os.path.getsize(p) / 1e6, 2)})
+    pj = cx.projet()
+    if pj.get("livre") and os.path.exists(cx.chemin(pj["livre"])) and not pj["livre"].startswith("sources"):
+        out.insert(0, {"nom": pj["livre"], "mo": round(os.path.getsize(cx.chemin(pj["livre"])) / 1e6, 2), "livre": True})
+    return out
+
+
+def verifications():
+    import shutil
+    pj, r = cx.projet(), cx.reglages()
+    from cles import etat_cles
+    cles = etat_cles(r)
+    musiques = [m for m in pj.get("musiques", []) if any(os.path.exists(os.path.join(d, m + ".mp3"))
+                                                          for d in (os.path.join(ICI, "musique"), cx.chemin("musique")))]
+    try:
+        import edge_tts  # noqa
+        edge = True
+    except Exception:
+        edge = False
+    v = [
+        {"ok": bool(shutil.which("ffmpeg")), "titre": "ffmpeg installé", "aide": "Lancer INSTALLER.bat puis relancer PILOTAGE.bat"},
+        {"ok": edge, "titre": "Voix Edge (module edge-tts)", "aide": "Lancer INSTALLER.bat"},
+        {"ok": len(musiques) == len(pj.get("musiques", [])), "titre": f"Musiques ({len(musiques)}/{len(pj.get('musiques', []))})", "aide": "Lancer INSTALLER.bat"},
+        {"ok": os.path.exists(os.path.join(ICI, "polices", "Cinzel.ttf")), "titre": "Police des titres", "aide": "Lancer INSTALLER.bat"},
+        {"ok": bool(sources()), "titre": "Sources du projet (livre, scripts…)", "aide": "Projets > Sources : ajouter les documents"},
+    ]
+    for p in pj.get("personnages", []):
+        if p.get("reference"):
+            v.append({"ok": os.path.exists(cx.chemin(p["reference"])), "titre": f"Référence : {p['nom']}",
+                      "aide": f"Déposer l'image dans {p['reference']}"})
+    v.append({"ok": all(cles.get(r["ia"]["par_tache"][t]) for t in r["ia"]["par_tache"]),
+              "titre": "Clés IA pour les étapes IA (facultatif)", "aide": "Réglages > Modèles IA"})
+    return v
+
+
+def assistant():
+    plan = plan_complet()
+    verifs = verifications()
+    courant = next((p for p in plan if p["n"] < 6), None)
+    a_preparer = not plan or (all(not p.get("resume") for p in plan) and not any(p["n"] > 0 for p in plan))
+    if a_preparer:
+        pj = cx.projet()
+        a_sources = bool(sources())
+        courant = {"code": "—", "num": "", "titre": "Préparer le projet", "n": 0,
+                   "etape": "Bible et plan à créer" if a_sources else "Sources à ajouter",
+                   "suite": ("Générer la bible et le plan des épisodes à partir des sources (IA), ou les écrire dans l'onglet Bible."
+                             if a_sources else f"Ajouter le livre, le script ou les documents de « {pj['nom']} » dans Projets > Sources."),
+                   "action": {"type": "bible"} if a_sources else {"type": "projet"}}
+    par_saison = {}
+    for p in plan:
+        d = par_saison.setdefault(p["saison"], {"saison": p["saison"], "titre": p.get("titre_saison", ""), "faits": 0, "total": 0})
+        d["total"] += 1; d["faits"] += p["n"] == 6
+    return {"courant": courant, "suivants": [] if a_preparer else [p for p in plan if p["n"] < 6][:4], "verifications": verifs,
+            "saisons": list(par_saison.values()), "valides": sum(p["n"] == 6 for p in plan), "total": len(plan)}
+
+
+# ---------------------------------------------------------------- projets
+def infos_projet():
+    pj, ps = cx.projet(), cx.poste()
+    projets = [dict(x, existe=os.path.isdir(x["chemin"])) for x in ps.get("projets", [])]
+    return {"projet": pj, "racine": cx.racine(), "projets": projets, "logiciel": cx.NOM_LOGICIEL, "app": ICI,
+            "est_projet": cx.est_projet(cx.racine())}
+
+
+def creer_projet(d):
+    from logo import logo_pour
+    parent = d.get("parent", "").strip()
+    if not parent or not os.path.isdir(parent):
+        raise ValueError("Dossier parent introuvable")
+    rac = os.path.join(parent, d.get("dossier") or d["nom"])
+    if os.path.exists(rac) and os.listdir(rac) and not d.get("dans_existant"):
+        raise ValueError(f"Le dossier {rac} existe déjà et n'est pas vide")
+    for sous in ("sources", "bible", "episodes", "Characters", "Flow", "Prompts_Flow", "Rendus"):
+        os.makedirs(os.path.join(rac, sous), exist_ok=True)
+    pj = dict(cx.DEFAUT_PROJET)
+    for k in ("nom", "sous_titre", "type", "style_image", "regles_ia", "couleur", "langue"):
+        if d.get(k):
+            pj[k] = d[k]
+    for k in ("saisons", "episodes_par_saison", "duree_min"):
+        if d.get(k):
+            pj[k] = int(d[k])
+    if d.get("voix"):
+        pj["voix"] = dict(pj["voix"], nom=d["voix"])
+    if d.get("narrateur"):
+        pj["personnages"] = [{"tag": "NARRATEUR", "nom": d["narrateur"], "description": d.get("narrateur_desc", d["narrateur"]),
+                              "reference": "Characters/narrateur_reference.png"}]
+    cx.sauver_projet(pj, rac)
+    open(os.path.join(rac, "logo.svg"), "w", encoding="utf-8").write(logo_pour(pj["nom"], pj.get("couleur", "#d8b46a")))
+    S, E = pj["saisons"], pj["episodes_par_saison"]
+    if not os.path.exists(os.path.join(rac, "bible", "bible.md")):
+        open(os.path.join(rac, "bible", "bible.md"), "w", encoding="utf-8").write(
+            f"# {pj['nom']} — Bible\n\n{pj.get('sous_titre', '')}\n\n## Concept\n\n(à écrire, ou : Assistant > Générer la bible avec l'IA)\n")
+    if not os.path.exists(os.path.join(rac, "bible", "plan.json")):
+        plan = [{"code": f"E{s}{e:02d}", "saison": s, "titre_saison": f"Saison {s}", "num": f"{s}.{e}",
+                 "titre": f"Épisode {s}.{e}", "resume": "", "pages": ""} for s in range(1, S + 1) for e in range(1, E + 1)]
+        json.dump(plan, open(os.path.join(rac, "bible", "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    cx.definir_projet_actif(rac)
+    return rac
+
+
+def parcourir(c):
+    if not c:
+        if os.name == "nt":
+            lecteurs = [f"{l}:\\" for l in string.ascii_uppercase if os.path.exists(f"{l}:\\")]
+            return {"chemin": "", "dossiers": lecteurs + [os.path.expanduser("~")], "parent": ""}
+        c = os.path.expanduser("~")
+    c = os.path.abspath(c)
+    try:
+        ds = sorted(x for x in os.listdir(c) if os.path.isdir(os.path.join(c, x)) and not x.startswith((".", "$")))
+    except Exception:
+        ds = []
+    parent = os.path.dirname(c) if os.path.dirname(c) != c else ""
+    return {"chemin": c, "dossiers": [os.path.join(c, x) for x in ds], "parent": parent, "est_projet": cx.est_projet(c)}
+
+
+# ---------------------------------------------------------------- tâches de fond
+def lancer(cmd, args):
+    jid = uuid.uuid4().hex[:8]
+    job = {"id": jid, "cmd": cmd, "args": args, "etat": "en cours", "log": "", "debut": time.time(), "projet": cx.racine()}
+    JOBS[jid] = job
+
+    def tourner():
+        env = dict(os.environ, PYTHONIOENCODING="utf-8", STUDIO_PROJET=job["projet"])
+        p = subprocess.Popen([sys.executable, os.path.join(ICI, "atelier.py"), cmd] + args, cwd=ICI,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                             errors="replace", env=env)
+        for ligne in p.stdout:
+            job["log"] += ligne
+        p.wait()
+        job["etat"] = "terminé" if p.returncode == 0 and "!! Erreur" not in job["log"] else "erreur"
+        job["fin"] = time.time()
+
+    threading.Thread(target=tourner, daemon=True).start()
+    return job
+
+
+# ---------------------------------------------------------------- serveur HTTP
+class H(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def envoyer(self, code, corps, ctype="application/json; charset=utf-8"):
+        if isinstance(corps, (dict, list)):
+            corps = json.dumps(corps, ensure_ascii=False)
+        if isinstance(corps, str):
+            corps = corps.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(corps)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(corps)
+
+    def fichier(self, chemin, base):
+        chemin = os.path.realpath(chemin)
+        if not chemin.startswith(os.path.realpath(base) + os.sep) or not os.path.isfile(chemin):
+            return self.envoyer(404, {"erreur": "introuvable"})
+        taille = os.path.getsize(chemin)
+        ctype = mimetypes.guess_type(chemin)[0] or "application/octet-stream"
+        if chemin.endswith(".svg"):
+            ctype = "image/svg+xml"
+        debut, fin = 0, taille - 1
+        plage = self.headers.get("Range")
+        if plage:
+            m = re.match(r"bytes=(\d*)-(\d*)", plage)
+            if m:
+                debut = int(m.group(1) or 0)
+                fin = int(m.group(2)) if m.group(2) else taille - 1
+            self.send_response(206)
+            self.send_header("Content-Range", f"bytes {debut}-{fin}/{taille}")
+        else:
+            self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(fin - debut + 1))
+        self.end_headers()
+        with open(chemin, "rb") as f:
+            f.seek(debut)
+            reste = fin - debut + 1
+            while reste > 0:
+                bloc = f.read(min(1 << 20, reste))
+                if not bloc:
+                    break
+                try:
+                    self.wfile.write(bloc)
+                except (BrokenPipeError, ConnectionResetError):
+                    return
+                reste -= len(bloc)
+
+    def corps(self):
+        n = int(self.headers.get("Content-Length", 0))
+        return json.loads(self.rfile.read(n).decode("utf-8")) if n else {}
+
+    def do_GET(self):
+        u = urllib.parse.urlparse(self.path)
+        p = urllib.parse.unquote(u.path)
+        q = urllib.parse.parse_qs(u.query)
+        try:
+            if p in ("/", "/index.html"):
+                return self.envoyer(200, open(os.path.join(ICI, "web", "index.html"), encoding="utf-8").read(),
+                                    "text/html; charset=utf-8")
+            if p == "/api/projet":
+                return self.envoyer(200, infos_projet())
+            if p == "/api/logo":
+                pj = cx.projet()
+                f = cx.chemin(pj.get("logo") or "logo.svg")
+                if not os.path.exists(f):
+                    from logo import logo_pour
+                    return self.envoyer(200, logo_pour(pj["nom"], pj.get("couleur", "#d8b46a")), "image/svg+xml")
+                return self.fichier(f, cx.racine())
+            if p == "/api/episodes":
+                return self.envoyer(200, liste_episodes())
+            if p.startswith("/api/episode/"):
+                return self.envoyer(200, lire_episode(p.split("/")[-1]))
+            if p == "/api/reglages":
+                from cles import TACHES
+                r = cx.reglages(); r["_taches"] = TACHES
+                return self.envoyer(200, r)
+            if p == "/api/cles":
+                from cles import etat_cles
+                return self.envoyer(200, etat_cles(cx.reglages()))
+            if p == "/api/bible":
+                try:
+                    t = open(cx.chemin("bible", "bible.md"), encoding="utf-8").read()
+                except Exception:
+                    t = ""
+                return self.envoyer(200, {"texte": t})
+            if p == "/api/plan":
+                return self.envoyer(200, plan_complet())
+            if p == "/api/assistant":
+                return self.envoyer(200, assistant())
+            if p == "/api/sources":
+                return self.envoyer(200, sources())
+            if p == "/api/parcourir":
+                return self.envoyer(200, parcourir(q.get("chemin", [""])[0]))
+            if p == "/api/rendus":
+                eps = {e["ep"]: e for e in liste_episodes() if "erreur" not in e}
+                out = []
+                for f in fichiers_rendus():
+                    ep = next((k for k, e in eps.items() if f.startswith(e["id"] + "_") or f.startswith(k + "_")), None)
+                    st = os.stat(cx.chemin("Rendus", f))
+                    out.append({"f": f, "ep": ep, "id": eps[ep]["id"] if ep else "", "titre": eps[ep]["title"] if ep else "",
+                                "mo": round(st.st_size / 1e6, 1), "date": time.strftime("%d/%m %H:%M", time.localtime(st.st_mtime))})
+                return self.envoyer(200, out)
+            if p == "/api/jobs":
+                return self.envoyer(200, sorted(JOBS.values(), key=lambda j: -j["debut"])[:20])
+            if p.startswith("/api/job/"):
+                return self.envoyer(200, JOBS.get(p.split("/")[-1], {"erreur": "inconnu"}))
+            if p.startswith("/api/fiche/"):
+                from fiche import fiche_flow
+                chemin = fiche_flow(p.split("/")[-1])
+                return self.envoyer(200, {"chemin": chemin, "texte": open(chemin, encoding="utf-8-sig").read()})
+            if p == "/api/livre":
+                from ia import lire_livre, nb_pages_livre
+                if "pages" in q:
+                    return self.envoyer(200, {"texte": lire_livre(q["pages"][0])})
+                return self.envoyer(200, {"pages": nb_pages_livre()})
+            if p.startswith("/flow/"):
+                return self.fichier(cx.chemin("Flow", *p.split("/")[2:]), cx.chemin("Flow"))
+            if p.startswith("/rendus/"):
+                return self.fichier(cx.chemin("Rendus", p.split("/", 2)[2]), cx.chemin("Rendus"))
+            if p.startswith("/projet/"):
+                return self.fichier(cx.chemin(*p.split("/")[2:]), cx.racine())
+            return self.envoyer(404, {"erreur": "introuvable"})
+        except Exception as ex:
+            return self.envoyer(500, {"erreur": str(ex)})
+
+    def do_PUT(self):
+        u = urllib.parse.urlparse(self.path)
+        p = urllib.parse.unquote(u.path)
+        try:
+            if p.startswith("/api/episode/"):
+                sauver_episode(p.split("/")[-1], self.corps())
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/projet":
+                pj = self.corps()
+                cx.sauver_projet(pj)
+                cx.definir_projet_actif(cx.racine())
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/reglages":
+                r = self.corps(); r.pop("_taches", None)
+                cx.sauver_reglages(r)
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/bible":
+                os.makedirs(cx.chemin("bible"), exist_ok=True)
+                open(cx.chemin("bible", "bible.md"), "w", encoding="utf-8").write(self.corps()["texte"])
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/fichier":
+                dest = urllib.parse.parse_qs(u.query)["dest"][0].replace("\\", "/").lstrip("/")
+                if ".." in dest or not (dest.startswith(DOSSIERS_ECRITURE) or re.match(r"^logo\.(svg|png|jpg|jpeg|webp)$", dest)):
+                    return self.envoyer(400, {"erreur": "destination non autorisée"})
+                cible = cx.chemin(*dest.split("/"))
+                os.makedirs(os.path.dirname(cible), exist_ok=True)
+                n = int(self.headers.get("Content-Length", 0))
+                with open(cible, "wb") as f:
+                    while n > 0:
+                        bloc = self.rfile.read(min(1 << 20, n))
+                        if not bloc:
+                            break
+                        f.write(bloc); n -= len(bloc)
+                if dest.startswith("logo."):
+                    pj = cx.projet(); pj["logo"] = dest; cx.sauver_projet(pj)
+                return self.envoyer(200, {"ok": True, "chemin": cible})
+            return self.envoyer(404, {"erreur": "introuvable"})
+        except Exception as ex:
+            return self.envoyer(500, {"erreur": str(ex)})
+
+    def do_POST(self):
+        p = urllib.parse.urlparse(self.path).path
+        try:
+            c = self.corps()
+            if p == "/api/action":
+                if c.get("cmd") not in ("monter", "etat", "fiche", "ecrire", "prompts", "verifier", "bible", "exporter"):
+                    return self.envoyer(400, {"erreur": "commande inconnue"})
+                args = [str(a) for a in c.get("args", [])]
+                if c["cmd"] not in ("bible", "exporter") and args and not EP_RE.match(args[0]):
+                    return self.envoyer(400, {"erreur": "épisode invalide"})
+                return self.envoyer(200, lancer(c["cmd"], args))
+            if p == "/api/projet/ouvrir":
+                rac = os.path.abspath(c["chemin"].strip().strip('"'))
+                if not os.path.isdir(rac):
+                    return self.envoyer(400, {"erreur": "Dossier introuvable"})
+                if not cx.est_projet(rac):
+                    if not c.get("initialiser"):
+                        return self.envoyer(200, {"ok": False, "a_initialiser": True, "chemin": rac})
+                    pj = dict(cx.DEFAUT_PROJET, nom=os.path.basename(rac))
+                    cx.sauver_projet(pj, rac)
+                cx.definir_projet_actif(rac)
+                return self.envoyer(200, {"ok": True, "chemin": rac})
+            if p == "/api/projet/nouveau":
+                return self.envoyer(200, {"ok": True, "chemin": creer_projet(c)})
+            if p == "/api/projet/oublier":
+                d = cx.poste()
+                d["projets"] = [x for x in d.get("projets", []) if x["chemin"] != c["chemin"]]
+                cx.sauver_poste(d)
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/projet/logo":
+                from logo import logo_pour, logo_generique
+                pj = cx.projet()
+                svg = logo_generique(pj["nom"], pj.get("couleur", "#d8b46a")) if c.get("generique") else logo_pour(pj["nom"], pj.get("couleur", "#d8b46a"))
+                open(cx.chemin("logo.svg"), "w", encoding="utf-8").write(svg)
+                pj["logo"] = "logo.svg"; cx.sauver_projet(pj)
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/cle":
+                from cles import ecrire_cle, profil, compte
+                pr = profil(cx.reglages(), pid=c["profil"])
+                ou = ecrire_cle(pr["id"], c.get("cle", "").strip())
+                if c.get("partager"):
+                    ecrire_cle(compte(pr), c.get("cle", "").strip())
+                return self.envoyer(200, {"ok": True, "ou": ou})
+            if p == "/api/test_ia":
+                import ia
+                t0 = time.time()
+                rep = ia.appeler("Réponds en un seul mot.", "Dis simplement : OK", max_tokens=20, pid=c["profil"])
+                return self.envoyer(200, {"ok": True, "reponse": rep.strip()[:80], "secondes": round(time.time() - t0, 1)})
+            if p == "/api/valider":
+                d = suivi()
+                d.setdefault(c["ep"], {})["valide"] = bool(c.get("valide", True))
+                d[c["ep"]]["date"] = time.strftime("%Y-%m-%d %H:%M")
+                json.dump(d, open(cx.chemin("suivi.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/ouvrir":
+                cible = {"rendus": "Rendus", "flow": "Flow", "fiches": "Prompts_Flow", "sources": "sources",
+                         "projet": "", "exports": "_exports"}.get(c.get("dossier", ""))
+                if cible is not None:
+                    d = cx.chemin(cible) if cible else cx.racine()
+                    os.makedirs(d, exist_ok=True)
+                    if sys.platform == "win32":
+                        os.startfile(d)
+                    elif sys.platform == "darwin":
+                        subprocess.Popen(["open", d])
+                    else:
+                        subprocess.Popen(["xdg-open", d])
+                return self.envoyer(200, {"ok": cible is not None})
+            return self.envoyer(404, {"erreur": "introuvable"})
+        except Exception as ex:
+            return self.envoyer(500, {"erreur": str(ex)})
+
+
+if __name__ == "__main__":
+    fait = cx.migrer()
+    if fait:
+        print("Migration vers le format projet :", ", ".join(fait))
+    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
+    url = f"http://localhost:{PORT}"
+    print(f"{cx.NOM_LOGICIEL} — projet « {cx.projet()['nom']} » ({cx.racine()})")
+    print(f"Interface : {url}  (laisser cette fenêtre ouverte, Ctrl+C pour arrêter)")
+    if "--sans-navigateur" not in sys.argv:
+        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    srv.serve_forever()

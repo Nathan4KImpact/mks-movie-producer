@@ -1,0 +1,37 @@
+﻿MKS MOVIE PRODUCER — MODE D'EMPLOI
+=================================================================
+
+1. INSTALLATION (une fois par poste)
+   Double-clic sur INSTALLER.bat (Python, ffmpeg, voix, musiques, police).
+   Si on te demande de relancer, relance.
+
+2. LANCEMENT
+   Double-clic sur PILOTAGE.bat : l'interface s'ouvre dans le navigateur
+   (http://localhost:8765, uniquement sur ce PC). Laisser la fenêtre noire ouverte.
+
+3. L'INTERFACE
+   - Assistant   : étape actuelle du plan de production et prochaine étape
+   - Production  : état de chaque épisode ; éditeur plan par plan
+   - Plan        : tous les épisodes par saison, avec leur étape
+   - Bible       : la bible de la série (modifiable, ou générée par l'IA)
+   - Rendus      : regarder et valider les épisodes montés
+   - Nouvel épisode : l'IA écrit un épisode depuis les sources
+   - Projet      : nom, logo, paramètres, personnages, sources, projets du poste,
+                   export zip, ouverture d'un autre dossier, nouveau projet
+   - Réglages    : modèles IA et clés API de ce poste
+
+4. LOGICIEL ET PROJETS
+   Le logiciel (ce dossier) est séparé des projets. Un projet = un dossier
+   (projet.json, sources, bible, episodes, Flow, Rendus…).
+   Changer de poste : copier le dossier du projet (ou Projet > Exporter),
+   installer le logiciel, puis Projet > Ouvrir un dossier existant :
+   l'avancement est recalculé à partir des fichiers.
+
+5. CLAUDE (MCP)
+   Claude Desktop : Paramètres > Développeur > Modifier la config :
+   { "mcpServers": { "mks-movie-producer": { "command": "py",
+       "args": ["-3", "<chemin du logiciel>\\mcp_server.py"] } } }
+   Claude Code : claude mcp add mks-movie-producer -- py -3 "<chemin>\mcp_server.py"
+
+CRÉDITS : musique Kevin MacLeod (incompetech.com, CC BY 4.0) ;
+voix Microsoft Edge TTS ; police Cinzel (SIL OFL).
