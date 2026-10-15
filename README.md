@@ -6,6 +6,12 @@ montage automatique (voix off, musique par scène, titres, mouvements de caméra
 
 Premier projet réalisé avec : **L'Ultime Assaut** (7 saisons × 7 épisodes).
 
+## Documentation
+- [Manuel d'installation](docs/MANUEL_INSTALLATION.md) ([PDF](docs/MANUEL_INSTALLATION.pdf))
+- [Manuel d'utilisation](docs/MANUEL_UTILISATION.md) ([PDF](docs/MANUEL_UTILISATION.pdf))
+
+Les deux manuels sont aussi consultables dans l'application, menu **Aide**.
+
 ## Installation
 
 ### Windows

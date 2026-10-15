@@ -1,0 +1,297 @@
+# MKS Movie Producer — Manuel d'installation
+
+Version 1.0 · octobre 2026
+
+Ce manuel explique comment installer MKS Movie Producer sur un poste, vérifier que tout fonctionne, brancher les modèles d'IA et transférer un projet d'un ordinateur à un autre. L'utilisation au quotidien est décrite dans le **Manuel d'utilisation**.
+
+## 1. Ce que contient le livrable
+
+MKS Movie Producer est une application locale : elle tourne sur votre ordinateur et s'utilise dans le navigateur, à l'adresse `http://localhost:8765`. Rien n'est hébergé sur Internet ; seules la voix off (Microsoft Edge TTS) et les étapes d'IA, si vous les utilisez, passent par le réseau.
+
+| Fichier ou dossier | Rôle |
+|---|---|
+| `INSTALLER.bat` | Installation complète sous Windows (à lancer une fois par poste) |
+| `PILOTAGE.bat` | Lance l'application et ouvre l'interface dans le navigateur |
+| `ATELIER.bat` | Menu en mode texte (sans navigateur), pour dépanner |
+| `install.ps1` | Script appelé par `INSTALLER.bat` |
+| `install.sh` | Installation sous macOS ou Linux |
+| `pilotage.py` | Serveur local et interface web |
+| `atelier.py` | Ligne de commande : monter, fiche, écrire, exporter… |
+| `moteur.py` | Montage vidéo (ffmpeg), voix off, musique |
+| `ia.py`, `cles.py` | Appels aux modèles d'IA, gestion des clés |
+| `contexte.py` | Projet actif, réglages, migration |
+| `fiche.py`, `logo.py` | Fiches de prompts, logos générés |
+| `mcp_server.py` | Serveur MCP pour piloter le projet depuis Claude |
+| `web/index.html` | L'interface |
+| `docs/` | Ce manuel, le manuel d'utilisation et leurs captures |
+| `README.md`, `CLAUDE.md` | Présentation du dépôt ; notes pour Claude Code |
+| `LISEZ-MOI.txt` | Aide-mémoire d'une page |
+
+Les dossiers `musique/`, `polices/`, `travail/` et `cache/` sont créés par l'installation et le montage. Ils ne sont pas dans le paquet.
+
+> **Logiciel et projets sont séparés.** Le dossier du logiciel contient le code et les réglages de *ce poste*. Chaque œuvre (série, film) vit dans son propre **dossier de projet**, qui voyage d'un poste à l'autre. Voir la section 9.
+
+## 2. Configuration requise
+
+| Élément | Minimum conseillé |
+|---|---|
+| Système | Windows 10 ou 11 (64 bits) ; macOS 12+ ou Linux récent |
+| Processeur et mémoire | 4 cœurs, 8 Go de RAM (16 Go confortable pour les montages) |
+| Espace disque | 1 Go pour le logiciel ; compter 2 à 4 Go par saison de 7 épisodes (images, vidéos, rendus) |
+| Navigateur | Chrome, Edge ou Firefox récent |
+| Internet | Pendant l'installation ; pendant le montage (voix Edge) ; pour les étapes d'IA |
+| Droits | Compte Windows pouvant installer des logiciels (winget) |
+
+L'installation ajoute automatiquement, si besoin : **Python 3.12**, **ffmpeg**, les modules Python `edge-tts`, `pypdf`, `anthropic`, `openai`, `mcp` et `keyring`, la police **Cinzel** et les **14 musiques** de la bibliothèque.
+
+## 3. Installation sous Windows
+
+### 3.1 Décompresser
+
+1. Copiez `MKS-Movie-Producer_v1.0.zip` sur le poste.
+2. Clic droit › **Extraire tout…** vers un dossier de votre choix, par exemple `D:\Logiciels\`. Vous obtenez `D:\Logiciels\MKS-Movie-Producer\`.
+
+Deux dispositions sont possibles :
+
+| Disposition | Exemple | Quand la choisir |
+|---|---|---|
+| **Logiciel à part** (recommandé) | `D:\Logiciels\MKS-Movie-Producer\` et `D:\Projets\L'Ultime Assaut\` | Plusieurs projets sur le même poste |
+| **Logiciel dans le projet** | `D:\Projets\L'Ultime Assaut\atelier\` | Un seul projet ; tout est dans un seul dossier à copier |
+
+Dans la seconde disposition, au premier lancement, l'application prend automatiquement le dossier parent comme projet.
+
+### 3.2 Lancer l'installation
+
+1. Double-cliquez sur **`INSTALLER.bat`**. Une fenêtre bleue PowerShell s'ouvre.
+2. Si Python n'est pas installé, il est installé puis la fenêtre demande de **la fermer et de relancer `INSTALLER.bat`**. Faites-le : Windows ne voit Python qu'après réouverture.
+3. L'installation se poursuit : ffmpeg, modules Python, police, musiques. Comptez 2 à 5 minutes.
+4. Le message **« Installation terminée. Lance PILOTAGE.bat »** s'affiche. Appuyez sur Entrée.
+
+> Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur **Informations complémentaires › Exécuter quand même**. Les scripts sont lisibles en clair dans le dossier.
+
+### 3.3 Premier lancement
+
+1. Double-cliquez sur **`PILOTAGE.bat`**. Une fenêtre noire s'ouvre et affiche :
+   `Interface : http://localhost:8765 (laisser cette fenêtre ouverte, Ctrl+C pour arrêter)`
+2. Le navigateur s'ouvre sur l'interface. S'il ne s'ouvre pas, tapez `http://localhost:8765` dans la barre d'adresse.
+3. **Laissez la fenêtre noire ouverte** tant que vous travaillez : c'est le moteur de l'application. La fermer arrête l'interface.
+
+Pour quitter : fermez l'onglet, puis la fenêtre noire (ou Ctrl+C dans celle-ci).
+
+> Après une mise à jour du logiciel, appuyez sur **Ctrl+F5** dans le navigateur pour recharger l'interface sans cache.
+
+## 4. Installation sous macOS ou Linux
+
+1. Installez ffmpeg : `brew install ffmpeg` (macOS, avec Homebrew) ou `sudo apt install ffmpeg` (Debian, Ubuntu).
+2. Vérifiez que Python 3.10 ou plus récent est présent : `python3 --version`.
+3. Dans un terminal, placez-vous dans le dossier du logiciel puis lancez :
+
+```bash
+chmod +x install.sh
+./install.sh
+python3 pilotage.py
+```
+
+L'interface s'ouvre sur `http://localhost:8765`. Sur ces systèmes, les clés d'IA sont rangées dans le Trousseau (macOS) ou le Secret Service (Linux).
+
+## 5. Installation avec Claude Code (zip ou GitHub)
+
+Le paquet contient un fichier `CLAUDE.md` qui décrit l'architecture à Claude Code : il peut installer, lancer, dépanner ou faire évoluer l'application.
+
+### 5.1 Depuis le zip
+
+1. Décompressez le zip (section 3.1).
+2. Ouvrez un terminal dans le dossier `MKS-Movie-Producer`, lancez `claude`, puis demandez par exemple :
+   *« Installe MKS Movie Producer depuis ce dossier (lis CLAUDE.md), lance-le, puis ouvre le projet D:\Projets\L'Ultime Assaut. »*
+
+### 5.2 Publier sur GitHub (une fois)
+
+Le zip contient déjà l'historique git. Depuis le dossier décompressé, avec le GitHub CLI connecté (`gh auth login`) :
+
+```bash
+gh repo create mks-movie-producer --private --source . --push
+```
+
+Le dépôt est **privé** : seuls vous et les personnes invitées y ont accès. Le fichier `.gitignore` exclut déjà les réglages du poste, les clés, les musiques, la police et les fichiers de travail.
+
+### 5.3 Installer depuis GitHub sur un autre poste
+
+```bash
+git clone https://github.com/<votre-compte>/mks-movie-producer.git
+cd mks-movie-producer
+```
+
+Puis `INSTALLER.bat` (Windows) ou `./install.sh` (macOS, Linux), ou demandez à Claude Code de le faire.
+
+## 6. Vérifier l'installation
+
+Ouvrez l'onglet **Assistant**. Le cadre **Installation et outils** contrôle chaque élément :
+
+![Assistant : cadre Installation et outils à droite](images/01_assistant.jpg)
+
+| Ligne | Si elle est orange (●) |
+|---|---|
+| ffmpeg installé | Relancer `INSTALLER.bat`, puis fermer et rouvrir `PILOTAGE.bat` |
+| Voix Edge (module edge-tts) | Relancer `INSTALLER.bat` |
+| Musiques (14/14) | Relancer `INSTALLER.bat` (téléchargement interrompu) |
+| Police des titres | Relancer `INSTALLER.bat` |
+| Sources du projet | Ajouter le livre ou le script : Projet › Sources |
+| Référence : (personnage) | Déposer l'image du personnage : Projet › Personnages › Image |
+| Clés IA (facultatif) | Réglages › Modèles IA (section 7) |
+
+Quand toutes les lignes sont vertes (✔), le poste est prêt. Les clés d'IA restent facultatives : sans elles, tout fonctionne sauf les boutons marqués **IA**.
+
+## 7. Configurer les modèles d'IA et les clés
+
+Les étapes d'IA (écrire un épisode, réécrire les prompts, relire les images, générer la bible) passent par un modèle de votre choix.
+
+![Réglages du poste : modèles IA et clés](images/14_reglages.jpg)
+
+1. Ouvrez **Réglages**.
+2. Sur la ligne du modèle voulu (par exemple *Claude Sonnet*), collez la clé API dans **Clé API**, puis cliquez sur **OK**. L'état passe à « enregistrée ».
+3. Cliquez sur **Tester** : une fenêtre affiche la réponse du modèle et le temps de réponse.
+4. Dans **Quel modèle pour quelle étape**, choisissez le modèle de chaque tâche, puis **Enregistrer les réglages**.
+
+| Fournisseur | Où obtenir une clé | Remarque |
+|---|---|---|
+| Anthropic (Claude) | console.anthropic.com › API Keys | Profils Sonnet, Opus, Haiku fournis |
+| OpenRouter | openrouter.ai/keys | Accès à de nombreux modèles avec une seule clé |
+| OpenAI ou compatible | platform.openai.com | Choisir « Compatible OpenAI » et l'URL du service |
+| Ollama (local) | Aucune clé | Modèle installé sur le poste, URL `http://localhost:11434/v1` |
+
+- **+ Ajouter un modèle** crée un profil libre (Mistral, Gemini, etc.) : renseignez le fournisseur « Compatible OpenAI », l'URL et le nom exact du modèle.
+- La case **« une clé saisie vaut pour tous les modèles du même fournisseur »** évite de recoller la même clé Anthropic sur Sonnet, Opus et Haiku.
+
+> **Sécurité des clés.** Les clés sont rangées dans le **Gestionnaire d'identification Windows** (ou le trousseau du système), sous le nom de service `ultime-assaut-atelier`. Elles ne sont jamais écrites dans le projet, dans `reglages.json` ni dans un export zip. Si le trousseau est indisponible, un fichier `.cles.json` local au logiciel sert de repli ; il est exclu de git.
+
+## 8. Connecter Claude (MCP)
+
+Le serveur MCP permet à Claude (Desktop ou Code) de lire et piloter le projet actif : lister et écrire les épisodes, lire le livre et les sources, générer une fiche, lancer un montage, consulter l'état de la production et la bible.
+
+### Claude Desktop
+
+Paramètres › Développeur › **Modifier la configuration**, puis ajoutez (en adaptant le chemin) :
+
+```json
+{
+  "mcpServers": {
+    "mks-movie-producer": {
+      "command": "py",
+      "args": ["-3", "D:\\Logiciels\\MKS-Movie-Producer\\mcp_server.py"]
+    }
+  }
+}
+```
+
+Redémarrez Claude Desktop. Les outils apparaissent sous le nom `mks-movie-producer`.
+
+### Claude Code
+
+```bash
+claude mcp add mks-movie-producer -- py -3 "D:\Logiciels\MKS-Movie-Producer\mcp_server.py"
+```
+
+Sous macOS ou Linux, remplacez `py -3` par `python3`.
+
+| Outil MCP | Effet |
+|---|---|
+| `projet_actif`, `etat_production` | Projet ouvert, étape de chaque épisode |
+| `lire_bible`, `lire_sources`, `lire_livre` | Contexte de l'œuvre |
+| `lister_episodes`, `lire_episode`, `ecrire_episode` | Scripts des épisodes |
+| `etat_images`, `generer_fiche_flow` | Images manquantes, fiche de prompts |
+| `monter_episode` | Montage d'un épisode |
+
+## 9. Organisation des dossiers
+
+### Le dossier du logiciel (propre au poste)
+
+```
+MKS-Movie-Producer/
+  pilotage.py, atelier.py, moteur.py…   le code
+  web/index.html                         l'interface
+  docs/                                  les manuels
+  reglages.json      modèles IA choisis sur ce poste
+  poste.json         projets connus et projet actif
+  musique/           14 pistes (installées)
+  polices/           Cinzel.ttf (installée)
+  travail/, cache/   fichiers temporaires de montage
+```
+
+### Le dossier d'un projet (voyage d'un poste à l'autre)
+
+```
+L'Ultime Assaut/
+  projet.json       nom, sous-titre, structure, voix, style, personnages, règles IA
+  logo.svg          logo affiché dans la bannière
+  sources/          livre (PDF), scripts, notes, documents de référence
+  bible/            bible.md et plan.json (le plan des épisodes)
+  episodes/         scripts des épisodes : E101.json, E102.json…
+  Characters/       images de référence des personnages
+  Prompts_Flow/     fiches de prompts : E104_fiche_Flow.txt…
+  Flow/E104/        images et vidéos générées : E104-01.png, E104-07.mp4…
+  Rendus/           épisodes montés (.mp4)
+  suivi.json        épisodes validés
+  _exports/         zips d'export
+```
+
+**L'avancement est entièrement recalculé à partir de ces fichiers** : script présent, fiche présente, nombre d'images rangées, rendu présent, validation. Il n'y a pas de base de données à transférer.
+
+## 10. Transférer un projet sur un autre poste
+
+1. Sur le poste d'origine : **Projet › Exporter (zip, sans rendus)**. Le zip arrive dans `_exports\` du projet. Choisissez **Exporter avec rendus** pour emporter aussi les vidéos montées (fichier beaucoup plus gros). Vous pouvez aussi copier simplement le dossier du projet.
+2. Sur le nouveau poste : installez le logiciel (section 3), puis décompressez ou copiez le projet où vous voulez.
+3. Lancez `PILOTAGE.bat`, ouvrez **Projet › Ouvrir un dossier existant…**, naviguez jusqu'au dossier du projet (ou collez son chemin), puis **Choisir ce dossier**.
+4. L'Assistant se positionne aussitôt sur l'étape où vous en étiez.
+
+![Choisir le dossier du projet](images/13_ouvrir_dossier.jpg)
+
+Ce qui **ne voyage pas** avec le projet, et qu'il faut refaire sur chaque poste : les clés d'IA et le choix des modèles (Réglages), les musiques et la police (installées par `INSTALLER.bat`).
+
+## 11. Mettre à jour le logiciel
+
+- **Avec git** : dans le dossier du logiciel, `git pull`, puis relancez `PILOTAGE.bat` et faites Ctrl+F5 dans le navigateur.
+- **Avec un zip** : fermez la fenêtre `PILOTAGE`, remplacez les fichiers du logiciel par ceux du nouveau zip **sans supprimer** `reglages.json`, `poste.json`, `musique\`, `polices\` et `.cles.json` s'il existe. Relancez `PILOTAGE.bat`, puis Ctrl+F5.
+
+Les projets ne sont jamais modifiés par une mise à jour du logiciel.
+
+## 12. Migration depuis l'ancien atelier
+
+Les versions précédentes rangeaient les épisodes, la bible, le suivi et `config.json` *dans* le dossier `atelier`. Au premier lancement de MKS Movie Producer, la migration est automatique :
+
+- `episodes\`, `bible\` et `suivi.json` sont déplacés dans le dossier du projet (le parent de `atelier`) ;
+- `projet.json` est créé avec les réglages de la série (voix, style, personnage du Voyant, règles) ;
+- `reglages.json` reprend les profils d'IA ; `config.json` est renommé `config.ancien.json` ;
+- la fenêtre noire affiche « Migration vers le format projet : … ».
+
+Aucun fichier n'est perdu : en cas de doublon, la version déjà présente dans le projet est conservée.
+
+## 13. Désinstaller
+
+1. Fermez la fenêtre `PILOTAGE`.
+2. Supprimez le dossier du logiciel. Vos projets ne sont pas touchés.
+3. Facultatif : supprimez les clés dans **Panneau de configuration › Gestionnaire d'identification › Informations d'identification Windows**, entrées `ultime-assaut-atelier`.
+4. Facultatif : Python et ffmpeg se désinstallent depuis **Paramètres › Applications**.
+
+## 14. Dépannage
+
+| Symptôme | Cause probable | Solution |
+|---|---|---|
+| `INSTALLER.bat` s'arrête après Python | Python vient d'être installé | Fermer la fenêtre et relancer `INSTALLER.bat` |
+| « winget n'est pas reconnu » | App Installer absent (Windows ancien) | Installer « App Installer » depuis le Microsoft Store, ou Python et ffmpeg à la main |
+| La page ne s'ouvre pas | Fenêtre `PILOTAGE` fermée | Relancer `PILOTAGE.bat` |
+| « Address already in use » | Une autre fenêtre `PILOTAGE` tourne déjà | Fermer l'ancienne fenêtre ; ou changer de port : `set ATELIER_PORT=8766` avant `py -3 pilotage.py` |
+| Interface ancienne ou incomplète | Cache du navigateur | Ctrl+F5 |
+| ffmpeg reste orange après installation | La fenêtre a été ouverte avant l'installation | Fermer et rouvrir `PILOTAGE.bat` |
+| Montage : erreur de voix | Pas d'Internet (Edge TTS est en ligne) | Vérifier la connexion, relancer le montage (il reprend où il s'était arrêté) |
+| « Échec du test » dans Réglages | Clé, nom de modèle ou URL incorrects | Recoller la clé ; vérifier le nom exact du modèle |
+| Projet « introuvable » dans la liste | Dossier déplacé ou disque débranché | Projet › Ouvrir un dossier existant, puis retirer l'ancienne entrée (✕) |
+| Titres sans la police Cinzel | Police non téléchargée | Relancer `INSTALLER.bat` |
+
+En dernier recours, `ATELIER.bat` ouvre un menu texte qui permet de monter un épisode, de vérifier les images ou de générer une fiche sans passer par le navigateur.
+
+## 15. Licences et crédits
+
+- **Musiques** : Kevin MacLeod (incompetech.com), licence Creative Commons Attribution 4.0. Le crédit est obligatoire dans la description de chaque vidéo publiée : *Musique : Kevin MacLeod (incompetech.com), licence CC BY 4.0*.
+- **Voix** : Microsoft Edge TTS (service en ligne).
+- **Police** : Cinzel, SIL Open Font License.
+- **Outils** : Python, ffmpeg, pypdf, SDK Anthropic et OpenAI, MCP.

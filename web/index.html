@@ -16,9 +16,10 @@
 body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#2a1f14 0%,var(--bg) 60%) fixed;color:var(--text);font:14px/1.5 var(--sans)}
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,11,16,.92);backdrop-filter:blur(8px);z-index:10}
 header h1{font:700 19px var(--serif);letter-spacing:.08em;margin:0;color:var(--gold2);text-transform:uppercase;white-space:nowrap}
+.appli{font:600 9.5px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
 .marque{display:flex;gap:12px;align-items:center;cursor:pointer}.marque img{width:46px;height:46px;object-fit:contain}.marque .meta{font-size:11px;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
 nav{display:flex;gap:4px}
-nav button{background:none;border:0;color:var(--muted);font:500 14px var(--sans);padding:8px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+nav button{background:none;border:0;color:var(--muted);font:500 14px var(--sans);padding:8px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 nav button.on,nav button:hover{color:var(--text);background:var(--panel2)}
 .sp{flex:1}
 main{padding:24px;max-width:1500px;margin:0 auto}
@@ -79,6 +80,11 @@ video.player{width:100%;border-radius:10px;background:#000}
 .md h1{font:700 26px var(--serif);color:var(--gold2)} .md h2{font:700 20px var(--serif);color:var(--gold2);margin-top:32px;border-bottom:1px solid var(--line);padding-bottom:6px} .md h3{font:700 16px var(--serif);color:var(--gold);margin-top:22px}
 .md table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px} .md th,.md td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top} .md th{background:var(--panel2);color:var(--gold2)}
 .md code{background:#0f0d13;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px} .md pre{background:#0f0d13;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap}
+.md h2,.md h3{scroll-margin-top:170px}
+.md img{max-width:100%;border:1px solid var(--line);border-radius:8px;margin:8px 0;display:block}
+.md blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid var(--gold);background:var(--panel);border-radius:0 8px 8px 0;color:var(--text)}
+.md a{color:var(--gold2)} .md hr{border:0;border-top:1px solid var(--line);margin:24px 0} .md ol,.md ul{padding-left:22px}
+@media (max-width:900px){.md.aide{grid-column:1/-1}}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer;font:500 13px var(--sans)}
 .tabs button.on{color:#1b1408;background:var(--gold);border-color:var(--gold)}
@@ -96,7 +102,7 @@ video.player{width:100%;border-radius:10px;background:#000}
 <header>
   <div class="marque" onclick="go('projet')" title="Projet en cours — cliquer pour changer">
     <img id="logo" src="/api/logo" alt="">
-    <div><h1 id="nomProjet">…</h1><div id="sousProjet" class="meta"></div></div>
+    <div><div class="appli">MKS Movie Producer</div><h1 id="nomProjet">…</h1><div id="sousProjet" class="meta"></div></div>
   </div>
   <nav>
     <button data-v="assistant" class="on">Assistant</button>
@@ -107,9 +113,9 @@ video.player{width:100%;border-radius:10px;background:#000}
     <button data-v="nouveau">Nouvel épisode</button>
     <button data-v="projet">Projet</button>
     <button data-v="reglages">Réglages</button>
+    <button data-v="aide">Aide</button>
   </nav>
   <div class="sp"></div>
-  <span class="meta" style="letter-spacing:.12em;text-transform:uppercase;font-size:10px;margin-right:6px;white-space:nowrap">MKS Movie Producer</span>
   <button class="btn small" onclick="ouvrir('rendus')">Dossier Rendus</button>
   <button class="btn small" onclick="ouvrir('flow')">Dossier Flow</button>
 </header>
@@ -127,13 +133,13 @@ const MOUV = ['in','out','left','right','up','down','still'];
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
-  ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); }
+  ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet, aide})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); }
 async function ouvrir(d){ await api('/api/ouvrir',{method:'POST',body:JSON.stringify({dossier:d})}); }
 
 // ---------------------------------------------------------------- saison
 async function saison(){
   const eps = await api('/api/episodes');
-  $('#main').innerHTML = `<h2>Saison 1</h2><p class="sub">État de chaque épisode. Clique sur un épisode pour l'éditer, générer sa fiche Flow ou le monter.</p>
+  $('#main').innerHTML = `<h2>Production</h2><p class="sub">${eps.length} épisode(s) écrit(s). État de chaque épisode. Clique sur un épisode pour l'éditer, générer sa fiche Flow ou le monter.</p>
   <div class="grid">${eps.map(e => e.erreur ? `<div class="card"><h3>${e.ep}</h3><span class="err">${esc(e.erreur)}</span></div>` : `
     <div class="card">
       <div class="row"><span class="id">${esc(e.id)}</span><div class="sp"></div>${e.rendus.length?'<span class="pill ok">monté</span>':(e.medias===e.plans?'<span class="pill wait">prêt à monter</span>':'<span class="pill">en préparation</span>')}</div>
@@ -370,7 +376,7 @@ async function guide(){
   try { const r = await api('/api/assistant'); const c = r.courant;
     $('#guide').innerHTML = c ? `<div class="in"><span class="pin">Étape actuelle</span>
       <div style="flex:1"><b>${c.code&&c.code!=='—'?esc(c.code)+' · ':''}${esc(c.titre)}</b> — ${esc(c.etape)}<br><span class="meta" style="font-size:13px">Prochaine étape : ${esc(c.suite)}</span></div>
-      ${bouton(c.action)}</div>` : `<div class="in"><span class="pin">Terminé</span><div>Les 49 épisodes sont validés.</div></div>`;
+      ${bouton(c.action)}</div>` : `<div class="in"><span class="pin">Terminé</span><div>Tous les épisodes du plan sont validés.</div></div>`;
   } catch(e){ $('#guide').innerHTML = ''; }
 }
 async function assistant(){
@@ -414,17 +420,23 @@ async function plan(saisonSel){
 }
 
 // ---------------------------------------------------------------- bible
+const ancre = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 function md2html(t){
-  const inl = x => esc(x).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>');
+  const inl = x => esc(x).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*\s][^*]*)\*/g,'<i>$1</i>')
+    .replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'<img src="$2" alt="$1" loading="lazy">')
+    .replace(/\[([^\]]+)\]\((#[^)\s]+)\)/g,'<a href="javascript:void(0)" onclick="document.getElementById(\'$2\'.slice(1))?.scrollIntoView({behavior:\'smooth\'})">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   const L = t.split('\n'); let h = '', i = 0;
   while(i < L.length){ const l = L[i];
     if(l.startsWith('```')){ let c=[]; i++; while(i<L.length && !L[i].startsWith('```')) c.push(L[i++]); h += `<pre>${esc(c.join('\n'))}</pre>`; i++; continue; }
-    const m = l.match(/^(#{1,3}) (.*)/); if(m){ const id = m[2].toLowerCase().replace(/[^a-z0-9]+/g,'-'); h += `<h${m[1].length} id="${id}">${inl(m[2])}</h${m[1].length}>`; i++; continue; }
+    const m = l.match(/^(#{1,4}) (.*)/); if(m){ const id = ancre(m[2]); h += `<h${m[1].length} id="${id}">${inl(m[2])}</h${m[1].length}>`; i++; continue; }
     if(l.startsWith('|')){ const rows=[]; while(i<L.length && L[i].startsWith('|')) rows.push(L[i++]);
       const cells = r => r.slice(1,-1).split(' | ').map(c=>c.trim()); const hd = cells(rows[0]);
       h += `<table><tr>${hd.map(c=>`<th>${inl(c)}</th>`).join('')}</tr>${rows.slice(2).map(r=>`<tr>${cells(r).map(c=>`<td>${inl(c)}</td>`).join('')}</tr>`).join('')}</table>`; continue; }
-    if(/^\s*([-*]|\d+\.) /.test(l)){ const items=[]; while(i<L.length && /^\s*([-*]|\d+\.) /.test(L[i])) items.push(L[i++].replace(/^\s*([-*]|\d+\.) /,''));
-      h += `<ul>${items.map(x=>`<li>${inl(x)}</li>`).join('')}</ul>`; continue; }
+    if(l.startsWith('>')){ const q=[]; while(i<L.length && L[i].startsWith('>')) q.push(L[i++].replace(/^>\s?/,'')); h += `<blockquote>${q.map(inl).join('<br>')}</blockquote>`; continue; }
+    if(/^\s*([-*]|\d+\.) /.test(l)){ const num = /^\s*\d+\. /.test(l), items=[]; while(i<L.length && /^\s*([-*]|\d+\.) /.test(L[i])) items.push(L[i++].replace(/^\s*([-*]|\d+\.) /,''));
+      h += `<${num?'ol':'ul'}>${items.map(x=>`<li>${inl(x)}</li>`).join('')}</${num?'ol':'ul'}>`; continue; }
+    if(/^---+$/.test(l.trim())){ h += '<hr>'; i++; continue; }
     if(l.trim()) h += `<p>${inl(l)}</p>`; i++; }
   return h;
 }
@@ -436,9 +448,25 @@ async function bible(mode){
       <div class="row" style="margin-top:10px"><button class="btn gold" onclick="api('/api/bible',{method:'PUT',body:JSON.stringify({texte:$('#bibleTxt').value})}).then(()=>{toast('Bible enregistrée');bible()})">Enregistrer</button><button class="btn" onclick="bible()">Annuler</button></div>`;
     return; }
   const tdm = [...r.texte.matchAll(/^## (.*)$/gm)].map(m=>m[1]);
-  $('#main').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="tabs" style="margin:0;flex:1">${tdm.map(t=>`<button onclick="document.getElementById('${t.toLowerCase().replace(/[^a-z0-9]+/g,'-')}').scrollIntoView({behavior:'smooth'})">${esc(t)}</button>`).join('')}</div>
+  $('#main').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="tabs" style="margin:0;flex:1">${tdm.map(t=>`<button onclick="document.getElementById('${ancre(t)}').scrollIntoView({behavior:'smooth'})">${esc(t)}</button>`).join('')}</div>
     <button class="btn small" onclick="bible('edit')">Modifier</button><button class="btn small ia" onclick="genererBible()">IA · régénérer</button></div>
   <div class="md">${r.texte.trim()?md2html(r.texte):'<p>La bible est vide. Écris-la (Modifier) ou génère-la à partir des sources (IA).</p>'}</div>`;
+}
+
+// ---------------------------------------------------------------- aide
+async function aide(quel){
+  quel = quel === 'installation' ? 'installation' : 'utilisation';
+  const r = await api('/api/aide/'+quel);
+  const texte = r.texte.replace(/\]\(images\//g, '](/aide/images/');
+  const tdm = [...texte.matchAll(/^## (.*)$/gm)].map(m=>m[1]);
+  $('#main').innerHTML = `<div class="row" style="margin-bottom:12px"><div class="tabs" style="margin:0">
+      <button class="${quel==='utilisation'?'on':''}" onclick="go('aide','utilisation')">Manuel d'utilisation</button>
+      <button class="${quel==='installation'?'on':''}" onclick="go('aide','installation')">Manuel d'installation</button></div>
+      <div class="sp"></div><a class="btn small" href="/aide/${quel==='installation'?'MANUEL_INSTALLATION':'MANUEL_UTILISATION'}.pdf" target="_blank">Version PDF</a></div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:start">
+      <div class="card" style="position:sticky;top:150px;padding:12px;max-height:calc(100vh - 200px);overflow:auto"><h3>Sommaire</h3>
+        ${tdm.map(t=>`<div class="rendu" onclick="document.getElementById('${ancre(t)}').scrollIntoView({behavior:'smooth'})">${esc(t)}</div>`).join('')}</div>
+      <div class="md aide">${md2html(texte)}</div></div>`;
 }
 
 // ---------------------------------------------------------------- projet
@@ -594,7 +622,7 @@ function toast(t){ const d = document.createElement('div'); d.textContent = t; d
 window.onbeforeunload = () => DIRTY ? true : undefined;
 
 // démarrage
-const [v, a] = (location.hash.slice(1)||'assistant').split('/'); chargerProjet().then(()=>go(['assistant','saison','plan','bible','rendus','nouveau','reglages','episode','projet'].includes(v)?v:'assistant', a));
+const [v, a] = (location.hash.slice(1)||'assistant').split('/'); chargerProjet().then(()=>go(['assistant','saison','plan','bible','rendus','nouveau','reglages','episode','projet','aide'].includes(v)?v:'assistant', a));
 </script>
 </body>
 </html>

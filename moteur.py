@@ -7,7 +7,7 @@ Sortie  : <projet>/Rendus/<EP>_<titre>.mp4
 Pas de shell : toutes les commandes ffmpeg sont passées en listes d'arguments,
 ce qui évite les problèmes d'apostrophes et d'espaces dans les chemins Windows.
 """
-import json, os, re, subprocess, sys, shutil, urllib.request, unicodedata
+import hashlib, json, os, re, subprocess, sys, shutil, urllib.request, unicodedata
 
 ICI = os.path.dirname(os.path.abspath(__file__))          # dossier du logiciel
 sys.path.insert(0, ICI)
@@ -92,10 +92,34 @@ def charger_episode(ep):
 
 
 # ---------------------------------------------------------------- voix
+def signature(*elements):
+    """Empreinte d'un plan : s'il change (texte, image, mouvement…), le plan est recalculé au prochain montage."""
+    return hashlib.sha1(json.dumps(elements, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()
+
+
+def a_jour(fichier, sig):
+    try:
+        return os.path.getsize(fichier) > 0 and open(fichier + ".sig", encoding="utf-8").read() == sig
+    except OSError:
+        return False
+
+
+def marquer(fichier, sig):
+    open(fichier + ".sig", "w", encoding="utf-8").write(sig)
+
+
+def empreinte_media(src):
+    if src and os.path.exists(src):
+        st = os.stat(src)
+        return [os.path.abspath(src), st.st_size, int(st.st_mtime)]
+    return [src]
+
+
 def voix(texte, dst):
-    if os.path.exists(dst) and os.path.getsize(dst) > 0:
-        return dst
     v = projet()["voix"]
+    sig = signature(texte, v.get("nom"), v.get("debit"), v.get("hauteur"))
+    if a_jour(dst, sig):
+        return dst
     txt = dst + ".txt"
     open(txt, "w", encoding="utf-8").write(texte)
     for _ in range(3):
@@ -103,6 +127,7 @@ def voix(texte, dst):
                             f"--rate={v['debit']}", f"--pitch={v['hauteur']}",
                             "-f", txt, "--write-media", dst], capture_output=True, text=True)
         if r.returncode == 0 and os.path.exists(dst):
+            marquer(dst, sig)
             return dst
     raise RuntimeError("Voix Edge indisponible (connexion internet ?) : " + r.stderr[-300:])
 
@@ -215,8 +240,10 @@ def monter(ep, reprendre=True):
         nom = f"p{i:03d}"
         if s.get("card"):
             L = float(s.get("dur", 6))
-            if not os.path.exists(os.path.join(wd, nom + ".mp4")):
+            sig = signature("carton", s["card"], s.get("sub", ""), L)
+            if not a_jour(os.path.join(wd, nom + ".mp4"), sig):
                 carton(s["card"], s.get("sub", ""), L, wd, nom)
+                marquer(os.path.join(wd, nom + ".mp4"), sig)
             clips.append(nom + ".mp4"); segs.append((L, None)); continue
         vo = s.get("vo", "").strip()
         a, d = None, 0.0
@@ -224,12 +251,15 @@ def monter(ep, reprendre=True):
             a = voix(vo, os.path.join(wd, nom + ".mp3")); d = duree(a)
         L = round(max(float(s.get("min", 4.0)), d + float(s.get("pad", 1.5))), 2)
         src, est_video = trouver_media(ep, s, wd)
-        if not os.path.exists(os.path.join(wd, nom + ".mp4")):
+        sig = signature("plan", L, empreinte_media(src), est_video, s.get("m", s.get("motion", "in")), s.get("title", ""))
+        if src is None:
+            manquants.append(s.get("k"))
+        if not a_jour(os.path.join(wd, nom + ".mp4"), sig):
             if src is None:
-                manquants.append(s.get("k"))
                 carton("", f"[plan manquant : {s.get('k')}]", L, wd, nom)
             else:
                 plan(s, L, src, wd, nom, est_video)
+            marquer(os.path.join(wd, nom + ".mp4"), sig)
         clips.append(nom + ".mp4"); segs.append((L, a))
         log(f"  plan {i + 1}/{len(e['shots'])} {s.get('k', '')} ok ({L:.1f} s)")
     open(os.path.join(wd, "liste.txt"), "w", encoding="utf-8").write("".join(f"file '{c}'\n" for c in clips))

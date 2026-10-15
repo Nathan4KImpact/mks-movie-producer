@@ -3,7 +3,7 @@
 
 Lancement : double-clic sur PILOTAGE.bat  ->  http://localhost:8765
 Le serveur n'écoute que sur 127.0.0.1 : rien n'est accessible depuis le réseau.
-Le projet affiché est le « projet actif » (menu Projets) ; tout son état est recalculé à partir de ses fichiers.
+Le projet affiché est le « projet actif » (menu Projet) ; tout son état est recalculé à partir de ses fichiers.
 """
 import json, mimetypes, os, re, string, subprocess, sys, threading, time, urllib.parse, uuid, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -179,7 +179,7 @@ def verifications():
         {"ok": edge, "titre": "Voix Edge (module edge-tts)", "aide": "Lancer INSTALLER.bat"},
         {"ok": len(musiques) == len(pj.get("musiques", [])), "titre": f"Musiques ({len(musiques)}/{len(pj.get('musiques', []))})", "aide": "Lancer INSTALLER.bat"},
         {"ok": os.path.exists(os.path.join(ICI, "polices", "Cinzel.ttf")), "titre": "Police des titres", "aide": "Lancer INSTALLER.bat"},
-        {"ok": bool(sources()), "titre": "Sources du projet (livre, scripts…)", "aide": "Projets > Sources : ajouter les documents"},
+        {"ok": bool(sources()), "titre": "Sources du projet (livre, scripts…)", "aide": "Projet › Sources : ajouter les documents"},
     ]
     for p in pj.get("personnages", []):
         if p.get("reference"):
@@ -201,7 +201,7 @@ def assistant():
         courant = {"code": "—", "num": "", "titre": "Préparer le projet", "n": 0,
                    "etape": "Bible et plan à créer" if a_sources else "Sources à ajouter",
                    "suite": ("Générer la bible et le plan des épisodes à partir des sources (IA), ou les écrire dans l'onglet Bible."
-                             if a_sources else f"Ajouter le livre, le script ou les documents de « {pj['nom']} » dans Projets > Sources."),
+                             if a_sources else f"Ajouter le livre, le script ou les documents de « {pj['nom']} » dans Projet › Sources."),
                    "action": {"type": "bible"} if a_sources else {"type": "projet"}}
     par_saison = {}
     for p in plan:
@@ -417,6 +417,13 @@ class H(BaseHTTPRequestHandler):
                 return self.fichier(cx.chemin("Flow", *p.split("/")[2:]), cx.chemin("Flow"))
             if p.startswith("/rendus/"):
                 return self.fichier(cx.chemin("Rendus", p.split("/", 2)[2]), cx.chemin("Rendus"))
+            if p.startswith("/api/aide/"):
+                nom = {"installation": "MANUEL_INSTALLATION.md", "utilisation": "MANUEL_UTILISATION.md"}.get(p.split("/")[-1])
+                if not nom:
+                    return self.envoyer(404, {"erreur": "manuel inconnu"})
+                return self.envoyer(200, {"texte": open(os.path.join(ICI, "docs", nom), encoding="utf-8").read()})
+            if p.startswith("/aide/"):
+                return self.fichier(os.path.join(ICI, "docs", *p.split("/")[2:]), os.path.join(ICI, "docs"))
             if p.startswith("/projet/"):
                 return self.fichier(cx.chemin(*p.split("/")[2:]), cx.racine())
             return self.envoyer(404, {"erreur": "introuvable"})

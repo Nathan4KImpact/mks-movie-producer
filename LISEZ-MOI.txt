@@ -19,6 +19,7 @@
    - Projet      : nom, logo, paramètres, personnages, sources, projets du poste,
                    export zip, ouverture d'un autre dossier, nouveau projet
    - Réglages    : modèles IA et clés API de ce poste
+   - Aide        : manuels d'installation et d'utilisation
 
 4. LOGICIEL ET PROJETS
    Le logiciel (ce dossier) est séparé des projets. Un projet = un dossier
@@ -32,6 +33,10 @@
    { "mcpServers": { "mks-movie-producer": { "command": "py",
        "args": ["-3", "<chemin du logiciel>\\mcp_server.py"] } } }
    Claude Code : claude mcp add mks-movie-producer -- py -3 "<chemin>\mcp_server.py"
+
+6. MANUELS
+   docs\MANUEL_INSTALLATION.pdf et docs\MANUEL_UTILISATION.pdf
+   (aussi consultables dans l'interface : menu Aide).
 
 CRÉDITS : musique Kevin MacLeod (incompetech.com, CC BY 4.0) ;
 voix Microsoft Edge TTS ; police Cinzel (SIL OFL).
