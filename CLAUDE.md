@@ -11,17 +11,26 @@ Répondre en français à l'utilisateur.
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
 - `atelier.py` : CLI — `monter`, `etat`, `fiche`, `ecrire`, `prompts`, `verifier`, `bible`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
-  (champ `mus` d'un plan = changement de piste), plans recalculés seulement si leur empreinte change (`.sig`), sortie dans `<projet>/Rendus` (jamais d'écrasement).
+  (champ `mus` d'un plan = changement de piste), plans recalculés seulement si leur empreinte change (`.sig`), sortie dans le dossier des rendus (jamais d'écrasement).
 - `ia.py` : appels modèles (Anthropic ou compatible OpenAI) selon `reglages.json > ia > par_tache`,
   lecture des sources (PDF, docx, txt…), génération bible/plan/épisodes, relecture d'images.
 - `cles.py` : profils de modèles et clés (keyring, repli `.cles.json`).
 - `fiche.py` : fiche de prompts d'un épisode (tags `[TAG]` de personnages remplacés par leur description).
 - `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP sur le projet actif.
 
-## Format d'un épisode (`<projet>/episodes/E104.json`)
+## Organisation d'un projet (aucun chemin en dur)
+Seuls `projet.json` et `suivi.json` sont à la racine. Les dossiers de travail s'obtiennent TOUJOURS par
+`contexte.dossier(rôle, *sous_parties)` — rôles : `sources`, `personnages`, `bible`, `episodes`, `fiches`, `images`,
+`rendus`, `exports`, `musique` (voir `ROLES`). La carte est dans `projet.json > dossiers` ; un dossier déplacé est
+retrouvé d'après son contenu (`detecter`) puis mémorisé. Les fichiers notés en relatif (livre, logo, références)
+passent par `contexte.fichier(rel)` (recherche par nom), et `reparer_fichiers()` met `projet.json` à jour.
+Média d'un plan hors du dossier des images : `chercher_media(clé)`. Ne jamais écrire `chemin("Flow", …)`.
+Nouveau projet : `DISPOSITION_NOUVEAU` (bibliotheque/… et production/…). `ranger_racine()` range un projet existant.
+
+## Format d'un épisode (`<dossier episodes>/E104.json`)
 `{"id":"S1E04","title":"…","shots":[{"k":"E104-01","vo":"narration","p":"prompt image anglais","m":"in|out|left|right|up|down|still",
 "title":"MOT À L'ÉCRAN","min":5,"mus":"Heroic_Age","vid_prompt":"…"},{"card":"TITRE","sub":"…","dur":7}, …]}`
-Médias : `<projet>/Flow/E104/E104-01.png` (ou `.mp4`, prioritaire) ; à défaut `img_url`/`vid_url`.
+Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
 
 ## Documentation
 `docs/MANUEL_INSTALLATION.md` et `docs/MANUEL_UTILISATION.md` (servis dans l'interface, menu Aide, via `/api/aide/<nom>`

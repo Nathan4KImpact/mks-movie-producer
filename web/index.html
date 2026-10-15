@@ -85,6 +85,10 @@ video.player{width:100%;border-radius:10px;background:#000}
 .md blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid var(--gold);background:var(--panel);border-radius:0 8px 8px 0;color:var(--text)}
 .md a{color:var(--gold2)} .md hr{border:0;border-top:1px solid var(--line);margin:24px 0} .md ol,.md ul{padding-left:22px}
 @media (max-width:900px){.md.aide{grid-column:1/-1}}
+table.org{border-collapse:collapse;width:100%;margin-top:6px;font-size:13px}
+table.org th{text-align:left;color:var(--muted);font:600 11px var(--sans);text-transform:uppercase;letter-spacing:.08em;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.org td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.org code{background:#0f0d13;border:1px solid var(--line);border-radius:4px;padding:2px 6px;font-size:12px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer;font:500 13px var(--sans)}
 .tabs button.on{color:#1b1408;background:var(--gold);border-color:var(--gold)}
@@ -126,6 +130,7 @@ video.player{width:100%;border-radius:10px;background:#000}
 <script>
 const $ = (s, r=document) => r.querySelector(s);
 const api = async (u, o={}) => { const r = await fetch(u, {headers:{'Content-Type':'application/json'}, ...o}); const j = await r.json(); if(!r.ok) throw new Error(j.erreur||r.status); return j; };
+const win = p => (p||'').replace(/\//g, '\\');
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let CONFIG = null, PROJET = null, INFOS = null, EP = null, DIRTY = false;
 const MOUV = ['in','out','left','right','up','down','still'];
@@ -160,7 +165,7 @@ async function episode(ep){
   let n = 0;
   $('#main').innerHTML = `
   <h2>${esc(EP.id)} — <input id="titre" value="${esc(EP.title)}" style="display:inline;width:auto;min-width:380px;font:700 20px var(--serif);background:none;border:0;color:var(--gold2)"></h2>
-  <p class="sub">${EP.shots.filter(s=>!s.card).length} plans · les images se rangent dans Flow\\${ep}\\ sous leur clé (ex. ${ep}-01.png)</p>
+  <p class="sub">${EP.shots.filter(s=>!s.card).length} plans · les images se rangent dans ${esc(win(INFOS.dossiers.images))}\\${ep}\\ sous leur clé (ex. ${ep}-01.png)</p>
   <div class="toolbar">
     <button class="btn gold" onclick="sauver()">Enregistrer</button>
     <button class="btn" onclick="sauver().then(()=>action('monter',['${ep}']))">Enregistrer et monter</button>
@@ -479,7 +484,7 @@ async function chargerProjet(){
   return PROJET;
 }
 async function projet(){
-  await chargerProjet(); const src = await api('/api/sources'); const pj = PROJET;
+  await chargerProjet(); const [src, org] = await Promise.all([api('/api/sources'), api('/api/organisation')]); const pj = PROJET;
   const persos = pj.personnages || [];
   $('#main').innerHTML = `
   <div class="grid" style="grid-template-columns:minmax(320px,1fr) 2fr">
@@ -528,7 +533,7 @@ async function projet(){
     <div class="card"><h3>Sources du projet <span class="meta">(livre, script, notes, documents de référence — lues par l'IA)</span></h3>
       ${src.length?src.map(s=>`<div class="check"><span class="okc">■</span><div style="flex:1">${esc(s.nom)}${s.livre?' <span class="pill wait">livre</span>':''}</div><span class="meta">${s.mo} Mo</span></div>`).join(''):'<p class="meta">Aucune source pour l\'instant.</p>'}
       <div class="row" style="margin-top:8px"><label class="btn gold" style="margin:0;text-transform:none;letter-spacing:0">Ajouter des fichiers<input type="file" multiple style="display:none" onchange="envoyerSources(this.files)"></label>
-        <button class="btn small" onclick="ouvrir('sources')">Ouvrir le dossier sources</button></div>
+        <button class="btn small" onclick="ouvrir('sources')">Ouvrir le dossier des sources</button></div>
       <p class="meta">PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain… ainsi que des images de référence.</p>
     </div>
     <div class="card"><h3>Projets sur ce poste</h3>
@@ -536,8 +541,43 @@ async function projet(){
         ${x.chemin===INFOS.racine?'<span class="pill ok">actif</span>':`<button class="btn small" onclick="ouvrirProjet('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">Ouvrir</button><button class="btn small" onclick="oublier('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">✕</button>`}</div>`).join('')}
       <div class="row" style="margin-top:10px"><button class="btn" onclick="choisirDossier(c=>ouvrirProjet(c),'Ouvrir un dossier de projet')">Ouvrir un dossier existant…</button><button class="btn gold" onclick="nouveauProjet()">Nouveau projet…</button></div>
     </div>
-  </div>`;
+  </div>
+  <div class="card" style="margin-top:16px" id="organisation">${vueOrganisation(org)}</div>`;
 }
+// ---------------------------------------------------------------- organisation des dossiers
+function vueOrganisation(org){
+  return `<div class="row"><h3 style="flex:1">Organisation du projet</h3>
+      <button class="btn small" onclick="rechercherDossiers()">Rechercher les dossiers déplacés</button>
+      <button class="btn small" onclick="rangerRacine()">Ranger la racine</button></div>
+    <p style="margin:0;color:var(--muted);font-size:12.5px">Rangez le dossier du projet comme vous le souhaitez : chaque dossier est retrouvé d'après son contenu, même après un déplacement dans l'Explorateur. Seuls <b>projet.json</b> et <b>suivi.json</b> doivent rester à la racine. <b>Ranger la racine</b> regroupe ce qui se prépare dans <code>bibliotheque</code> et ce qui se fabrique dans <code>production</code>.</p>
+    <table class="org"><tr><th>Rôle</th><th>Dossier dans le projet</th><th>Fichiers</th><th></th></tr>
+    ${org.map(o=>`<tr><td><b>${esc(o.libelle)}</b><div class="meta">${esc(o.description)}</div></td>
+      <td><code>${esc(win(o.chemin))}</code> ${o.existe?'':'<span class="pill">sera créé au besoin</span>'}</td>
+      <td>${o.existe?o.fichiers:'—'}</td>
+      <td style="white-space:nowrap;text-align:right">${o.existe?`<button class="btn small" onclick="ouvrir('${o.role}')">Ouvrir</button>`:''}
+        <button class="btn small" onclick="choisirRole('${o.role}','${esc(o.libelle)}')">Choisir…</button>
+        ${o.existe?`<button class="btn small" onclick="deplacerRole('${o.role}','${esc(o.libelle)}','${esc(o.chemin)}')">Déplacer…</button>`:''}</td></tr>`).join('')}
+    </table>`;
+}
+async function majOrganisation(r, msg){ $('#organisation').innerHTML = vueOrganisation(r.organisation); if(msg) toast(msg); await chargerProjet(); guide(); }
+async function rechercherDossiers(){ const r = await api('/api/organisation/rechercher',{method:'POST',body:'{}'});
+  majOrganisation(r, r.trouves.length ? r.trouves.length+' élément(s) retrouvé(s)' : 'Tout est à jour'); }
+async function rangerRacine(){
+  const a = await api('/api/organisation/ranger',{method:'POST',body:'{}'});
+  if(!a.deplacements.length) return toast(a.erreurs[0] || 'La racine est déjà rangée');
+  const liste = a.deplacements.map(d=>'• '+d.libelle+' : '+win(d.de)+'  →  '+win(d.vers)).join('\n');
+  if(!confirm('Déplacer ces éléments ?\n\n'+liste+(a.erreurs.length?'\n\n'+a.erreurs.join('\n'):'')+'\n\nLes fiches de prompts seront réécrites avec les nouveaux chemins.')) return;
+  try { const r = await api('/api/organisation/ranger',{method:'POST',body:JSON.stringify({appliquer:true})}); majOrganisation(r, r.deplacements.length+' élément(s) rangé(s)'); }
+  catch(e){ toast(e.message); } }
+function choisirRole(role, libelle){
+  choisirDossier(async c => { try { const r = await api('/api/organisation',{method:'POST',body:JSON.stringify({role, chemin:c})}); majOrganisation(r, libelle+' : '+win(r.chemin)); } catch(e){ toast(e.message); } },
+    'Dossier pour « '+libelle+' »', INFOS.racine); }
+async function deplacerRole(role, libelle, actuel){
+  const vers = prompt('Déplacer le dossier « '+libelle+' » (et son contenu) vers :\n(chemin relatif au projet, ex. bibliotheque/'+actuel.split('/').pop()+')', actuel);
+  if(!vers || vers.trim()===actuel) return;
+  try { const r = await api('/api/organisation',{method:'POST',body:JSON.stringify({role, vers:vers.trim()})}); majOrganisation(r, libelle+' déplacé vers '+win(r.chemin)); }
+  catch(e){ toast(e.message); } }
+
 function lirePersos(){ document.querySelectorAll('#persos .prof').forEach(row=>{ const x = PROJET.personnages[+row.dataset.i];
   row.querySelectorAll('[data-k]').forEach(el=>{ x[el.dataset.k] = el.value.trim(); }); x.tag = (x.tag||'').toUpperCase().replace(/[^A-Z0-9_]/g,''); }); }
 async function sauverProjet(silencieux){
@@ -553,7 +593,7 @@ async function supPerso(i){ await sauverProjet(true); PROJET.personnages.splice(
 async function envoyer(dest, f){ const r = await fetch('/api/fichier?dest='+encodeURIComponent(dest), {method:'PUT', body:f}); const j = await r.json(); if(!r.ok) throw new Error(j.erreur); return j; }
 async function envoyerSources(fs){ for(const f of fs){ toast('Envoi de '+f.name+'…'); await envoyer('sources/'+f.name, f); } toast(fs.length+' fichier(s) ajouté(s)'); projet(); guide(); }
 async function envoyerRef(i, f){ await sauverProjet(true); const x = PROJET.personnages[i]; const ext = f.name.split('.').pop().toLowerCase();
-  const dest = 'Characters/'+(x.tag||'perso').toLowerCase()+'_reference.'+ext; await envoyer(dest, f); x.reference = dest;
+  const dest = 'Characters/'+(x.tag||'perso').toLowerCase()+'_reference.'+ext; x.reference = (await envoyer(dest, f)).rel;
   await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); toast('Image de référence enregistrée'); projet(); }
 async function envoyerLogo(f){ const ext = f.name.split('.').pop().toLowerCase(); await envoyer('logo.'+ext, f); toast('Logo importé'); projet(); }
 async function regenLogo(g){ await api('/api/projet/logo',{method:'POST',body:JSON.stringify({generique:g})}); toast('Logo régénéré'); projet(); }

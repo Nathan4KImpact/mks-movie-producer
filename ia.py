@@ -9,7 +9,7 @@ import base64, json, os, re, shutil, sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ICI)
-from contexte import projet, chemin, reglages, regles_ia, remplacer_tags
+from contexte import projet, chemin, dossier, fichier, reglages, regles_ia, remplacer_tags
 
 
 # ---------------------------------------------------------------- appel modèle
@@ -70,9 +70,11 @@ EXT_TEXTE = (".txt", ".md", ".srt", ".fountain", ".json", ".csv")
 
 def chemin_livre():
     pj = projet()
-    if pj.get("livre") and os.path.exists(chemin(pj["livre"])):
-        return chemin(pj["livre"])
-    for d in (chemin("sources"), chemin()):
+    if pj.get("livre"):
+        f = fichier(pj["livre"])
+        if f:
+            return f
+    for d in (dossier("sources"), chemin()):
         if os.path.isdir(d):
             for f in sorted(os.listdir(d)):
                 if f.lower().endswith(".pdf"):
@@ -115,7 +117,7 @@ def lire_document(p):
 
 def texte_sources(limite=180000):
     """Texte de tous les documents de sources/ (livre, scripts, notes), tronqué à `limite` caractères."""
-    morceaux, d = [], chemin("sources")
+    morceaux, d = [], dossier("sources")
     fichiers = [chemin_livre()] if chemin_livre() else []
     if os.path.isdir(d):
         fichiers += [os.path.join(d, f) for f in sorted(os.listdir(d)) if os.path.join(d, f) not in fichiers]
@@ -144,19 +146,19 @@ def generer_bible(consignes=""):
                f"Le plan contient exactement {S * E} épisodes, codes E<saison><numéro sur 2 chiffres>.")
     msg = f"Consignes : {consignes or 'aucune'}\n\nSOURCES DU PROJET :\n{texte_sources()}"
     r = extraire_json(appeler(systeme, msg, tache="ecrire", max_tokens=32000))
-    os.makedirs(chemin("bible"), exist_ok=True)
+    dossier("bible", creer=True)
     for f in ("bible.md", "plan.json"):
-        if os.path.exists(chemin("bible", f)):
-            shutil.copy(chemin("bible", f), chemin("bible", f + ".ancien"))
-    open(chemin("bible", "bible.md"), "w", encoding="utf-8").write(r["bible_md"])
-    json.dump(r["plan"], open(chemin("bible", "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        if os.path.exists(dossier("bible", f)):
+            shutil.copy(dossier("bible", f), dossier("bible", f + ".ancien"))
+    open(dossier("bible", "bible.md"), "w", encoding="utf-8").write(r["bible_md"])
+    json.dump(r["plan"], open(dossier("bible", "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return {"episodes": len(r["plan"])}
 
 
 # ---------------------------------------------------------------- épisodes
 def _exemple():
     """Un épisode existant sert de modèle de format et de ton."""
-    d = chemin("episodes")
+    d = dossier("episodes")
     if os.path.isdir(d):
         for f in sorted(os.listdir(d), reverse=True):
             if f.endswith(".json"):
@@ -170,7 +172,7 @@ def _exemple():
 
 def _bible():
     try:
-        return open(chemin("bible", "bible.md"), encoding="utf-8").read()[:40000]
+        return open(dossier("bible", "bible.md"), encoding="utf-8").read()[:40000]
     except Exception:
         return ""
 
@@ -190,7 +192,7 @@ def ecrire_episode(ep, titre, pages="", consignes=""):
 
 def ameliorer_prompts(ep, consignes=""):
     """Réécrit les prompts image d'un épisode (même structure, mêmes clés)."""
-    e = json.load(open(chemin("episodes", ep + ".json"), encoding="utf-8"))
+    e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
     msg = (f"Réécris uniquement les champs \"p\" (et \"vid_prompt\" s'il y en a) de cet épisode pour qu'ils respectent "
            f"parfaitement la direction artistique. Ne change ni les clés ni la narration.\nConsignes : {consignes or 'aucune'}\n\n"
            f"Bible :\n{_bible()[:15000]}\n\n" + json.dumps(e, ensure_ascii=False, indent=1))
@@ -203,7 +205,7 @@ def verifier_images(ep):
     """Fait relire chaque image par le modèle (vision). Rapport dans Flow/<ep>/verification.txt."""
     from moteur import trouver_media
     pj = projet()
-    e = json.load(open(chemin("episodes", ep + ".json"), encoding="utf-8"))
+    e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
     lignes = []
     for s in e["shots"]:
         if s.get("card"):
@@ -218,14 +220,14 @@ def verifier_images(ep):
                       f"pas de visage déformé) ?", images=[src], max_tokens=300, tache="verifier")
         lignes.append(f"{s.get('k')} : {rep.strip()}")
         print(lignes[-1], file=sys.stderr, flush=True)
-    out = chemin("Flow", ep, "verification.txt")
+    out = dossier("images", ep, "verification.txt")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w", encoding="utf-8-sig").write("\r\n".join(lignes))
     return out
 
 
 def _sauver(ep, e):
-    d = chemin("episodes")
+    d = dossier("episodes", creer=True)
     os.makedirs(os.path.join(d, "anciennes"), exist_ok=True)
     p = os.path.join(d, ep + ".json")
     if os.path.exists(p):

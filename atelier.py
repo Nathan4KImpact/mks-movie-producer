@@ -15,26 +15,28 @@ import json, os, sys, time, zipfile
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ICI)
-from contexte import chemin, racine, projet, slug, migrer
+from contexte import racine, projet, slug, migrer, dossier, reparer_fichiers, APP
 
 
 def episodes():
-    d = chemin("episodes")
+    d = dossier("episodes")
     return sorted(f[:-5] for f in os.listdir(d) if f.endswith(".json")) if os.path.isdir(d) else []
 
 
 def exporter(avec_rendus=False):
     rac = racine()
-    os.makedirs(os.path.join(rac, "_exports"), exist_ok=True)
-    out = os.path.join(rac, "_exports", f"{slug(projet()['nom'])}_{time.strftime('%Y%m%d-%H%M')}.zip")
-    exclus = {"_exports"} | (set() if avec_rendus else {"Rendus"})
+    exp = dossier("exports", creer=True)
+    out = os.path.join(exp, f"{slug(projet()['nom'])}_{time.strftime('%Y%m%d-%H%M')}.zip")
+    exclus = {os.path.realpath(exp), os.path.realpath(APP)}          # exports et logiciel (s'il est dans le projet)
+    if not avec_rendus:
+        exclus.add(os.path.realpath(dossier("rendus")))
     n = 0
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as z:
         for d, sous, fichiers in os.walk(rac):
             rel = os.path.relpath(d, rac)
-            premier = rel.split(os.sep)[0]
-            if premier in exclus or premier == "atelier" and os.path.exists(os.path.join(rac, "atelier", "contexte.py")):
+            if os.path.realpath(d) in exclus:
                 sous[:] = []; continue
+            sous[:] = [s for s in sous if os.path.realpath(os.path.join(d, s)) not in exclus and s != "__pycache__"]
             for f in fichiers:
                 z.write(os.path.join(d, f), os.path.join(os.path.basename(rac), rel, f)); n += 1
                 if n % 50 == 0:
@@ -106,6 +108,7 @@ def menu():
 
 if __name__ == "__main__":
     migrer()
+    reparer_fichiers()
     if len(sys.argv) > 1:
         try:
             executer(sys.argv[1], sys.argv[2:])

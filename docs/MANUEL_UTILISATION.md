@@ -12,13 +12,15 @@ Chaque épisode suit la même chaîne de production. L'application calcule à to
 
 | Étape | Ce que vous faites | Ce qui la valide |
 |---|---|---|
-| 0. Préparer le projet | Ajouter les sources ; écrire ou générer la bible et le plan | `bible/plan.json` rempli |
-| 1. À écrire | Écrire le script de l'épisode (vous, l'IA ou Claude) | `episodes/E104.json` existe |
-| 2. Script écrit | Relire le script, générer la fiche de prompts | `Prompts_Flow/E104_fiche_Flow.txt` existe |
-| 3. Fiche prête / Images en cours | Générer les images avec la fiche, les ranger sous leur nom | Images dans `Flow/E104/` |
+| 0. Préparer le projet | Ajouter les sources ; écrire ou générer la bible et le plan | Le plan (`plan.json`) est rempli |
+| 1. À écrire | Écrire le script de l'épisode (vous, l'IA ou Claude) | Le script `E104.json` existe |
+| 2. Script écrit | Relire le script, générer la fiche de prompts | La fiche `E104_fiche_Flow.txt` existe |
+| 3. Fiche prête / Images en cours | Générer les images avec la fiche, les ranger sous leur nom | Images `E104-01.png`… présentes |
 | 4. Prêt à monter | Lancer le montage | Toutes les images sont là |
-| 5. Monté | Regarder le rendu, corriger si besoin, remonter | Un fichier dans `Rendus/` |
+| 5. Monté | Regarder le rendu, corriger si besoin, remonter | Un rendu `.mp4` existe |
 | 6. Validé | Valider l'épisode | Validation enregistrée dans `suivi.json` |
+
+Les dossiers où l'application cherche ces fichiers sont décrits dans l'onglet **Projet › Organisation du projet** (section 13.5). Vous pouvez les ranger comme vous le souhaitez.
 
 L'**Assistant** suit cette chaîne épisode par épisode, dans l'ordre du plan, et vous indique toujours l'action suivante.
 
@@ -36,7 +38,7 @@ Pour quitter : fermez l'onglet puis la fenêtre noire. Rien n'est perdu : tout e
 
 - **La bannière** (en haut à gauche) affiche le logo et le nom du projet ouvert, son sous-titre et le nom du logiciel. Cliquer dessus ouvre l'onglet **Projet**.
 - **Le menu** donne accès aux neuf vues : Assistant, Production, Plan, Bible, Rendus, Nouvel épisode, Projet, Réglages, Aide.
-- **Dossier Rendus** et **Dossier Flow** ouvrent ces dossiers dans l'Explorateur Windows.
+- **Dossier Rendus** et **Dossier Flow** ouvrent dans l'Explorateur Windows le dossier des rendus et celui des images.
 - **Le bandeau « Étape actuelle »**, sous le menu, rappelle sur chaque page l'épisode en cours, son étape, la prochaine action, et propose le bouton qui la lance.
 
 ### Les tâches en cours
@@ -86,7 +88,7 @@ Une carte par épisode écrit, avec :
 | **IA · réécrire les prompts** | L'IA réécrit les prompts d'image dans la direction artistique de la série ; une consigne est demandée (facultative) |
 | **IA · relire les images** | L'IA regarde les images rangées et signale celles qui ne correspondent pas au prompt |
 
-À chaque enregistrement, la version précédente est conservée dans `episodes/anciennes/` (`E104_1.json`, `E104_2.json`…).
+À chaque enregistrement, la version précédente est conservée dans le sous-dossier `anciennes` du dossier des épisodes (`E104_1.json`, `E104_2.json`…).
 
 ### Les champs d'un plan
 
@@ -95,7 +97,7 @@ Une carte par épisode écrit, avec :
 | Champ | Rôle |
 |---|---|
 | Numéro et clé | La clé (ex. `E101-02`) est le **nom de fichier** de l'image ou de la vidéo du plan |
-| Vignette | L'image ou la vidéo trouvée dans `Flow/E101/` ; survolez une vidéo pour la lire |
+| Vignette | L'image ou la vidéo du plan trouvée dans le projet ; survolez une vidéo pour la lire |
 | **Copier le prompt** | Copie le prompt complet (style de la série + description des personnages) |
 | **Narration** | Texte lu par la voix off. Sa longueur fixe la durée du plan. |
 | **Prompt image** | Description de l'image, en anglais. Un tag de personnage comme `[VOYANT]` est remplacé par sa description. |
@@ -125,7 +127,7 @@ Clash Defiant, Crusade - Heavy Industry, Dark Walk, Darkest Child, Echoes of Tim
 
 ### 7.1 La fiche
 
-**Fiche Flow** génère le fichier `Prompts_Flow/E104_fiche_Flow.txt` et l'affiche :
+**Fiche Flow** génère le fichier `E104_fiche_Flow.txt` dans le dossier des fiches et l'affiche :
 
 ![Fiche de prompts](images/05_fiche.jpg)
 
@@ -134,9 +136,9 @@ Chaque bloc donne le **nom du fichier à créer** (`E101-01.png`), le début de 
 ### 7.2 Générer et ranger les images
 
 1. Ouvrez votre générateur d'images (Google Flow, Higgsfield…), au format **16:9**.
-2. Pour les plans où un personnage récurrent apparaît (la fiche l'indique entre crochets), ajoutez son **image de référence** (`Characters/…`) comme ingrédient ou référence, pour garder le même visage d'un épisode à l'autre.
+2. Pour les plans où un personnage récurrent apparaît (la fiche l'indique entre crochets), ajoutez son **image de référence** (son emplacement est rappelé en tête de la fiche) comme ingrédient ou référence, pour garder le même visage d'un épisode à l'autre.
 3. Collez le prompt, générez, choisissez la meilleure image.
-4. Enregistrez-la **sous le nom exact indiqué** dans le dossier `Flow\E104\` du projet : `E104-01.png`, `E104-02.png`… Les formats `.png`, `.jpg` et `.webp` sont acceptés.
+4. Enregistrez-la **sous le nom exact indiqué** dans le dossier que la fiche indique en tête (par exemple `production\Flow\E104\`) : `E104-01.png`, `E104-02.png`… Les formats `.png`, `.jpg` et `.webp` sont acceptés. Une image rangée ailleurs dans le projet est quand même retrouvée par son nom.
 5. Dans l'éditeur, **Rafraîchir les images** : les vignettes apparaissent et la jauge avance.
 
 > Le nom du fichier fait tout : une image mal nommée n'est pas trouvée. En cas de doute, **Monter** ou l'Assistant indiquent les plans encore manquants.
@@ -153,7 +155,7 @@ Cliquez sur **Monter** (Production, éditeur ou Assistant). Le montage :
 2. anime chaque image selon son mouvement, ajoute le titre à l'écran et les fondus ;
 3. insère les cartons ;
 4. place la musique par sections, la baisse automatiquement sous la voix et termine par un fondu ;
-5. exporte en **1920 × 1080, 25 images/s** dans `Rendus/`.
+5. exporte en **1920 × 1080, 25 images/s** dans le dossier des rendus.
 
 Le premier montage d'un épisode de 7 minutes prend plusieurs minutes, selon la puissance du poste. Le journal s'affiche dans le panneau des tâches.
 
@@ -183,7 +185,7 @@ Après visionnage :
 
 Le plan liste tous les épisodes prévus, saison par saison (onglets **S1**, **S2**…). Pour chacun : numéro, code, titre, pages du livre, résumé, barre d'étape, et l'action suivante. **Ouvrir** donne accès à l'éditeur dès que le script existe.
 
-Le plan vient du fichier `bible/plan.json`, écrit avec la bible (section 11) ou par l'IA.
+Le plan vient du fichier `plan.json` du dossier de la bible, écrit avec la bible (section 11) ou par l'IA.
 
 ## 11. Bible
 
@@ -237,23 +239,38 @@ Cliquez sur **Enregistrer le projet** après modification.
 
 ### 13.3 Personnages récurrents
 
-Chaque personnage a un **tag** (ex. `VOYANT`), un nom, une **description en anglais** et une **image de référence**. Dans un prompt, `[VOYANT]` est remplacé par la description, et la fiche rappelle d'ajouter l'image de référence. **Image** dépose la référence dans `Characters/` ; **+ Personnage** en ajoute un.
+Chaque personnage a un **tag** (ex. `VOYANT`), un nom, une **description en anglais** et une **image de référence**. Dans un prompt, `[VOYANT]` est remplacé par la description, et la fiche rappelle d'ajouter l'image de référence. **Image** dépose la référence dans le dossier des personnages ; **+ Personnage** en ajoute un.
 
 ### 13.4 Sources, export et projets du poste
 
 ![Sources et projets du poste](images/11_projet_sources.jpg)
 
-- **Sources du projet** : livre, scripts, notes, documents de référence. Formats lus par l'IA : PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain, CSV, JSON. **Ajouter des fichiers** les copie dans `sources/`.
-- **Exporter (zip, sans rendus)** ou **Exporter avec rendus** : crée un zip du projet dans `_exports/`, pour l'archiver ou le transférer sur un autre poste.
+- **Sources du projet** : livre, scripts, notes, documents de référence. Formats lus par l'IA : PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain, CSV, JSON. **Ajouter des fichiers** les copie dans le dossier des sources.
+- **Exporter (zip, sans rendus)** ou **Exporter avec rendus** : crée un zip du projet dans le dossier des exports, pour l'archiver ou le transférer sur un autre poste.
 - **Projets sur ce poste** : la liste des projets déjà ouverts ; **Ouvrir** bascule sur un autre projet, **✕** le retire de la liste (sans rien supprimer sur le disque).
 - **Ouvrir un dossier existant…** ouvre un projet copié ou transféré. Si le dossier n'est pas encore un projet, l'application propose de l'initialiser.
+
+### 13.5 Organisation du projet
+
+![Organisation du projet](images/16_organisation.jpg)
+
+Ce tableau indique, pour chaque **rôle**, le dossier du projet que l'application utilise, et le nombre de fichiers qu'il contient.
+
+- **Rangez librement** le dossier du projet dans l'Explorateur : renommez, regroupez, déplacez. Seuls `projet.json` et `suivi.json` doivent rester à la racine. Au lancement suivant, ou dès qu'un dossier manque, l'application le retrouve d'après son contenu et met le tableau à jour. Le livre, le logo et les images de référence sont retrouvés par leur nom de fichier.
+- **Rechercher les dossiers déplacés** relance cette recherche tout de suite, sans redémarrer.
+- **Ranger la racine** regroupe les dossiers restés à la racine : les sources, personnages, bible, épisodes et le logo dans `bibliotheque`, les fiches, images et rendus dans `production`, en gardant leur nom. La liste des déplacements est affichée avant confirmation, et les fiches de prompts sont réécrites avec les nouveaux chemins.
+- **Choisir…** associe un rôle à un autre dossier existant du projet (si la recherche automatique s'est trompée, par exemple).
+- **Déplacer…** déplace physiquement le dossier d'un rôle, avec son contenu, vers un nouvel emplacement du projet.
+- **Ouvrir** affiche le dossier dans l'Explorateur.
+
+> Après un rangement, les **fiches de prompts** déjà imprimées ou ouvertes indiquent l'ancien dossier des images. Régénérez-les (bouton **Fiche Flow**) pour avoir le bon chemin. Une image enregistrée par habitude dans l'ancien dossier est malgré tout retrouvée par son nom.
 
 ## 14. Créer un nouveau projet de A à Z
 
 ![Nouveau projet](images/12_nouveau_projet.jpg)
 
 1. **Projet › Nouveau projet…** Indiquez le nom, le sous-titre, le dossier où le créer, le nombre de saisons, d'épisodes et leur durée, la couleur, la voix, le narrateur éventuel, le style visuel et les règles de la série. **Créer le projet**.
-   Le dossier est créé avec sa structure, son logo et un plan vide, et devient le projet actif.
+   Le dossier est créé avec sa structure (`bibliotheque` et `production`), son logo et un plan vide, et devient le projet actif.
 2. **Sources** : ajoutez le livre, le script de film ou de série, vos notes et documents de référence.
 3. **Personnages** : décrivez le narrateur et les personnages récurrents ; générez puis déposez leur image de référence.
 4. **Bible et plan** : suivez l'Assistant, **Générer la bible et le plan (IA)**, ou écrivez-les dans l'onglet Bible. Relisez et corrigez la bible : elle guide toute la suite.
@@ -304,27 +321,30 @@ Les commandes agissent sur le projet actif. Pour viser un autre projet, définis
 
 ## 19. Questions fréquentes
 
-**J'ai remplacé une image mais le film n'a pas changé.** Vérifiez que la nouvelle image porte exactement le même nom et se trouve dans `Flow/<épisode>/`, puis remontez. Un fichier `.mp4` du même nom est prioritaire sur l'image.
+**J'ai remplacé une image mais le film n'a pas changé.** Vérifiez que la nouvelle image porte exactement le même nom et se trouve dans le dossier des images de l'épisode (indiqué dans la fiche), puis remontez. Un fichier `.mp4` du même nom est prioritaire sur l'image.
 
 **L'Assistant reste sur un épisode que je veux sauter.** Il suit l'ordre du plan. Vous pouvez travailler sur n'importe quel épisode depuis Production ou Plan ; l'Assistant se mettra à jour.
 
 **Puis-je travailler sur deux postes ?** Oui, mais pas en même temps sur le même dossier. Transférez le projet (export zip ou copie) ; l'avancement est recalculé à l'ouverture.
 
-**Où sont mes vidéos finales ?** Dans le dossier `Rendus/` du projet (bouton **Dossier Rendus** en haut à droite).
+**Où sont mes vidéos finales ?** Dans le dossier des rendus du projet (bouton **Dossier Rendus** en haut à droite).
 
-**Comment revenir à une ancienne version d'un script ?** Les versions précédentes sont dans `episodes/anciennes/`. Copiez celle voulue à la place de `episodes/E104.json` (les numéros vont de la plus ancienne à la plus récente).
+**J'ai réorganisé le dossier du projet : est-ce que ça casse quelque chose ?** Non, tant que `projet.json` et `suivi.json` restent à la racine. Les dossiers et fichiers déplacés sont retrouvés automatiquement ; vérifiez le résultat dans Projet › Organisation du projet.
+
+**Comment revenir à une ancienne version d'un script ?** Les versions précédentes sont dans le sous-dossier `anciennes` du dossier des épisodes. Copiez celle voulue à la place de `E104.json` (les numéros vont de la plus ancienne à la plus récente).
 
 ## 20. Glossaire
 
 | Terme | Définition |
 |---|---|
 | Projet | Dossier contenant tout ce qui concerne une œuvre |
-| Bible | Document de référence de la série (`bible/bible.md`) |
-| Plan | Liste des épisodes prévus (`bible/plan.json`) |
+| Bible | Document de référence de la série (`bible.md`) |
+| Plan | Liste des épisodes prévus (`plan.json`) |
 | Plan (d'épisode) | Une image ou vidéo avec sa narration ; un épisode en compte environ 30 |
 | Clé | Nom d'un plan, ex. `E104-07`, qui sert de nom de fichier |
 | Carton | Écran titre entre les plans |
 | Fiche de prompts | Liste des prompts d'un épisode, à copier dans le générateur d'images |
 | Tag | Nom court d'un personnage entre crochets, ex. `[VOYANT]` |
-| Rendu | Épisode monté, fichier `.mp4` dans `Rendus/` |
+| Rendu | Épisode monté, fichier `.mp4` du dossier des rendus |
+| Rôle | Fonction d'un dossier du projet (sources, images, rendus…) ; voir Projet › Organisation du projet |
 | MCP | Protocole qui permet à Claude d'utiliser directement l'application |

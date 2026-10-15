@@ -4,18 +4,21 @@ import json, os, sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ICI)
-from contexte import projet, chemin, remplacer_tags
+from contexte import projet, dossier, remplacer_tags, fichier, racine, _rel
 
 
 def fiche_flow(ep):
     pj = projet()
-    e = json.load(open(chemin("episodes", ep + ".json"), encoding="utf-8"))
+    e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
     sty = pj.get("style_image", "")
-    refs = [f"[{p['tag']}] = ajouter {p.get('reference') or 'la référence de ' + p['nom']} comme ingrédient / référence."
-            for p in pj.get("personnages", [])]
+    def ref(p):
+        f = fichier(p.get("reference", ""))
+        return _rel(f).replace("/", "\\") if f else (p.get("reference") or "la référence de " + p["nom"])
+    refs = [f"[{p['tag']}] = ajouter {ref(p)} comme ingrédient / référence." for p in pj.get("personnages", [])]
+    rel_images = _rel(dossier("images")).replace("/", "\\")
     L = [f"{pj['nom'].upper()} — {e['id']} « {e.get('title', '')} » — FICHE DE PROMPTS", "=" * 70,
          "Format : 16:9. Copier-coller chaque prompt tel quel (en anglais : meilleur rendu).",
-         f"Enregistrer chaque image sous le NOM indiqué dans :  Flow\\{ep}\\  (dossier du projet)"] + refs + \
+         f"Enregistrer chaque image sous le NOM indiqué dans :  {rel_images}\\{ep}\\  (dossier du projet)"] + refs + \
         ["Les plans VIDÉO sont listés à la fin (à faire après les images).", ""]
     for s in e["shots"]:
         if "k" not in s:
@@ -31,8 +34,8 @@ def fiche_flow(ep):
     for s in vids:
         L += [f"--- {s['k']}.mp4  (image de départ : {s['k']}.png)",
               f"PROMPT : cinematic, slow camera movement, {s['vid_prompt']}", ""]
-    out = chemin("Prompts_Flow", f"{ep}_fiche_Flow.txt")
+    out = dossier("fiches", f"{ep}_fiche_Flow.txt", creer=False)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w", encoding="utf-8-sig").write("\r\n".join(L))
-    os.makedirs(chemin("Flow", ep), exist_ok=True)
+    os.makedirs(dossier("images", ep), exist_ok=True)
     return out

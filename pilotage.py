@@ -16,7 +16,9 @@ PORT = int(os.environ.get("ATELIER_PORT", "8765"))
 EP_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG")
 VID_EXT = (".mp4", ".mov", ".webm")
-DOSSIERS_ECRITURE = ("sources/", "Characters/", "musique/", "Flow/", "bible/")
+# envoi de fichiers : le premier segment de la destination désigne un rôle (ou son ancien nom de dossier)
+ALIAS_ROLES = {"sources": "sources", "characters": "personnages", "personnages": "personnages", "musique": "musique",
+               "flow": "images", "images": "images", "bible": "bible"}
 JOBS = {}
 ETAPES = ["À écrire", "Script écrit", "Fiche prête", "Images en cours", "Prêt à monter", "Monté", "Validé"]
 
@@ -25,22 +27,27 @@ ETAPES = ["À écrire", "Script écrit", "Fiche prête", "Images en cours", "Pr�
 def chemin_ep(ep):
     if not EP_RE.match(ep):
         raise ValueError("nom d'épisode invalide")
-    return cx.chemin("episodes", ep + ".json")
+    return cx.dossier("episodes", ep + ".json")
 
 
 def media_local(ep, k):
-    d = cx.chemin("Flow", ep)
+    """(url, type) du média d'un plan : dans le dossier des images, sinon n'importe où dans le projet."""
+    d = cx.dossier("images", ep)
     for ext in VID_EXT:
         if os.path.exists(os.path.join(d, k + ext)):
-            return k + ext, "video"
+            return f"/flow/{ep}/{urllib.parse.quote(k + ext)}", "video"
     for ext in IMG_EXT:
         if os.path.exists(os.path.join(d, k + ext)):
-            return k + ext, "image"
+            return f"/flow/{ep}/{urllib.parse.quote(k + ext)}", "image"
+    if k:
+        p, video = cx.chercher_media(k)
+        if p:
+            return "/projet/" + urllib.parse.quote(cx._rel(p)), "video" if video else "image"
     return None, None
 
 
 def fichiers_rendus():
-    d = cx.chemin("Rendus")
+    d = cx.dossier("rendus")
     return sorted(f for f in os.listdir(d) if f.lower().endswith(".mp4")) if os.path.isdir(d) else []
 
 
@@ -63,7 +70,7 @@ def etat_episode(ep, rendus=None):
 
 
 def liste_episodes():
-    d = cx.chemin("episodes")
+    d = cx.dossier("episodes")
     out, rendus = [], fichiers_rendus()
     for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
         if f.endswith(".json"):
@@ -81,7 +88,7 @@ def lire_episode(ep):
             continue
         f, t = media_local(ep, s.get("k", ""))
         if f:
-            s["_media"] = f"/flow/{ep}/{urllib.parse.quote(f)}"; s["_type"] = t
+            s["_media"] = f; s["_type"] = t
         elif s.get("vid_url"):
             s["_media"] = s["vid_url"]; s["_type"] = "video"
         elif s.get("img_url"):
@@ -107,19 +114,19 @@ def suivi():
 
 def plan_brut():
     try:
-        return json.load(open(cx.chemin("bible", "plan.json"), encoding="utf-8"))
+        return json.load(open(cx.dossier("bible", "plan.json"), encoding="utf-8"))
     except Exception:
         return []
 
 
 def etape_episode(code, pl=None, rendus=None, sv=None):
     pl = pl or {}
-    if not os.path.exists(cx.chemin("episodes", code + ".json")):
+    if not os.path.exists(cx.dossier("episodes", code + ".json")):
         pages = f" (livre p. {pl['pages']})" if pl.get("pages") else ""
         return {"n": 0, "etape": ETAPES[0], "suite": f"Écrire le script{pages} : onglet Nouvel épisode, ou demande-le à Claude.",
                 "action": {"type": "nouveau", "ep": code}}
     info = etat_episode(code, rendus)
-    fiche = os.path.exists(cx.chemin("Prompts_Flow", f"{code}_fiche_Flow.txt"))
+    fiche = os.path.exists(cx.dossier("fiches", f"{code}_fiche_Flow.txt"))
     valide = (sv if sv is not None else suivi()).get(code, {}).get("valide")
     if info["medias"] < info["plans"]:
         if not fiche:
@@ -127,7 +134,7 @@ def etape_episode(code, pl=None, rendus=None, sv=None):
                     "action": {"type": "fiche", "ep": code}}
         n = 2 if info["medias"] == 0 else 3
         return {"n": n, "etape": f"{ETAPES[n]} ({info['medias']}/{info['plans']})",
-                "suite": f"Générer les {info['plans'] - info['medias']} images manquantes avec la fiche et les ranger dans Flow\\{code}\\. "
+                "suite": f"Générer les {info['plans'] - info['medias']} images manquantes avec la fiche et les ranger dans {rel_win('images')}\\{code}\\. "
                          f"Plans vidéo prévus : {info['videos_prevues']}.", "action": {"type": "fiche", "ep": code}}
     if not info["rendus"]:
         return {"n": 4, "etape": ETAPES[4], "suite": "Toutes les images sont là : lancer le montage.",
@@ -148,17 +155,37 @@ def plan_complet():
     return plan
 
 
+def regenerer_fiches():
+    """Les fiches de prompts contiennent les chemins des images et des références : on les réécrit après un rangement."""
+    from fiche import fiche_flow
+    d, faites = cx.dossier("fiches"), []
+    if os.path.isdir(d):
+        for f in sorted(os.listdir(d)):
+            m = re.match(r"^(.+)_fiche_Flow\.txt$", f)
+            if m and os.path.exists(cx.dossier("episodes", m.group(1) + ".json")):
+                try:
+                    fiche_flow(m.group(1)); faites.append(m.group(1))
+                except Exception:
+                    pass
+    return faites
+
+
+def rel_win(role):
+    return cx._rel(cx.dossier(role)).replace("/", "\\")
+
+
 def sources():
-    d = cx.chemin("sources")
+    d = cx.dossier("sources")
+    pj = cx.projet()
+    livre = cx.fichier(pj.get("livre", ""))
     out = []
     if os.path.isdir(d):
         for f in sorted(os.listdir(d)):
             p = os.path.join(d, f)
             if os.path.isfile(p):
-                out.append({"nom": f, "mo": round(os.path.getsize(p) / 1e6, 2)})
-    pj = cx.projet()
-    if pj.get("livre") and os.path.exists(cx.chemin(pj["livre"])) and not pj["livre"].startswith("sources"):
-        out.insert(0, {"nom": pj["livre"], "mo": round(os.path.getsize(cx.chemin(pj["livre"])) / 1e6, 2), "livre": True})
+                out.append({"nom": f, "mo": round(os.path.getsize(p) / 1e6, 2), "livre": livre and os.path.samefile(p, livre)})
+    if livre and not any(s["livre"] for s in out):
+        out.insert(0, {"nom": cx._rel(livre), "mo": round(os.path.getsize(livre) / 1e6, 2), "livre": True})
     return out
 
 
@@ -168,7 +195,7 @@ def verifications():
     from cles import etat_cles
     cles = etat_cles(r)
     musiques = [m for m in pj.get("musiques", []) if any(os.path.exists(os.path.join(d, m + ".mp3"))
-                                                          for d in (os.path.join(ICI, "musique"), cx.chemin("musique")))]
+                                                          for d in (os.path.join(ICI, "musique"), cx.dossier("musique")))]
     try:
         import edge_tts  # noqa
         edge = True
@@ -183,7 +210,7 @@ def verifications():
     ]
     for p in pj.get("personnages", []):
         if p.get("reference"):
-            v.append({"ok": os.path.exists(cx.chemin(p["reference"])), "titre": f"Référence : {p['nom']}",
+            v.append({"ok": bool(cx.fichier(p["reference"])), "titre": f"Référence : {p['nom']}",
                       "aide": f"Déposer l'image dans {p['reference']}"})
     v.append({"ok": all(cles.get(r["ia"]["par_tache"][t]) for t in r["ia"]["par_tache"]),
               "titre": "Clés IA pour les étapes IA (facultatif)", "aide": "Réglages > Modèles IA"})
@@ -213,10 +240,13 @@ def assistant():
 
 # ---------------------------------------------------------------- projets
 def infos_projet():
+    if cx.est_projet(cx.racine()):
+        cx.reparer_fichiers()
     pj, ps = cx.projet(), cx.poste()
     projets = [dict(x, existe=os.path.isdir(x["chemin"])) for x in ps.get("projets", [])]
-    return {"projet": pj, "racine": cx.racine(), "projets": projets, "logiciel": cx.NOM_LOGICIEL, "app": ICI,
-            "est_projet": cx.est_projet(cx.racine())}
+    dossiers = {r: cx._rel(cx.dossier(r)) for r in cx.ROLES}
+    return {"projet": cx.projet(), "racine": cx.racine(), "projets": projets, "logiciel": cx.NOM_LOGICIEL, "app": ICI,
+            "est_projet": cx.est_projet(cx.racine()), "dossiers": dossiers}
 
 
 def creer_projet(d):
@@ -227,9 +257,10 @@ def creer_projet(d):
     rac = os.path.join(parent, d.get("dossier") or d["nom"])
     if os.path.exists(rac) and os.listdir(rac) and not d.get("dans_existant"):
         raise ValueError(f"Le dossier {rac} existe déjà et n'est pas vide")
-    for sous in ("sources", "bible", "episodes", "Characters", "Flow", "Prompts_Flow", "Rendus"):
-        os.makedirs(os.path.join(rac, sous), exist_ok=True)
+    for role in ("sources", "bible", "episodes", "personnages", "images", "fiches", "rendus"):
+        os.makedirs(cx._abs(cx.DISPOSITION_NOUVEAU[role], rac), exist_ok=True)
     pj = dict(cx.DEFAUT_PROJET)
+    pj["dossiers"] = dict(cx.DISPOSITION_NOUVEAU)
     for k in ("nom", "sous_titre", "type", "style_image", "regles_ia", "couleur", "langue"):
         if d.get(k):
             pj[k] = d[k]
@@ -240,17 +271,19 @@ def creer_projet(d):
         pj["voix"] = dict(pj["voix"], nom=d["voix"])
     if d.get("narrateur"):
         pj["personnages"] = [{"tag": "NARRATEUR", "nom": d["narrateur"], "description": d.get("narrateur_desc", d["narrateur"]),
-                              "reference": "Characters/narrateur_reference.png"}]
+                              "reference": cx.DISPOSITION_NOUVEAU["personnages"] + "/narrateur_reference.png"}]
+    pj["logo"] = "bibliotheque/logo.svg"
     cx.sauver_projet(pj, rac)
-    open(os.path.join(rac, "logo.svg"), "w", encoding="utf-8").write(logo_pour(pj["nom"], pj.get("couleur", "#d8b46a")))
+    open(cx._abs(pj["logo"], rac), "w", encoding="utf-8").write(logo_pour(pj["nom"], pj.get("couleur", "#d8b46a")))
     S, E = pj["saisons"], pj["episodes_par_saison"]
-    if not os.path.exists(os.path.join(rac, "bible", "bible.md")):
-        open(os.path.join(rac, "bible", "bible.md"), "w", encoding="utf-8").write(
+    bible = cx._abs(cx.DISPOSITION_NOUVEAU["bible"], rac)
+    if not os.path.exists(os.path.join(bible, "bible.md")):
+        open(os.path.join(bible, "bible.md"), "w", encoding="utf-8").write(
             f"# {pj['nom']} — Bible\n\n{pj.get('sous_titre', '')}\n\n## Concept\n\n(à écrire, ou : Assistant > Générer la bible avec l'IA)\n")
-    if not os.path.exists(os.path.join(rac, "bible", "plan.json")):
+    if not os.path.exists(os.path.join(bible, "plan.json")):
         plan = [{"code": f"E{s}{e:02d}", "saison": s, "titre_saison": f"Saison {s}", "num": f"{s}.{e}",
                  "titre": f"Épisode {s}.{e}", "resume": "", "pages": ""} for s in range(1, S + 1) for e in range(1, E + 1)]
-        json.dump(plan, open(os.path.join(rac, "bible", "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        json.dump(plan, open(os.path.join(bible, "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     cx.definir_projet_actif(rac)
     return rac
 
@@ -361,8 +394,8 @@ class H(BaseHTTPRequestHandler):
                 return self.envoyer(200, infos_projet())
             if p == "/api/logo":
                 pj = cx.projet()
-                f = cx.chemin(pj.get("logo") or "logo.svg")
-                if not os.path.exists(f):
+                f = cx.fichier(pj.get("logo") or "logo.svg")
+                if not f:
                     from logo import logo_pour
                     return self.envoyer(200, logo_pour(pj["nom"], pj.get("couleur", "#d8b46a")), "image/svg+xml")
                 return self.fichier(f, cx.racine())
@@ -379,7 +412,7 @@ class H(BaseHTTPRequestHandler):
                 return self.envoyer(200, etat_cles(cx.reglages()))
             if p == "/api/bible":
                 try:
-                    t = open(cx.chemin("bible", "bible.md"), encoding="utf-8").read()
+                    t = open(cx.dossier("bible", "bible.md"), encoding="utf-8").read()
                 except Exception:
                     t = ""
                 return self.envoyer(200, {"texte": t})
@@ -387,6 +420,8 @@ class H(BaseHTTPRequestHandler):
                 return self.envoyer(200, plan_complet())
             if p == "/api/assistant":
                 return self.envoyer(200, assistant())
+            if p == "/api/organisation":
+                return self.envoyer(200, cx.organisation())
             if p == "/api/sources":
                 return self.envoyer(200, sources())
             if p == "/api/parcourir":
@@ -396,7 +431,7 @@ class H(BaseHTTPRequestHandler):
                 out = []
                 for f in fichiers_rendus():
                     ep = next((k for k, e in eps.items() if f.startswith(e["id"] + "_") or f.startswith(k + "_")), None)
-                    st = os.stat(cx.chemin("Rendus", f))
+                    st = os.stat(cx.dossier("rendus", f))
                     out.append({"f": f, "ep": ep, "id": eps[ep]["id"] if ep else "", "titre": eps[ep]["title"] if ep else "",
                                 "mo": round(st.st_size / 1e6, 1), "date": time.strftime("%d/%m %H:%M", time.localtime(st.st_mtime))})
                 return self.envoyer(200, out)
@@ -414,9 +449,9 @@ class H(BaseHTTPRequestHandler):
                     return self.envoyer(200, {"texte": lire_livre(q["pages"][0])})
                 return self.envoyer(200, {"pages": nb_pages_livre()})
             if p.startswith("/flow/"):
-                return self.fichier(cx.chemin("Flow", *p.split("/")[2:]), cx.chemin("Flow"))
+                return self.fichier(cx.dossier("images", *p.split("/")[2:]), cx.dossier("images"))
             if p.startswith("/rendus/"):
-                return self.fichier(cx.chemin("Rendus", p.split("/", 2)[2]), cx.chemin("Rendus"))
+                return self.fichier(cx.dossier("rendus", p.split("/", 2)[2]), cx.dossier("rendus"))
             if p.startswith("/api/aide/"):
                 nom = {"installation": "MANUEL_INSTALLATION.md", "utilisation": "MANUEL_UTILISATION.md"}.get(p.split("/")[-1])
                 if not nom:
@@ -447,14 +482,19 @@ class H(BaseHTTPRequestHandler):
                 cx.sauver_reglages(r)
                 return self.envoyer(200, {"ok": True})
             if p == "/api/bible":
-                os.makedirs(cx.chemin("bible"), exist_ok=True)
-                open(cx.chemin("bible", "bible.md"), "w", encoding="utf-8").write(self.corps()["texte"])
+                open(cx.dossier("bible", "bible.md", creer=True), "w", encoding="utf-8").write(self.corps()["texte"])
                 return self.envoyer(200, {"ok": True})
             if p == "/api/fichier":
                 dest = urllib.parse.parse_qs(u.query)["dest"][0].replace("\\", "/").lstrip("/")
-                if ".." in dest or not (dest.startswith(DOSSIERS_ECRITURE) or re.match(r"^logo\.(svg|png|jpg|jpeg|webp)$", dest)):
+                parties = [x for x in dest.split("/") if x]
+                if ".." in parties or not parties:
                     return self.envoyer(400, {"erreur": "destination non autorisée"})
-                cible = cx.chemin(*dest.split("/"))
+                if len(parties) == 1 and re.match(r"^logo\.(svg|png|jpg|jpeg|webp)$", parties[0]):
+                    cible = cx.chemin(parties[0])
+                elif len(parties) > 1 and parties[0].lower() in ALIAS_ROLES:
+                    cible = cx.dossier(ALIAS_ROLES[parties[0].lower()], *parties[1:], creer=True)
+                else:
+                    return self.envoyer(400, {"erreur": "destination non autorisée"})
                 os.makedirs(os.path.dirname(cible), exist_ok=True)
                 n = int(self.headers.get("Content-Length", 0))
                 with open(cible, "wb") as f:
@@ -463,9 +503,10 @@ class H(BaseHTTPRequestHandler):
                         if not bloc:
                             break
                         f.write(bloc); n -= len(bloc)
-                if dest.startswith("logo."):
-                    pj = cx.projet(); pj["logo"] = dest; cx.sauver_projet(pj)
-                return self.envoyer(200, {"ok": True, "chemin": cible})
+                if len(parties) == 1:
+                    pj = cx.projet(); pj["logo"] = parties[0]; cx.sauver_projet(pj)
+                cx.oublier_index()
+                return self.envoyer(200, {"ok": True, "chemin": cible, "rel": cx._rel(cible)})
             return self.envoyer(404, {"erreur": "introuvable"})
         except Exception as ex:
             return self.envoyer(500, {"erreur": str(ex)})
@@ -492,6 +533,20 @@ class H(BaseHTTPRequestHandler):
                     cx.sauver_projet(pj, rac)
                 cx.definir_projet_actif(rac)
                 return self.envoyer(200, {"ok": True, "chemin": rac})
+            if p == "/api/organisation":
+                if c.get("vers"):
+                    rel = cx.deplacer_dossier(c["role"], c["vers"])
+                else:
+                    rel = cx.definir_dossier(c["role"], c["chemin"])
+                regenerer_fiches()
+                return self.envoyer(200, {"ok": True, "chemin": rel, "organisation": cx.organisation()})
+            if p == "/api/organisation/ranger":
+                r = cx.ranger_racine(appliquer=bool(c.get("appliquer")))
+                if c.get("appliquer"):
+                    r["fiches"] = regenerer_fiches()
+                return self.envoyer(200, dict(r, organisation=cx.organisation()))
+            if p == "/api/organisation/rechercher":
+                return self.envoyer(200, {"ok": True, "trouves": cx.rechercher(), "organisation": cx.organisation()})
             if p == "/api/projet/nouveau":
                 return self.envoyer(200, {"ok": True, "chemin": creer_projet(c)})
             if p == "/api/projet/oublier":
@@ -503,8 +558,10 @@ class H(BaseHTTPRequestHandler):
                 from logo import logo_pour, logo_generique
                 pj = cx.projet()
                 svg = logo_generique(pj["nom"], pj.get("couleur", "#d8b46a")) if c.get("generique") else logo_pour(pj["nom"], pj.get("couleur", "#d8b46a"))
-                open(cx.chemin("logo.svg"), "w", encoding="utf-8").write(svg)
-                pj["logo"] = "logo.svg"; cx.sauver_projet(pj)
+                cible = cx.fichier(pj.get("logo", "")) if (pj.get("logo") or "").endswith(".svg") else ""
+                cible = cible or cx.chemin("logo.svg")
+                open(cible, "w", encoding="utf-8").write(svg)
+                pj["logo"] = cx._rel(cible); cx.sauver_projet(pj)
                 return self.envoyer(200, {"ok": True})
             if p == "/api/cle":
                 from cles import ecrire_cle, profil, compte
@@ -525,18 +582,17 @@ class H(BaseHTTPRequestHandler):
                 json.dump(d, open(cx.chemin("suivi.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
                 return self.envoyer(200, {"ok": True})
             if p == "/api/ouvrir":
-                cible = {"rendus": "Rendus", "flow": "Flow", "fiches": "Prompts_Flow", "sources": "sources",
-                         "projet": "", "exports": "_exports"}.get(c.get("dossier", ""))
-                if cible is not None:
-                    d = cx.chemin(cible) if cible else cx.racine()
-                    os.makedirs(d, exist_ok=True)
+                nom = c.get("dossier", "")
+                cible = {"flow": "images"}.get(nom, nom)
+                if cible == "projet" or cible in cx.ROLES:
+                    d = cx.racine() if cible == "projet" else cx.dossier(cible, creer=True)
                     if sys.platform == "win32":
                         os.startfile(d)
                     elif sys.platform == "darwin":
                         subprocess.Popen(["open", d])
                     else:
                         subprocess.Popen(["xdg-open", d])
-                return self.envoyer(200, {"ok": cible is not None})
+                return self.envoyer(200, {"ok": cible == "projet" or cible in cx.ROLES})
             return self.envoyer(404, {"erreur": "introuvable"})
         except Exception as ex:
             return self.envoyer(500, {"erreur": str(ex)})
@@ -546,6 +602,8 @@ if __name__ == "__main__":
     fait = cx.migrer()
     if fait:
         print("Migration vers le format projet :", ", ".join(fait))
+    if cx.est_projet(cx.racine()):
+        cx.rechercher()           # dossiers et fichiers déplacés depuis la dernière session
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     url = f"http://localhost:{PORT}"
     print(f"{cx.NOM_LOGICIEL} — projet « {cx.projet()['nom']} » ({cx.racine()})")

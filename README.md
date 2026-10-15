@@ -31,21 +31,19 @@ claude "Installe MKS Movie Producer depuis ce dossier (lis CLAUDE.md) puis ouvre
 ```
 
 ## Projets
-Le logiciel et les données sont séparés. Un **projet** est un dossier autonome :
+Le logiciel et les données sont séparés. Un **projet** est un dossier autonome, créé ainsi :
 
 ```
 MonProjet/
-  projet.json      nom, logo, structure, style, personnages, voix, règles IA
-  logo.svg
-  sources/         livre (PDF), scripts, notes, documents de référence
-  bible/           bible.md, plan.json
-  episodes/        scripts des épisodes (E101.json…)
-  Characters/      images de référence des personnages
-  Flow/E101/       images et vidéos générées (E101-01.png…)
-  Prompts_Flow/    fiches de prompts
-  Rendus/          épisodes montés
+  projet.json      paramètres du projet et carte des dossiers
   suivi.json       validations
+  bibliotheque/    sources/, personnages/, bible/ (bible.md, plan.json), episodes/, logo.svg
+  production/      fiches/, images/E101/E101-01.png…, rendus/
+  _exports/
 ```
+
+Le projet se range **librement** : seuls `projet.json` et `suivi.json` restent à la racine ; chaque dossier
+déplacé est retrouvé d'après son contenu (*Projet › Organisation du projet*).
 
 - **Changer de poste** : copier le dossier du projet (ou *Projet › Exporter* en zip), installer le logiciel,
   puis *Projet › Ouvrir un dossier existant*. L'avancement est recalculé à partir des fichiers.

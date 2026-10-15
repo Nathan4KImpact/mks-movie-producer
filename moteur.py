@@ -11,7 +11,7 @@ import hashlib, json, os, re, subprocess, sys, shutil, urllib.request, unicodeda
 
 ICI = os.path.dirname(os.path.abspath(__file__))          # dossier du logiciel
 sys.path.insert(0, ICI)
-from contexte import racine, projet, chemin, slug as slug_projet
+from contexte import racine, projet, chemin, dossier, slug as slug_projet
 
 W, H, FPS = 1920, 1080, 25
 FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
@@ -45,16 +45,21 @@ def slug(t):
 def trouver_media(ep, s, wd, telecharger=True):
     """Renvoie (chemin, est_video) pour un plan, ou (None, False) si introuvable."""
     k = s.get("k")
-    dossier = chemin("Flow", ep)
+    rep = dossier("images", ep)
     if k:
         for ext in (".mp4", ".mov", ".webm"):
-            p = os.path.join(dossier, k + ext)
+            p = os.path.join(rep, k + ext)
             if os.path.exists(p):
                 return p, True
         for ext in (".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG"):
-            p = os.path.join(dossier, k + ext)
+            p = os.path.join(rep, k + ext)
             if os.path.exists(p):
                 return p, False
+    if k:                                       # rangé ailleurs dans le projet (ancien dossier, autre sous-dossier…)
+        from contexte import chercher_media
+        p, video = chercher_media(k)
+        if p:
+            return p, video
     for champ, est_video in (("vid_url", True), ("img_url", False)):
         u = s.get(champ)
         if u and not telecharger:
@@ -88,7 +93,7 @@ def etat_images(ep):
 
 
 def charger_episode(ep):
-    return json.load(open(chemin("episodes", ep + ".json"), encoding="utf-8"))
+    return json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
 
 
 # ---------------------------------------------------------------- voix
@@ -200,7 +205,7 @@ def plan(s, L, src, wd, nom, est_video):
 def musique(total, sections, wd):
     """sections : [(debut_s, piste, decalage)] ; fondu enchaîné de 3 s entre pistes."""
     XF = 3.0
-    dossiers = [chemin("musique"), os.path.join(ICI, "musique")]
+    dossiers = [dossier("musique"), os.path.join(ICI, "musique")]
     entrees, chaine = [], []
     for k, (t0, piste, off) in enumerate(sections):
         t1 = sections[k + 1][0] if k + 1 < len(sections) else total
@@ -290,8 +295,7 @@ def monter(ep, reprendre=True):
          f"[b][v1]sidechaincompress=threshold=0.03:ratio=4:attack=30:release=600[bd];"
          f"[bd][v2]amix=inputs=2:normalize=0,atrim=0:{total:.2f}[m]",
          "-map", "[m]", "-ar", "44100", "mix.wav"], cwd=wd)
-    os.makedirs(chemin("Rendus"), exist_ok=True)
-    sortie = chemin("Rendus", f"{e['id']}_{slug(e.get('title', ''))}.mp4")
+    sortie = dossier("rendus", f"{e['id']}_{slug(e.get('title', ''))}.mp4", creer=True)
     if os.path.exists(sortie):
         base, n = sortie[:-4], 2
         while os.path.exists(f"{base}_v{n}.mp4"):

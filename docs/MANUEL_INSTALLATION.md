@@ -219,22 +219,37 @@ MKS-Movie-Producer/
 
 ### Le dossier d'un projet (voyage d'un poste à l'autre)
 
+Un nouveau projet est créé avec cette organisation : ce qui se **prépare** dans `bibliotheque`, ce qui se **fabrique** dans `production`.
+
 ```
 L'Ultime Assaut/
-  projet.json       nom, sous-titre, structure, voix, style, personnages, règles IA
-  logo.svg          logo affiché dans la bannière
-  sources/          livre (PDF), scripts, notes, documents de référence
-  bible/            bible.md et plan.json (le plan des épisodes)
-  episodes/         scripts des épisodes : E101.json, E102.json…
-  Characters/       images de référence des personnages
-  Prompts_Flow/     fiches de prompts : E104_fiche_Flow.txt…
-  Flow/E104/        images et vidéos générées : E104-01.png, E104-07.mp4…
-  Rendus/           épisodes montés (.mp4)
-  suivi.json        épisodes validés
-  _exports/         zips d'export
+  projet.json          paramètres du projet et carte des dossiers
+  suivi.json           épisodes validés
+  bibliotheque/
+    sources/           livre (PDF), scripts, notes, documents de référence
+    personnages/       images de référence des personnages
+    bible/             bible.md et plan.json (le plan des épisodes)
+    episodes/          scripts des épisodes : E101.json, E102.json…
+    logo.svg           logo affiché dans la bannière
+  production/
+    fiches/            fiches de prompts : E104_fiche_Flow.txt…
+    images/E104/       images et vidéos générées : E104-01.png, E104-07.mp4…
+    rendus/            épisodes montés (.mp4)
+  _exports/            zips d'export
 ```
 
-**L'avancement est entièrement recalculé à partir de ces fichiers** : script présent, fiche présente, nombre d'images rangées, rendu présent, validation. Il n'y a pas de base de données à transférer.
+### Ranger le projet librement
+
+Cette organisation n'est pas imposée. Vous pouvez renommer, regrouper ou déplacer les dossiers dans l'Explorateur : **seuls `projet.json` et `suivi.json` doivent rester à la racine**.
+
+- Chaque dossier a un **rôle** (sources, personnages, bible, épisodes, fiches, images, rendus, exports, musique). Le dossier de chaque rôle est noté dans `projet.json`.
+- Si un dossier a été déplacé, l'application le **retrouve d'après son contenu** : des scripts `.json` d'épisodes, un `plan.json`, des fiches `_fiche_Flow.txt`, des sous-dossiers d'images nommés comme les épisodes, etc. Elle met alors `projet.json` à jour.
+- Le livre, le logo et les images de référence déplacés sont retrouvés **par leur nom de fichier**, n'importe où dans le projet.
+- Une image de plan rangée hors du dossier des images (par exemple dans un ancien dossier `Flow`) est elle aussi retrouvée par son nom.
+
+La recherche a lieu au lancement de `PILOTAGE.bat` et dès qu'un dossier manque. Le panneau **Projet › Organisation du projet** affiche la carte des dossiers et permet de la corriger (manuel d'utilisation, section 13.5).
+
+**L'avancement est entièrement recalculé à partir des fichiers** : script présent, fiche présente, nombre d'images rangées, rendu présent, validation. Il n'y a pas de base de données à transférer.
 
 ## 10. Transférer un projet sur un autre poste
 
@@ -258,7 +273,7 @@ Les projets ne sont jamais modifiés par une mise à jour du logiciel.
 
 Les versions précédentes rangeaient les épisodes, la bible, le suivi et `config.json` *dans* le dossier `atelier`. Au premier lancement de MKS Movie Producer, la migration est automatique :
 
-- `episodes\`, `bible\` et `suivi.json` sont déplacés dans le dossier du projet (le parent de `atelier`) ;
+- `episodes\`, `bible\` et `suivi.json` sont déplacés dans le dossier du projet (le parent de `atelier`), que vous pouvez ensuite ranger à votre guise (section 9) ;
 - `projet.json` est créé avec les réglages de la série (voix, style, personnage du Voyant, règles) ;
 - `reglages.json` reprend les profils d'IA ; `config.json` est renommé `config.ancien.json` ;
 - la fenêtre noire affiche « Migration vers le format projet : … ».
@@ -286,6 +301,8 @@ Aucun fichier n'est perdu : en cas de doublon, la version déjà présente dans 
 | « Échec du test » dans Réglages | Clé, nom de modèle ou URL incorrects | Recoller la clé ; vérifier le nom exact du modèle |
 | Projet « introuvable » dans la liste | Dossier déplacé ou disque débranché | Projet › Ouvrir un dossier existant, puis retirer l'ancienne entrée (✕) |
 | Titres sans la police Cinzel | Police non téléchargée | Relancer `INSTALLER.bat` |
+| Après un rangement du projet, des épisodes, le livre ou une référence n'apparaissent plus | Dossier déplacé sans contenu reconnaissable, ou fichier renommé | Projet › Organisation du projet › **Rechercher les dossiers déplacés** ; sinon **Choisir…** le bon dossier pour ce rôle |
+| Les nouvelles images n'apparaissent pas | Images enregistrées dans un dossier qui n'est pas celui du projet | Vérifier le dossier indiqué en tête de la fiche de prompts |
 
 En dernier recours, `ATELIER.bat` ouvre un menu texte qui permet de monter un épisode, de vérifier les images ou de générer une fiche sans passer par le navigateur.
 

@@ -11,18 +11,19 @@ sys.path.insert(0, ICI)
 os.chdir(ICI)
 import contexte as cx
 cx.migrer()
+cx.reparer_fichiers()
 
 try:                                   # SDK MCP 1.x
     from mcp.server.fastmcp import FastMCP as _Serveur
 except ImportError:                    # SDK MCP 2.x
     from mcp.server.mcpserver import MCPServer as _Serveur
 
-mcp = _Serveur("ultime-assaut-atelier")
+mcp = _Serveur("mks-movie-producer")
 
 
 @mcp.tool()
 def lister_episodes() -> list[str]:
-    """Liste les épisodes disponibles (fichiers episodes/*.json)."""
+    """Liste les épisodes disponibles (scripts du dossier des épisodes)."""
     from atelier import episodes
     return episodes()
 
@@ -30,7 +31,7 @@ def lister_episodes() -> list[str]:
 @mcp.tool()
 def lire_episode(ep: str) -> str:
     """Renvoie le JSON complet d'un épisode (narration, prompts, musiques, plans vidéo)."""
-    return open(cx.chemin("episodes", ep + ".json"), encoding="utf-8").read()
+    return open(cx.dossier("episodes", ep + ".json"), encoding="utf-8").read()
 
 
 @mcp.tool()
@@ -51,7 +52,7 @@ def etat_images(ep: str) -> dict:
 
 @mcp.tool()
 def generer_fiche_flow(ep: str) -> str:
-    """Génère Prompts_Flow/<ep>_fiche_Flow.txt à partir du JSON de l'épisode."""
+    """Génère la fiche de prompts <ep>_fiche_Flow.txt (dossier des fiches) à partir du JSON de l'épisode."""
     from fiche import fiche_flow
     return fiche_flow(ep)
 
@@ -65,15 +66,15 @@ def lire_livre(pages: str) -> str:
 
 @mcp.tool()
 def monter_episode(ep: str, depuis_zero: bool = False) -> dict:
-    """Monte l'épisode (voix, musique par scène, titres) et dépose le MP4 dans Rendus/. Peut prendre 10 à 20 min."""
+    """Monte l'épisode (voix, musique par scène, titres) et dépose le MP4 dans le dossier des rendus. Peut prendre 10 à 20 min."""
     from moteur import monter
     return monter(ep, reprendre=not depuis_zero)
 
 
 @mcp.tool()
 def projet_actif() -> dict:
-    """Nom, dossier et paramètres du projet actif (structure, style, personnages, voix)."""
-    return {"racine": cx.racine(), "projet": cx.projet()}
+    """Nom, dossier, paramètres du projet actif (structure, style, personnages, voix) et organisation de ses dossiers."""
+    return {"racine": cx.racine(), "projet": cx.projet(), "organisation": cx.organisation()}
 
 
 @mcp.tool()
@@ -92,8 +93,8 @@ def etat_production() -> dict:
 
 @mcp.tool()
 def lire_bible() -> str:
-    """Bible de la série (direction artistique, personnages, plan des 49 épisodes avec pages du livre)."""
-    return open(cx.chemin("bible", "bible.md"), encoding="utf-8").read()
+    """Bible de la série (direction artistique, personnages, plan des épisodes avec pages du livre)."""
+    return open(cx.dossier("bible", "bible.md"), encoding="utf-8").read()
 
 
 if __name__ == "__main__":
