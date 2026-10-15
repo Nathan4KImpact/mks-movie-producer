@@ -9,14 +9,14 @@ Répondre en français à l'utilisateur.
   sinon `poste.json`, sinon dossier parent). `projet()` lit `projet.json`. `migrer()` convertit l'ancien format.
 - `pilotage.py` : serveur HTTP local (127.0.0.1:8765) + API JSON ; interface dans `web/index.html` (vanilla JS).
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
-- `atelier.py` : CLI — `monter`, `etat`, `fiche`, `ecrire`, `prompts`, `verifier`, `bible`, `exporter`.
+- `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
   (champ `mus` d'un plan = changement de piste), plans recalculés seulement si leur empreinte change (`.sig`), sortie dans le dossier des rendus (jamais d'écrasement).
 - `ia.py` : appels modèles (Anthropic ou compatible OpenAI) selon `reglages.json > ia > par_tache`,
   lecture des sources (PDF, docx, txt…), génération bible/plan/épisodes, relecture d'images.
 - `cles.py` : profils de modèles et clés (keyring, repli `.cles.json`).
 - `fiche.py` : fiche de prompts d'un épisode (tags `[TAG]` de personnages remplacés par leur description).
-- `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP sur le projet actif.
+- `langues.py` : versions linguistiques (voir plus bas). `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP.
 
 ## Organisation d'un projet (aucun chemin en dur)
 Seuls `projet.json` et `suivi.json` sont à la racine. Les dossiers de travail s'obtiennent TOUJOURS par
@@ -31,6 +31,18 @@ Nouveau projet : `DISPOSITION_NOUVEAU` (bibliotheque/… et production/…). `ra
 `{"id":"S1E04","title":"…","shots":[{"k":"E104-01","vo":"narration","p":"prompt image anglais","m":"in|out|left|right|up|down|still",
 "title":"MOT À L'ÉCRAN","min":5,"mus":"Heroic_Age","vid_prompt":"…"},{"card":"TITRE","sub":"…","dur":7}, …]}`
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
+
+## Versions linguistiques (`langues.py`)
+Une seule série, plusieurs langues : plans, images et musiques communs ; textes et voix par langue, une vidéo par langue.
+`projet.json > langue` (origine) et `versions` : `{"en": {"titre": "The Final Quest", "voix": {"nom", "debit", "hauteur"}}}`.
+Traductions DANS le JSON de l'épisode : `"versions": {"en": {"vo", "title", "de"}}` sur chaque plan, `{"card", "sub", "de"}`
+sur les cartons, `{"title", "de"}` sur l'épisode. `de` = empreinte du texte d'origine traduit (`langues.empreinte`) :
+si l'origine change, statut `a_revoir`. Toujours écrire une traduction via `langues.poser()` (calcule `de`).
+`ia.traduire_episode` est incrémental (manquantes + à revoir). `moteur.monter(ep, langue="en")` : `localiser()` refuse
+un épisode incomplet, travail dans `travail/<projet>/<EP>.en`, sortie `<rendus>/en/<ID>_<titre>_EN.mp4`. Chaque montage
+écrit un `.srt` calé sur la voix (`langues.srt`). L'éditeur envoie `_retouche: ["en"]` pour une traduction corrigée à la
+main (le serveur remet `de` à jour). Toute IA qui réécrit le JSON complet doit recoller les `versions`
+(`ia._garder_traductions`).
 
 ## Documentation
 `docs/MANUEL_INSTALLATION.md` et `docs/MANUEL_UTILISATION.md` (servis dans l'interface, menu Aide, via `/api/aide/<nom>`

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """MKS Movie Producer — moteur de montage local (Windows / Mac / Linux).
 
-Entrée  : <projet>/episodes/<EP>.json  +  images/vidéos dans <projet>/Flow/<EP>/<clé>.png|jpg|mp4
-Sortie  : <projet>/Rendus/<EP>_<titre>.mp4
+Entrée  : <dossier des épisodes>/<EP>.json  +  images/vidéos dans <dossier des images>/<EP>/<clé>.png|jpg|mp4
+Sortie  : <dossier des rendus>/<ID>_<titre>.mp4 (+ .srt) ; version traduite : <rendus>/<langue>/<ID>_<titre>_EN.mp4 (+ .srt)
 
 Pas de shell : toutes les commandes ffmpeg sont passées en listes d'arguments,
 ce qui évite les problèmes d'apostrophes et d'espaces dans les chemins Windows.
@@ -120,8 +120,8 @@ def empreinte_media(src):
     return [src]
 
 
-def voix(texte, dst):
-    v = projet()["voix"]
+def voix(texte, dst, v=None):
+    v = v or projet()["voix"]
     sig = signature(texte, v.get("nom"), v.get("debit"), v.get("hauteur"))
     if a_jour(dst, sig):
         return dst
@@ -234,13 +234,26 @@ def musique(total, sections, wd):
 
 
 # ---------------------------------------------------------------- montage
-def monter(ep, reprendre=True):
-    e = charger_episode(ep)
-    wd = os.path.join(ICI, "travail", slug_projet(projet()["nom"]), ep)
+def monter(ep, reprendre=True, langue=None):
+    """Monte un épisode. langue : None (langue d'origine) ou code d'une version (ex. "en") déclarée dans le projet."""
+    import langues as lg
+    pj = projet()
+    if lg.est_source(langue, pj):
+        langue = None
+    elif langue not in lg.versions(pj):
+        raise RuntimeError(f"Langue « {langue} » non déclarée : ajoute-la dans Projet > Versions linguistiques.")
+    e = lg.localiser(charger_episode(ep), langue, pj)
+    if e.get("_a_revoir"):
+        log(f"  ATTENTION : {len(e['_a_revoir'])} traduction(s) à revoir (texte d'origine modifié depuis) : "
+            + ", ".join(e["_a_revoir"][:10]))
+    v_langue = lg.voix_de(langue, pj)
+    wd = os.path.join(ICI, "travail", slug_projet(pj["nom"]), ep + (f".{langue}" if langue else ""))
+    if langue:
+        log(f"Version {lg.nom_langue(langue)} — voix {v_langue['nom']}")
     if not reprendre and os.path.isdir(wd):
         shutil.rmtree(wd)
     os.makedirs(wd, exist_ok=True)
-    clips, segs, manquants = [], [], []
+    clips, segs, manquants, textes = [], [], [], {}
     for i, s in enumerate(e["shots"]):
         nom = f"p{i:03d}"
         if s.get("card"):
@@ -253,7 +266,7 @@ def monter(ep, reprendre=True):
         vo = s.get("vo", "").strip()
         a, d = None, 0.0
         if vo:
-            a = voix(vo, os.path.join(wd, nom + ".mp3")); d = duree(a)
+            a = voix(vo, os.path.join(wd, nom + ".mp3"), v_langue); d = duree(a)
         L = round(max(float(s.get("min", 4.0)), d + float(s.get("pad", 1.5))), 2)
         src, est_video = trouver_media(ep, s, wd)
         sig = signature("plan", L, empreinte_media(src), est_video, s.get("m", s.get("motion", "in")), s.get("title", ""))
@@ -265,7 +278,7 @@ def monter(ep, reprendre=True):
             else:
                 plan(s, L, src, wd, nom, est_video)
             marquer(os.path.join(wd, nom + ".mp4"), sig)
-        clips.append(nom + ".mp4"); segs.append((L, a))
+        clips.append(nom + ".mp4"); segs.append((L, a)); textes[len(segs) - 1] = (vo, d)
         log(f"  plan {i + 1}/{len(e['shots'])} {s.get('k', '')} ok ({L:.1f} s)")
     open(os.path.join(wd, "liste.txt"), "w", encoding="utf-8").write("".join(f"file '{c}'\n" for c in clips))
     run([FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", "liste.txt", "-c", "copy", "video.mp4"], cwd=wd)
@@ -295,7 +308,9 @@ def monter(ep, reprendre=True):
          f"[b][v1]sidechaincompress=threshold=0.03:ratio=4:attack=30:release=600[bd];"
          f"[bd][v2]amix=inputs=2:normalize=0,atrim=0:{total:.2f}[m]",
          "-map", "[m]", "-ar", "44100", "mix.wav"], cwd=wd)
-    sortie = dossier("rendus", f"{e['id']}_{slug(e.get('title', ''))}.mp4", creer=True)
+    nom_sortie = f"{e['id']}_{slug(e.get('title', ''))}{lg.suffixe(langue, pj)}.mp4"
+    sortie = dossier("rendus", *([langue] if langue else []), nom_sortie, creer=True)
+    os.makedirs(os.path.dirname(sortie), exist_ok=True)
     if os.path.exists(sortie):
         base, n = sortie[:-4], 2
         while os.path.exists(f"{base}_v{n}.mp4"):
@@ -303,10 +318,16 @@ def monter(ep, reprendre=True):
         sortie = f"{base}_v{n}.mp4"
     run([FFMPEG, "-y", "-i", "video.mp4", "-i", "mix.wav", "-map", "0:v", "-map", "1:a", "-c:v", "copy",
          "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", sortie], cwd=wd)
-    res = {"sortie": sortie, "duree_s": round(duree(sortie), 1), "plans": len(clips), "plans_manquants": manquants}
+    # sous-titres calés sur la voix (la narration démarre 0,45 s après le début du plan)
+    segments = [(debuts[k] + 0.45, textes[k][1], textes[k][0]) for k in sorted(textes)]
+    sous_titres = sortie[:-4] + ".srt"
+    open(sous_titres, "w", encoding="utf-8").write(lg.srt(segments))
+    res = {"sortie": sortie, "sous_titres": sous_titres, "langue": langue or lg.source(pj),
+           "duree_s": round(duree(sortie), 1), "plans": len(clips), "plans_manquants": manquants}
     log(json.dumps(res, ensure_ascii=False, indent=1))
     return res
 
 
 if __name__ == "__main__":
-    monter(sys.argv[1], reprendre="--neuf" not in sys.argv)
+    lang = sys.argv[sys.argv.index("--langue") + 1] if "--langue" in sys.argv else None
+    monter(sys.argv[1], reprendre="--neuf" not in sys.argv, langue=lang)

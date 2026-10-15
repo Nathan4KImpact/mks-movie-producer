@@ -28,6 +28,7 @@ DEFAUT_PROJET = {
     "langue": "fr",
     "livre": "",
     "voix": {"nom": "fr-FR-HenriNeural", "debit": "-15%", "hauteur": "-6Hz"},
+    "versions": {},
     "volume_musique": 0.47,
     "musique_defaut": "Lord_of_the_Land",
     "musiques": ["Clash_Defiant", "Crusade_-_Heavy_Industry", "Dark_Walk", "Darkest_Child", "Echoes_of_Time_v2",

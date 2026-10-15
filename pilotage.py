@@ -46,9 +46,19 @@ def media_local(ep, k):
     return None, None
 
 
-def fichiers_rendus():
-    d = cx.dossier("rendus")
+def fichiers_rendus(langue=None):
+    """Rendus de la langue d'origine (racine du dossier des rendus) ou d'une version (sous-dossier <langue>/)."""
+    d = cx.dossier("rendus", langue) if langue else cx.dossier("rendus")
     return sorted(f for f in os.listdir(d) if f.lower().endswith(".mp4")) if os.path.isdir(d) else []
+
+
+def tous_les_rendus():
+    """[(chemin relatif au dossier des rendus, langue ou None)]"""
+    import langues as lg
+    out = [(f, None) for f in fichiers_rendus()]
+    for l in lg.versions(cx.projet()):
+        out += [(f"{l}/{f}", l) for f in fichiers_rendus(l)]
+    return out
 
 
 def etat_episode(ep, rendus=None):
@@ -64,9 +74,16 @@ def etat_episode(ep, rendus=None):
     mots = sum(len(s.get("vo", "").split()) for s in plans)
     rendus = [f for f in (rendus if rendus is not None else fichiers_rendus())
               if f.startswith(e["id"] + "_") or f.startswith(ep + "_")]
+    import langues as lg
+    traductions = {}
+    for l in lg.versions(cx.projet()):
+        et = lg.etat_traduction(e, l)
+        traductions[l] = {"ok": et["ok"], "total": et["total"], "a_revoir": len(et["a_revoir"]),
+                          "manquantes": len(et["manquantes"]), "complete": et["complete"],
+                          "rendus": [f for f in fichiers_rendus(l) if f.startswith(e["id"] + "_") or f.startswith(ep + "_")]}
     return {"ep": ep, "id": e["id"], "title": e.get("title", ""), "plans": len(plans), "medias": ok,
             "videos": vid, "videos_prevues": sum(1 for s in plans if s.get("vid_prompt") or s.get("vid_url")),
-            "mots": mots, "minutes": round(mots / 115, 1), "rendus": rendus}
+            "mots": mots, "minutes": round(mots / 115, 1), "rendus": rendus, "traductions": traductions}
 
 
 def liste_episodes():
@@ -82,7 +99,11 @@ def liste_episodes():
 
 
 def lire_episode(ep):
+    import langues as lg
     e = json.load(open(chemin_ep(ep), encoding="utf-8"))
+    vs = lg.versions(cx.projet())
+    for el in [e] + e["shots"]:                          # état de chaque traduction : ok | manquante | a_revoir | rien
+        el["_tr"] = {l: lg.statut(el, l) for l in vs}
     for s in e["shots"]:
         if s.get("card"):
             continue
@@ -97,10 +118,24 @@ def lire_episode(ep):
 
 
 def sauver_episode(ep, e):
+    """L'éditeur signale par « _retouche » les traductions corrigées à la main : elles redeviennent à jour
+    vis-à-vis du texte d'origine actuel."""
     from ia import _sauver
-    for s in e.get("shots", []):
-        for k in [k for k in s if k.startswith("_")]:
-            s.pop(k)
+    import langues as lg
+    for el in [e] + e.get("shots", []):
+        for l in el.get("_retouche") or []:
+            t = (el.get("versions") or {}).get(l)
+            if t is not None:
+                for c in [c for c in t if c != "de" and not str(t[c]).strip()]:
+                    t.pop(c)
+                if any(c != "de" for c in t):
+                    t["de"] = lg.empreinte(el)
+                else:
+                    el["versions"].pop(l)
+        if el.get("versions") == {}:
+            el.pop("versions")
+        for k in [k for k in el if k.startswith("_")]:
+            el.pop(k)
     _sauver(ep, e)
 
 
@@ -324,6 +359,27 @@ def lancer(cmd, args):
     return job
 
 
+def essai_voix(c):
+    """Court extrait d'une voix Edge TTS (pour choisir la voix d'une langue avant de monter un épisode)."""
+    import hashlib
+    nom, debit, hauteur = (c.get("nom") or "").strip(), (c.get("debit") or "+0%").strip(), (c.get("hauteur") or "+0Hz").strip()
+    texte = (c.get("texte") or "").strip()[:600]
+    if not re.match(r"^[a-z]{2,3}-[A-Za-z]{2,4}-[A-Za-z]+Neural$", nom) or not texte:
+        raise ValueError("Voix ou texte invalide")
+    if not re.match(r"^[+-]\d{1,3}%$", debit) or not re.match(r"^[+-]\d{1,3}Hz$", hauteur):
+        raise ValueError("Débit (ex. -10%) ou hauteur (ex. -4Hz) invalide")
+    d = os.path.join(ICI, "cache", "essais"); os.makedirs(d, exist_ok=True)
+    f = hashlib.sha1(f"{nom}|{debit}|{hauteur}|{texte}".encode("utf-8")).hexdigest()[:12] + ".mp3"
+    if not os.path.exists(os.path.join(d, f)):
+        txt = os.path.join(d, f + ".txt"); open(txt, "w", encoding="utf-8").write(texte)
+        r = subprocess.run([sys.executable, "-m", "edge_tts", "--voice", nom, f"--rate={debit}", f"--pitch={hauteur}",
+                            "-f", txt, "--write-media", os.path.join(d, f)], capture_output=True, text=True, timeout=60)
+        os.remove(txt)
+        if r.returncode != 0:
+            raise RuntimeError("Voix Edge indisponible (connexion internet ? nom de voix ?) : " + r.stderr[-200:])
+    return {"url": "/essai/" + f}
+
+
 # ---------------------------------------------------------------- serveur HTTP
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
@@ -427,14 +483,25 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/parcourir":
                 return self.envoyer(200, parcourir(q.get("chemin", [""])[0]))
             if p == "/api/rendus":
+                import langues as lg
                 eps = {e["ep"]: e for e in liste_episodes() if "erreur" not in e}
                 out = []
-                for f in fichiers_rendus():
-                    ep = next((k for k, e in eps.items() if f.startswith(e["id"] + "_") or f.startswith(k + "_")), None)
-                    st = os.stat(cx.dossier("rendus", f))
+                for f, langue in tous_les_rendus():
+                    nom = f.split("/")[-1]
+                    ep = next((k for k, e in eps.items() if nom.startswith(e["id"] + "_") or nom.startswith(k + "_")), None)
+                    st = os.stat(cx.dossier("rendus", *f.split("/")))
+                    srt = cx.dossier("rendus", *f.split("/"))[:-4] + ".srt"
                     out.append({"f": f, "ep": ep, "id": eps[ep]["id"] if ep else "", "titre": eps[ep]["title"] if ep else "",
+                                "langue": langue or lg.source(cx.projet()), "srt": f[:-4] + ".srt" if os.path.exists(srt) else "",
                                 "mo": round(st.st_size / 1e6, 1), "date": time.strftime("%d/%m %H:%M", time.localtime(st.st_mtime))})
                 return self.envoyer(200, out)
+            if p == "/api/langues":
+                import langues as lg
+                pj = cx.projet()
+                return self.envoyer(200, {"source": lg.source(pj), "versions": lg.versions(pj), "noms": lg.NOMS,
+                                          "voix": lg.VOIX_PROPOSEES, "voix_defaut": lg.VOIX_DEFAUT})
+            if p.startswith("/essai/"):
+                return self.fichier(os.path.join(ICI, "cache", "essais", p.split("/")[-1]), os.path.join(ICI, "cache", "essais"))
             if p == "/api/jobs":
                 return self.envoyer(200, sorted(JOBS.values(), key=lambda j: -j["debut"])[:20])
             if p.startswith("/api/job/"):
@@ -451,7 +518,7 @@ class H(BaseHTTPRequestHandler):
             if p.startswith("/flow/"):
                 return self.fichier(cx.dossier("images", *p.split("/")[2:]), cx.dossier("images"))
             if p.startswith("/rendus/"):
-                return self.fichier(cx.dossier("rendus", p.split("/", 2)[2]), cx.dossier("rendus"))
+                return self.fichier(cx.dossier("rendus", *p.split("/")[2:]), cx.dossier("rendus"))
             if p.startswith("/api/aide/"):
                 nom = {"installation": "MANUEL_INSTALLATION.md", "utilisation": "MANUEL_UTILISATION.md"}.get(p.split("/")[-1])
                 if not nom:
@@ -516,11 +583,16 @@ class H(BaseHTTPRequestHandler):
         try:
             c = self.corps()
             if p == "/api/action":
-                if c.get("cmd") not in ("monter", "etat", "fiche", "ecrire", "prompts", "verifier", "bible", "exporter"):
+                if c.get("cmd") not in ("monter", "etat", "fiche", "ecrire", "prompts", "verifier", "bible", "exporter", "traduire"):
                     return self.envoyer(400, {"erreur": "commande inconnue"})
                 args = [str(a) for a in c.get("args", [])]
                 if c["cmd"] not in ("bible", "exporter") and args and not EP_RE.match(args[0]):
                     return self.envoyer(400, {"erreur": "épisode invalide"})
+                import langues as lg
+                langue = args[1] if c["cmd"] == "traduire" and len(args) > 1 else (
+                    args[args.index("--langue") + 1] if "--langue" in args[:-1] else None)
+                if (c["cmd"] == "traduire" and not langue) or (langue and not lg.CODE_RE.match(langue)):
+                    return self.envoyer(400, {"erreur": "langue invalide"})
                 return self.envoyer(200, lancer(c["cmd"], args))
             if p == "/api/projet/ouvrir":
                 rac = os.path.abspath(c["chemin"].strip().strip('"'))
@@ -575,6 +647,8 @@ class H(BaseHTTPRequestHandler):
                 t0 = time.time()
                 rep = ia.appeler("Réponds en un seul mot.", "Dis simplement : OK", max_tokens=20, pid=c["profil"])
                 return self.envoyer(200, {"ok": True, "reponse": rep.strip()[:80], "secondes": round(time.time() - t0, 1)})
+            if p == "/api/voix/essai":
+                return self.envoyer(200, essai_voix(c))
             if p == "/api/valider":
                 d = suivi()
                 d.setdefault(c["ep"], {})["valide"] = bool(c.get("valide", True))

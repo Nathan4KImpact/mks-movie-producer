@@ -50,6 +50,8 @@ déplacé est retrouvé d'après son contenu (*Projet › Organisation du projet
   puis *Projet › Ouvrir un dossier existant*. L'avancement est recalculé à partir des fichiers.
 - **Nouveau projet** : *Projet › Nouveau projet*, ajouter les sources, puis suivre l'Assistant
   (bible et plan par IA, épisodes, images, montage, validation).
+- **Autres langues** : *Projet › Versions linguistiques* (ex. anglais, titre et voix), puis *Traduire* et
+  *Monter EN* : mêmes images, une vidéo et des sous-titres `.srt` par langue (`rendus/en/`).
 
 ## IA
 Réglages › Modèles IA : Claude (API Anthropic) ou tout service compatible OpenAI (OpenAI, OpenRouter,

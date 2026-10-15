@@ -1,6 +1,6 @@
 # MKS Movie Producer — Manuel d'utilisation
 
-Version 1.0 · octobre 2026
+Version 1.1 · octobre 2026
 
 MKS Movie Producer transforme un livre, un script ou un ensemble de documents en série vidéo narrée. Les épisodes sont écrits plan par plan, les images sont générées dans l'outil de votre choix (Google Flow, Higgsfield…), puis le montage est automatique : voix off, musique adaptée à chaque scène, titres, mouvements de caméra. Les exemples de ce manuel viennent du premier projet réalisé avec l'outil, **L'Ultime Assaut** (7 saisons × 7 épisodes × 7 minutes).
 
@@ -155,7 +155,7 @@ Cliquez sur **Monter** (Production, éditeur ou Assistant). Le montage :
 2. anime chaque image selon son mouvement, ajoute le titre à l'écran et les fondus ;
 3. insère les cartons ;
 4. place la musique par sections, la baisse automatiquement sous la voix et termine par un fondu ;
-5. exporte en **1920 × 1080, 25 images/s** dans le dossier des rendus.
+5. exporte en **1920 × 1080, 25 images/s** dans le dossier des rendus, avec un fichier de sous-titres `.srt` du même nom (section 20.5).
 
 Le premier montage d'un épisode de 7 minutes prend plusieurs minutes, selon la puissance du poste. Le journal s'affiche dans le panneau des tâches.
 
@@ -178,6 +178,8 @@ Après visionnage :
 - sinon, **Corriger les plans** ouvre l'éditeur ; corrigez, rangez les nouvelles images, puis remontez.
 
 **Annuler la validation** remet l'épisode à l'étape « Monté ».
+
+Les versions traduites apparaissent sous leur épisode avec un badge de langue, et le bouton **Sous-titres .srt** télécharge les sous-titres de la vidéo affichée (section 20). La validation porte sur l'épisode d'origine.
 
 ## 10. Plan
 
@@ -291,6 +293,7 @@ Tout ce que fait l'application peut aussi être demandé à Claude, à tout mome
 - **Dans une conversation**, en lui donnant accès au dossier du projet : *« Écris l'épisode E107 d'après les pages 12 à 14 »*, *« Relis la bible et propose les titres de la saison 3 »*, *« Les images du plan E105-08 ne vont pas, propose un nouveau prompt »*.
 - **Par MCP** (Claude Desktop ou Claude Code, voir le Manuel d'installation, section 8) : Claude lit l'état de la production, la bible et les sources, écrit les épisodes directement dans le projet, génère les fiches et lance les montages.
 - **Par l'API**, depuis les boutons **IA** de l'application, avec le modèle de votre choix.
+- **Pour les traductions**, Claude peut consulter leur état (`etat_traductions`) et écrire lui-même une version (`enregistrer_traductions`), ou faire appel à l'IA de l'application (`traduire_episode`).
 
 Les fichiers écrits par Claude ou par l'IA sont les mêmes que ceux que vous éditez : vous pouvez reprendre la main dans l'éditeur à tout moment, et inversement.
 
@@ -301,6 +304,8 @@ Pour automatiser ou dépanner, `ATELIER.bat` ouvre un menu texte. Les mêmes com
 | Commande | Effet |
 |---|---|
 | `py -3 atelier.py monter E104` | Monte l'épisode (`--neuf` pour tout recalculer) |
+| `py -3 atelier.py monter E104 --langue en` | Monte la version anglaise (section 20) |
+| `py -3 atelier.py traduire E104 en "consignes"` | L'IA traduit les textes manquants ou à revoir (`--tout` pour tout refaire) |
 | `py -3 atelier.py etat E104` | Liste les images manquantes |
 | `py -3 atelier.py fiche E104` | Génère la fiche de prompts |
 | `py -3 atelier.py ecrire E107 "Titre" 12-14 "consignes"` | L'IA écrit l'épisode |
@@ -332,9 +337,79 @@ Les commandes agissent sur le projet actif. Pour viser un autre projet, définis
 
 **J'ai réorganisé le dossier du projet : est-ce que ça casse quelque chose ?** Non, tant que `projet.json` et `suivi.json` restent à la racine. Les dossiers et fichiers déplacés sont retrouvés automatiquement ; vérifiez le résultat dans Projet › Organisation du projet.
 
+**Le montage anglais refuse de démarrer.** L'épisode n'est pas entièrement traduit : la ligne de la langue, dans Production, indique combien de textes manquent. Lancez **Traduire**, ou complétez à la main dans l'éditeur.
+
+**Faut-il regénérer les images pour une autre langue ?** Non. Les images sont communes ; seuls les textes et la voix changent.
+
 **Comment revenir à une ancienne version d'un script ?** Les versions précédentes sont dans le sous-dossier `anciennes` du dossier des épisodes. Copiez celle voulue à la place de `E104.json` (les numéros vont de la plus ancienne à la plus récente).
 
-## 20. Glossaire
+## 20. Versions linguistiques et publication
+
+Une série peut exister en plusieurs langues sans regénérer une seule image : les plans (clés, images, vidéos, mouvements, musiques) sont **communs** à toutes les langues ; seuls changent la narration, les mots à l'écran, les cartons, le titre de l'épisode et la voix. Chaque langue donne **sa propre vidéo**, avec ses sous-titres.
+
+> Les images doivent rester **sans texte** (c'est le rôle de « no text » dans le style du projet) : c'est ce qui permet de les réutiliser dans toutes les langues. Tout texte visible est ajouté au montage, dans la bonne langue.
+
+### 20.1 Déclarer une langue
+
+![Projet › Versions linguistiques](images/17_versions.jpg)
+
+Dans **Projet › Versions linguistiques**, cliquez sur **+ Ajouter une langue** et saisissez son code (`en`, `es`, `de`, `pt`, `it`…). Pour chaque langue :
+
+| Champ | Rôle |
+|---|---|
+| **Titre de la série** | Nom affiché sur le carton d'ouverture dans cette langue (ex. *The Final Quest*) |
+| **Voix** | Voix Edge TTS de la langue ; la liste propose des voix masculines posées |
+| **Débit / Hauteur** | Comme pour la voix d'origine (ex. `-10%`, `-4Hz`) |
+| **▶ Écouter** | Fait lire une phrase d'essai avec ces réglages (connexion Internet nécessaire) |
+
+Enregistrez le projet. Retirer une langue (✕) ne supprime ni les traductions déjà écrites ni les vidéos.
+
+### 20.2 Traduire un épisode
+
+![Production : état de chaque langue](images/18_production_langues.jpg)
+
+Dans **Production**, chaque épisode affiche une ligne par langue : `EN · 31/33` signifie que 31 textes sur 33 sont traduits (titre, narrations, mots à l'écran, cartons). **Traduire** confie la traduction au modèle choisi pour l'écriture dans Réglages.
+
+- L'IA **adapte pour l'oral** : même ton, même personne de narration, longueur proche de l'original (chaque plan dure le temps de sa narration).
+- La traduction est **incrémentale** : seuls les textes jamais traduits, ou dont le texte d'origine a changé depuis, sont envoyés au modèle. Retraduire un épisode à jour ne coûte rien.
+- Si vous modifiez une narration d'origine après la traduction, le plan passe **à revoir** : la traduction existante reste utilisable, mais elle ne correspond plus au texte. Relancez **Traduire** pour ne refaire que ces plans-là.
+
+### 20.3 Relire côte à côte
+
+![Éditeur : version anglaise côte à côte](images/19_episode_cote_a_cote.jpg)
+
+Dans l'éditeur, choisissez la langue dans **Version linguistique** : chaque plan affiche, sous la narration d'origine, sa traduction (en bleu) avec son état — *traduit*, *à traduire* ou *à revoir*. Corrigez directement ; une traduction corrigée à la main est considérée comme **validée** pour le texte d'origine actuel. Le choix de la langue est mémorisé.
+
+Les boutons **IA · traduire en EN** et **Enregistrer et monter EN** agissent sur l'épisode ouvert.
+
+### 20.4 Monter et retrouver la version traduite
+
+**Monter EN** (Production ou éditeur) monte l'épisode avec la voix, les mots à l'écran et les cartons de la langue. Le montage **refuse un épisode incomplètement traduit** : on ne mélange jamais deux langues dans un film. Il prévient s'il reste des traductions *à revoir*.
+
+- La vidéo va dans un sous-dossier du dossier des rendus : `rendus\en\S1E01_The-Hordes-Are-on-the-March_EN.mp4`.
+- Les durées des plans suivent la narration de chaque langue : la version anglaise n'a pas exactement la durée de la version française.
+- Le montage de chaque langue a son propre dossier de travail : remonter une langue ne recalcule pas l'autre.
+
+![Rendus : version anglaise et ses sous-titres](images/20_rendus_langue.jpg)
+
+Dans **Rendus**, les versions traduites portent un badge de langue (`EN`) sous leur épisode.
+
+### 20.5 Sous-titres
+
+Chaque montage, dans chaque langue, écrit à côté de la vidéo un fichier de sous-titres **`.srt`** du même nom, calé sur la voix (phrases découpées en deux lignes de 42 caractères au plus). Le bouton **Sous-titres .srt** de la vue Rendus le télécharge.
+
+### 20.6 Publier sur YouTube (une vidéo par langue)
+
+Pour chaque langue, publiez la vidéo de cette langue comme une vidéo à part :
+
+1. **Téléversez** le `.mp4` de la langue, puis, dans **Sous-titres**, ajoutez le `.srt` correspondant en indiquant la langue. YouTube peut ensuite proposer aux spectateurs une **traduction automatique** de ces sous-titres dans d'autres langues ; elle est bien meilleure à partir d'un `.srt` exact qu'à partir de sous-titres reconnus automatiquement.
+2. **Titre et description dans la langue de la vidéo**, avec le crédit de la musique traduit, par exemple : *Music: Kevin MacLeod (incompetech.com), licensed under CC BY 4.0*.
+3. **Reliez les versions** entre elles dans les descriptions (« Version française : lien »), et rangez chaque langue dans sa propre playlist.
+4. **Doublage automatique de YouTube** : YouTube peut ajouter des pistes doublées par une voix de synthèse. Pour une vidéo qui existe déjà dans votre propre version, vérifiez ce réglage dans YouTube Studio (onglet Langues) et désactivez-le pour cette langue. Les fonctions et les langues proposées évoluent : référez-vous à YouTube Studio.
+
+> **Droits** : pour une adaptation d'œuvre, l'autorisation de publier peut être accordée langue par langue. Vérifiez qu'elle couvre chaque version avant de la mettre en ligne.
+
+## 21. Glossaire
 
 | Terme | Définition |
 |---|---|
@@ -349,3 +424,6 @@ Les commandes agissent sur le projet actif. Pour viser un autre projet, définis
 | Rendu | Épisode monté, fichier `.mp4` du dossier des rendus |
 | Rôle | Fonction d'un dossier du projet (sources, images, rendus…) ; voir Projet › Organisation du projet |
 | MCP | Protocole qui permet à Claude d'utiliser directement l'application |
+| Version linguistique | Langue supplémentaire de la série : mêmes plans, textes et voix traduits, vidéo séparée |
+| À revoir | Traduction écrite pour un texte d'origine qui a changé depuis |
+| SRT | Format de fichier de sous-titres accepté par YouTube et la plupart des lecteurs |

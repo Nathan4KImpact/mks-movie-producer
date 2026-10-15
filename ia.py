@@ -197,8 +197,87 @@ def ameliorer_prompts(ep, consignes=""):
            f"parfaitement la direction artistique. Ne change ni les clés ni la narration.\nConsignes : {consignes or 'aucune'}\n\n"
            f"Bible :\n{_bible()[:15000]}\n\n" + json.dumps(e, ensure_ascii=False, indent=1))
     e2 = extraire_json(appeler(regles_ia(ep), msg, tache="prompts"))
+    _garder_traductions(e, e2)
     _sauver(ep, e2)
     return e2
+
+
+def _garder_traductions(avant, apres):
+    """Le modèle réécrit tout le JSON : on recolle les traductions qu'il aurait omises (même clé de plan)."""
+    if avant.get("versions") and not apres.get("versions"):
+        apres["versions"] = avant["versions"]
+    par_cle = {s.get("k") or f"#{i}": s for i, s in enumerate(avant.get("shots", []))}
+    for i, s in enumerate(apres.get("shots", [])):
+        a = par_cle.get(s.get("k") or f"#{i}")
+        if a and a.get("versions") and not s.get("versions"):
+            s["versions"] = a["versions"]
+
+
+# ---------------------------------------------------------------- versions linguistiques
+def traduire_episode(ep, langue, consignes="", tout=False):
+    """Traduit (adapte) les textes d'un épisode dans une langue du projet : narration, mots à l'écran, cartons, titre.
+    Incrémental : seuls les éléments sans traduction, ou dont le texte d'origine a changé, sont envoyés au modèle."""
+    import langues as lg
+    pj = projet()
+    if langue not in lg.versions(pj):
+        raise RuntimeError(f"Langue « {langue} » non déclarée : ajoute-la dans Projet > Versions linguistiques.")
+    e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
+    elements = [e] + e.get("shots", [])
+    a_faire = [i for i, el in enumerate(elements) if lg.statut(el, langue) in (("ok", "manquante", "a_revoir") if tout else ("manquante", "a_revoir"))]
+    if not a_faire:
+        print(f"{ep} : traduction {langue} déjà à jour.", file=sys.stderr, flush=True)
+        return lg.etat_traduction(e, langue)
+    cible, origine = lg.nom_langue(langue), lg.nom_langue(lg.source(pj))
+    titre_serie = (lg.versions(pj)[langue] or {}).get("titre") or ""
+    lot = []
+    for i in a_faire:
+        el = elements[i]
+        if i == 0:
+            lot.append({"i": 0, "type": "titre de l'épisode", "title": el.get("title", "")})
+        elif el.get("card") is not None:
+            lot.append({"i": i, "type": "carton", "card": el.get("card", ""), "sub": el.get("sub", "")})
+        else:
+            d = {"i": i, "type": "plan", "vo": el.get("vo", "")}
+            if el.get("title"):
+                d["title"] = el["title"]
+            lot.append(d)
+    deja = {}                                   # traductions existantes : cohérence des noms et du vocabulaire
+    for el in elements:
+        t = (el.get("versions") or {}).get(langue)
+        if t and t.get("vo"):
+            deja[el.get("vo", "")[:120]] = t["vo"][:120]
+        if len(deja) >= 12:
+            break
+    systeme = (f"Tu es adaptateur de voix off pour la série « {pj['nom']} ». Tu traduis du {origine} vers le {cible} "
+               f"des textes destinés à être LUS À VOIX HAUTE par un narrateur, sur des images déjà montées.\n"
+               f"Règles :\n- Garde le sens, le ton, le registre et la personne de narration (un récit à la première personne le reste).\n"
+               f"- Longueur proche de l'original (±10 %) : chaque plan dure le temps de sa narration.\n"
+               f"- Phrases naturelles et rythmées pour l'oral dans la langue cible, pas de traduction mot à mot.\n"
+               f"- Les noms propres, titres bibliques et termes récurrents restent cohérents d'un plan à l'autre ; "
+               f"cite les Écritures selon une version reconnue dans la langue cible quand le texte en cite une.\n"
+               f"- « title » : mot ou courte expression affiché à l'écran, en MAJUSCULES, aussi court que l'original.\n"
+               f"- Cartons : « card » est le nom de la série en majuscules"
+               f"{(' (titre dans cette langue : ' + titre_serie + ')') if titre_serie else ''}, ou l'équivalent de « À SUIVRE » ; "
+               f"« sub » suit le format « Saison X · Épisode Y — Titre » traduit.\n"
+               f"Réponds UNIQUEMENT avec un JSON : {{\"elements\": [{{\"i\": 3, \"vo\": \"…\", \"title\": \"…\"}}, "
+               f"{{\"i\": 2, \"card\": \"…\", \"sub\": \"…\"}}, {{\"i\": 0, \"title\": \"…\"}}]}} "
+               f"avec exactement les mêmes « i » et les mêmes champs que l'entrée.")
+    msg = (f"Contexte de la série (bible, extrait) :\n{_bible()[:12000]}\n\n"
+           + (f"Traductions déjà validées (pour la cohérence) :\n{json.dumps(deja, ensure_ascii=False, indent=1)}\n\n" if deja else "")
+           + f"Consignes supplémentaires : {consignes or 'aucune'}\n\n"
+           f"Éléments à traduire ({len(lot)}) :\n{json.dumps(lot, ensure_ascii=False, indent=1)}")
+    print(f"{ep} : {len(lot)} élément(s) à traduire en {cible}…", file=sys.stderr, flush=True)
+    r = extraire_json(appeler(systeme, msg, tache="ecrire"))
+    recus = {int(x["i"]): x for x in r.get("elements", []) if "i" in x}
+    for i in a_faire:
+        if i in recus:
+            lg.poser(elements[i], langue, recus[i])
+    _sauver(ep, e)
+    et = lg.etat_traduction(e, langue)
+    manque = len(et["manquantes"]) + len(et["a_revoir"])
+    print(f"{ep} : {et['ok']}/{et['total']} élément(s) traduits en {cible}"
+          + (f" — {manque} restant(s), relance la traduction." if manque else "."), file=sys.stderr, flush=True)
+    return et
 
 
 def verifier_images(ep):

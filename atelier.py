@@ -3,6 +3,8 @@
 
   python atelier.py monter E104            monte l'épisode -> <projet>/Rendus
   python atelier.py monter E104 --neuf     remonte tout depuis zéro
+  python atelier.py monter E104 --langue en   monte la version anglaise -> <rendus>/en/ (+ sous-titres .srt)
+  python atelier.py traduire E104 en ["consignes"]   [IA] traduit les textes manquants ou à revoir (--tout : tout refaire)
   python atelier.py etat E104              liste les images manquantes
   python atelier.py fiche E104             (re)génère la fiche de prompts
   python atelier.py ecrire E107 "Titre" 61-68 ["consignes"]   [IA] écrit l'épisode (pages du livre facultatives)
@@ -48,7 +50,13 @@ def exporter(avec_rendus=False):
 def executer(cmd, args):
     if cmd == "monter":
         from moteur import monter
-        return monter(args[0], reprendre="--neuf" not in args)
+        lang = args[args.index("--langue") + 1] if "--langue" in args else None
+        return monter(args[0], reprendre="--neuf" not in args, langue=lang)
+    if cmd == "traduire":
+        from ia import traduire_episode
+        libres = [a for a in args[2:] if a != "--tout"]
+        r = traduire_episode(args[0], args[1], libres[0] if libres else "", tout="--tout" in args)
+        print(json.dumps(r, ensure_ascii=False, indent=1)); return r
     if cmd == "etat":
         from moteur import etat_images
         r = etat_images(args[0]); print(json.dumps(r, ensure_ascii=False, indent=1)); return r

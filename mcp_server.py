@@ -65,10 +65,43 @@ def lire_livre(pages: str) -> str:
 
 
 @mcp.tool()
-def monter_episode(ep: str, depuis_zero: bool = False) -> dict:
-    """Monte l'épisode (voix, musique par scène, titres) et dépose le MP4 dans le dossier des rendus. Peut prendre 10 à 20 min."""
+def monter_episode(ep: str, depuis_zero: bool = False, langue: str = "") -> dict:
+    """Monte l'épisode (voix, musique par scène, titres) et dépose le MP4 + sous-titres .srt dans le dossier des rendus.
+    langue : vide = langue d'origine ; sinon code d'une version du projet (ex. "en"), rendu dans <rendus>/en/. 10 à 20 min."""
     from moteur import monter
-    return monter(ep, reprendre=not depuis_zero)
+    return monter(ep, reprendre=not depuis_zero, langue=langue or None)
+
+
+@mcp.tool()
+def etat_traductions(ep: str) -> dict:
+    """Pour chaque langue cible du projet : éléments traduits, manquants, et à revoir (texte d'origine modifié depuis).
+    Les traductions sont dans le JSON de l'épisode : "versions": {"en": {"vo", "title" | "card", "sub", "de"}} sur chaque
+    plan et carton, et sur l'épisode pour son titre. Pour traduire toi-même : lis l'épisode, remplis ces champs, puis
+    appelle enregistrer_traductions (qui calcule l'empreinte « de »)."""
+    import langues as lg
+    e = json.load(open(cx.dossier("episodes", ep + ".json"), encoding="utf-8"))
+    return {l: lg.etat_traduction(e, l) for l in lg.versions(cx.projet())}
+
+
+@mcp.tool()
+def enregistrer_traductions(ep: str, langue: str, elements_json: str) -> dict:
+    """Enregistre des traductions écrites par Claude. elements_json : [{"i": 0, "title": "…"}, {"i": 3, "vo": "…", "title": "…"},
+    {"i": 2, "card": "…", "sub": "…"}] où i = 0 pour l'épisode (titre) et i = n pour shots[n-1]."""
+    import langues as lg
+    from ia import _sauver
+    e = json.load(open(cx.dossier("episodes", ep + ".json"), encoding="utf-8"))
+    elements = [e] + e.get("shots", [])
+    for x in json.loads(elements_json):
+        lg.poser(elements[int(x["i"])], langue, x)
+    _sauver(ep, e)
+    return lg.etat_traduction(e, langue)
+
+
+@mcp.tool()
+def traduire_episode(ep: str, langue: str, consignes: str = "", tout: bool = False) -> dict:
+    """[IA de l'application] Traduit les textes manquants ou à revoir d'un épisode avec le modèle choisi dans Réglages."""
+    from ia import traduire_episode as f
+    return f(ep, langue, consignes, tout)
 
 
 @mcp.tool()

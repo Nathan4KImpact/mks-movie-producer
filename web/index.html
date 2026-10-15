@@ -55,6 +55,9 @@ textarea:focus,input:focus,select:focus{outline:none;border-color:var(--gold)}
 textarea.vo{min-height:64px;font-size:14px}
 .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .dirty{box-shadow:0 0 0 1px var(--gold) inset}
+.tr label{color:var(--blue)} .tr textarea,.tr input{border-color:#2b3a4f;background:#141a24}
+.pill.lang{background:#1b2636;color:var(--blue)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
 #jobs{position:fixed;right:16px;bottom:16px;width:min(560px,calc(100vw - 32px));z-index:20}
 .job{background:#0b0a0e;border:1px solid var(--line);border-radius:var(--r);margin-top:8px;overflow:hidden}
 .job .hd{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--panel);cursor:pointer}
@@ -133,10 +136,27 @@ const api = async (u, o={}) => { const r = await fetch(u, {headers:{'Content-Typ
 const win = p => (p||'').replace(/\//g, '\\');
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let CONFIG = null, PROJET = null, INFOS = null, EP = null, DIRTY = false;
+let LANGS = {source:'fr', versions:{}, noms:{}, voix:{}, voix_defaut:{}}, VL = '', RETOUCHE = new Set();
+const LN = c => LANGS.noms[(c||'').split('-')[0]] || c;
+const VERS = () => Object.keys(LANGS.versions||{});
+const STR = {ok:'<span class="pill ok">traduit</span>', manquante:'<span class="pill">à traduire</span>', a_revoir:'<span class="pill wait">à revoir</span>', rien:''};
+const chemin = f => f.split('/').map(encodeURIComponent).join('/');
+function langueAffichee(){ let l = ''; try { l = localStorage.getItem('ua_lang')||''; } catch(e){} return VERS().includes(l) ? l : ''; }
+function choisirVL(l){ if(DIRTY) lireForm(); try { localStorage.setItem('ua_lang', l); } catch(e){} const d = DIRTY; episode(EP._ep, d ? EP : null).then(()=>{ if(d) marquerSale(); }); }
+const EXTRAITS = {fr:"Ce que je vais vous raconter, je l'ai vu. Une armée immense s'avançait, et la montagne tremblait sous ses pas.",
+  en:"What I am about to tell you, I saw. A vast army was advancing, and the mountain trembled beneath its feet.",
+  es:"Lo que voy a contarles, lo vi. Un ejército inmenso avanzaba, y la montaña temblaba bajo sus pasos.",
+  de:"Was ich euch erzählen werde, habe ich gesehen. Ein gewaltiges Heer rückte vor, und der Berg bebte unter seinen Schritten.",
+  pt:"O que vou contar, eu vi. Um exército imenso avançava, e a montanha tremia sob os seus passos.",
+  it:"Ciò che sto per raccontarvi, l'ho visto. Un esercito immenso avanzava, e la montagna tremava sotto i suoi passi."};
+async function ecouter(nom, debit, hauteur, langue){
+  toast('Préparation de l\'extrait…');
+  try { const r = await api('/api/voix/essai',{method:'POST',body:JSON.stringify({nom, debit, hauteur, texte: EXTRAITS[(langue||'').split('-')[0]] || EXTRAITS.en})});
+    new Audio(r.url).play(); } catch(e){ toast(e.message); } }
 const MOUV = ['in','out','left','right','up','down','still'];
 
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
-function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false;
+function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false; $('#main').oninput = null;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet, aide})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); }
 async function ouvrir(d){ await api('/api/ouvrir',{method:'POST',body:JSON.stringify({dossier:d})}); }
@@ -154,17 +174,26 @@ async function saison(){
       <div class="row"><button class="btn gold" onclick="go('episode','${e.ep}')">Ouvrir</button>
         <button class="btn" onclick="action('monter',['${e.ep}'])">Monter</button>
         <button class="btn" onclick="fiche('${e.ep}')">Fiche Flow</button></div>
+      ${Object.entries(e.traductions||{}).map(([l,t])=>`<div class="row" style="gap:6px;flex-wrap:nowrap;border-top:1px solid var(--line);padding-top:8px">
+        <span class="pill ${t.complete?'ok':(t.a_revoir?'wait':'lang')}" title="${esc(LN(l))}">${l.toUpperCase()} · ${t.ok}/${t.total}${t.a_revoir?' · '+t.a_revoir+' à revoir':''}</span>
+        ${t.rendus.length?`<span class="meta" style="white-space:nowrap">${t.rendus.length} rendu(s)</span>`:''}<div class="sp"></div>
+        <button class="btn small" onclick="action('traduire',['${e.ep}','${l}'])">${t.complete?'Retraduire':'Traduire'}</button>
+        <button class="btn small" ${t.manquantes?'disabled title="Traduction incomplète"':''} onclick="action('monter',['${e.ep}','--langue','${l}'])">Monter ${l.toUpperCase()}</button></div>`).join('')}
     </div>`).join('')}</div>`;
 }
 
 // ---------------------------------------------------------------- épisode
-async function episode(ep){
-  EP = await api('/api/episode/'+ep); EP._ep = ep;
-  await chargerProjet();
+async function episode(ep, garder){
+  EP = garder || await api('/api/episode/'+ep); EP._ep = ep;
+  await chargerProjet(); VL = langueAffichee(); RETOUCHE = new Set();
+  const trv = (el, i, champ, lib, zone) => { const t = (el.versions||{})[VL]||{};
+    return zone ? `<div class="full tr"><label>${lib} (${VL.toUpperCase()}) ${STR[(el._tr||{})[VL]]||''}</label><textarea class="vo" data-l="${champ}" rows="3">${esc(t[champ])}</textarea></div>`
+                : `<div class="tr"><label>${lib} (${VL.toUpperCase()})</label><input data-l="${champ}" value="${esc(t[champ])}"></div>`; };
   const mus = ['', ...(PROJET.musiques||[])];
   let n = 0;
   $('#main').innerHTML = `
   <h2>${esc(EP.id)} — <input id="titre" value="${esc(EP.title)}" style="display:inline;width:auto;min-width:380px;font:700 20px var(--serif);background:none;border:0;color:var(--gold2)"></h2>
+  ${VL?`<div class="tr" data-i="e" style="max-width:640px;margin:4px 0 8px"><label>Titre (${VL.toUpperCase()}) ${STR[(EP._tr||{})[VL]]||''}</label><input data-l="title" value="${esc(((EP.versions||{})[VL]||{}).title)}"></div>`:''}
   <p class="sub">${EP.shots.filter(s=>!s.card).length} plans · les images se rangent dans ${esc(win(INFOS.dossiers.images))}\\${ep}\\ sous leur clé (ex. ${ep}-01.png)</p>
   <div class="toolbar">
     <button class="btn gold" onclick="sauver()">Enregistrer</button>
@@ -176,17 +205,26 @@ async function episode(ep){
     <button class="btn ia" onclick="sauver().then(()=>action('prompts',['${ep}', prompt('Consignes pour la réécriture des prompts (facultatif) :')||'']))">IA · réécrire les prompts</button>
     <button class="btn ia" onclick="action('verifier',['${ep}'])">IA · relire les images</button>
   </div>
+  ${VERS().length?`<div class="toolbar">
+    <label style="margin:0">Version linguistique</label>
+    <select id="vl" style="width:auto" onchange="choisirVL(this.value)"><option value="">— texte d'origine seul (${esc(LN(LANGS.source))})</option>${VERS().map(l=>`<option value="${l}" ${l===VL?'selected':''}>${esc(LN(l))} (${l.toUpperCase()}) côte à côte</option>`).join('')}</select>
+    ${VL?`<button class="btn ia" onclick="sauver().then(()=>action('traduire',['${ep}','${VL}', prompt('Consignes pour la traduction (facultatif) :')||'']))">IA · traduire en ${VL.toUpperCase()}</button>
+    <button class="btn" onclick="sauver().then(()=>action('monter',['${ep}','--langue','${VL}']))">Enregistrer et monter ${VL.toUpperCase()}</button>
+    <span class="meta">Seuls les plans à traduire ou à revoir partent à l'IA. Une correction à la main compte comme validée.</span>`:''}
+  </div>`:''}
   <div id="shots">${EP.shots.map((s,i)=> s.card ? `
     <div class="shot cardrow" data-i="${i}"><div class="num">◆</div>
       <div class="fields"><div><label>Carton</label><input data-f="card" value="${esc(s.card)}"></div>
       <div><label>Sous-titre</label><input data-f="sub" value="${esc(s.sub)}"></div>
-      <div><label>Durée (s)</label><input data-f="dur" type="number" value="${s.dur??6}"></div></div></div>` : `
+      <div><label>Durée (s)</label><input data-f="dur" type="number" value="${s.dur??6}"></div>
+      ${VL?`${trv(s,i,'card','Carton')}${trv(s,i,'sub','Sous-titre')}<div class="tr"><label>&nbsp;</label>${STR[(s._tr||{})[VL]]||''}</div>`:''}</div></div>` : `
     <div class="shot" data-i="${i}">
       <div class="num">${++n}<br><span style="font:11px var(--sans);color:var(--muted)">${esc(s.k)}</span></div>
       <div><div class="thumb">${s._media ? (s._type==='video' ? `<video src="${s._media}" muted loop onmouseenter="this.play()" onmouseleave="this.pause()"></video><span class="pill ok tag">vidéo</span>` : `<img loading="lazy" src="${s._media}">`) : `image manquante<br>${esc(s.k)}.png`}</div>
         <div class="row" style="margin-top:6px"><button class="btn small" onclick="copier(${i})">Copier le prompt</button></div></div>
       <div class="fields">
         <div class="full"><label>Narration</label><textarea class="vo" data-f="vo">${esc(s.vo)}</textarea></div>
+        ${VL?trv(s,i,'vo','Narration',true)+(s.title||((s.versions||{})[VL]||{}).title?trv(s,i,'title','Titre à l\'écran'):''):''}
         <div class="full"><label>Prompt image ${(PROJET.personnages||[]).filter(x=>(s.p||'').includes('['+x.tag+']')).map(x=>`<span class="pill wait">${esc(x.tag)}</span>`).join(' ')}</label><textarea data-f="p" rows="2">${esc(s.p)}</textarea></div>
         <div class="full mini">
           <div><label>Mouvement</label><select data-f="m">${MOUV.map(m=>`<option ${m===(s.m||'in')?'selected':''}>${m}</option>`).join('')}</select></div>
@@ -197,9 +235,9 @@ async function episode(ep){
         <div class="full"><label>Prompt vidéo (si plan animé)</label><input data-f="vid_prompt" value="${esc(s.vid_prompt)}"></div>
       </div>
     </div>`).join('')}</div>`;
-  const sale = () => { DIRTY = true; $('.toolbar .gold').classList.add('dirty'); };
-  $('#shots').addEventListener('input', sale); $('#titre').addEventListener('input', sale);
+  $('#main').oninput = ev => { marquerSale(); const r = ev.target.closest('[data-i]'); if(ev.target.dataset.l && r) RETOUCHE.add(r.dataset.i); };
 }
+function marquerSale(){ DIRTY = true; $('.toolbar .gold').classList.add('dirty'); }
 function lireForm(){
   EP.title = $('#titre').value;
   document.querySelectorAll('#shots [data-i]').forEach(row => {
@@ -210,9 +248,17 @@ function lireForm(){
       if(v==='' && f!=='vo') delete s[f]; else s[f] = v;
     });
   });
+  if(VL) document.querySelectorAll('[data-i]').forEach(row => {          // traductions corrigées à la main
+    if(!RETOUCHE.has(row.dataset.i)) return;
+    const el = row.dataset.i==='e' ? EP : EP.shots[+row.dataset.i];
+    const t = ((el.versions ||= {})[VL] ||= {});
+    row.querySelectorAll('[data-l]').forEach(x => { t[x.dataset.l] = x.value; });
+    el._retouche = [...new Set([...(el._retouche||[]), VL])];
+  });
 }
 async function sauver(){ lireForm(); const e = JSON.parse(JSON.stringify(EP)); const ep = e._ep; delete e._ep;
-  await api('/api/episode/'+ep, {method:'PUT', body:JSON.stringify(e)}); DIRTY=false; toast('Épisode enregistré'); }
+  await api('/api/episode/'+ep, {method:'PUT', body:JSON.stringify(e)}); DIRTY=false; toast('Épisode enregistré');
+  if(RETOUCHE.size){ RETOUCHE = new Set(); episode(ep); } }
 async function recharger(){ if(DIRTY) await sauver(); episode(EP._ep); }
 function copier(i){ const s = EP.shots[i]; let p = (s.p||'');
   (PROJET.personnages||[]).forEach(x => { p = p.split('['+x.tag+']').join(x.description||x.nom); });
@@ -243,11 +289,11 @@ async function rendus(sel){
       <h3>Rendus</h3>
       ${Object.entries(groupes).map(([ep, rs]) => `
         <div style="margin-top:8px"><div class="row"><span class="id">${esc(rs[0].id||ep)}</span>${P[ep]?.n===6?'<span class="pill ok">validé</span>':''}</div>
-        ${rs.map(r=>`<div class="rendu ${r.f===RENDU.f?'on':''}" onclick="choisirRendu('${encodeURIComponent(r.f)}')">${esc(r.f.replace((r.id||'')+'_','').replace(ep+'_',''))}<span class="meta">${r.date} · ${r.mo} Mo</span></div>`).join('')}</div>`).join('')}
+        ${rs.map(r=>`<div class="rendu ${r.f===RENDU.f?'on':''}" onclick="choisirRendu('${encodeURIComponent(r.f)}')">${r.langue!==LANGS.source?`<span class="pill lang">${esc(r.langue.toUpperCase())}</span> `:''}${esc(r.f.split('/').pop().replace((r.id||'')+'_','').replace(ep+'_',''))}<span class="meta">${r.date} · ${r.mo} Mo</span></div>`).join('')}</div>`).join('')}
     </div>
     <div>
       <div id="cadre" style="width:${taillePlayer()}%;margin:0 auto">
-        <video class="player" id="player" controls src="/rendus/${encodeURIComponent(RENDU.f)}" style="max-height:calc(100vh - 260px)"></video>
+        <video class="player" id="player" controls src="/rendus/${chemin(RENDU.f)}" style="max-height:calc(100vh - 260px)"></video>
       </div>
       <div class="row" style="justify-content:center;margin-top:10px;gap:12px">
         <span class="meta">Taille du lecteur</span>
@@ -268,7 +314,8 @@ function infosRendu(P){
     ${p.resume?`<p style="margin:6px 0">${esc(p.resume)}</p>`:''}
     <div style="border-top:1px solid var(--line);padding-top:8px">
       <label>Fichier</label><div style="word-break:break-all">${esc(r.f)}</div>
-      <div class="meta">${r.date} · ${r.mo} Mo</div>
+      <div class="meta">${r.date} · ${r.mo} Mo · ${esc(LN(r.langue))}</div>
+      ${r.srt?`<div class="row" style="margin-top:6px"><a class="btn small" href="/rendus/${chemin(r.srt)}" download>Sous-titres .srt</a><span class="meta">à téléverser sur YouTube avec la vidéo</span></div>`:''}
     </div>
     ${p.code?`<div style="border-top:1px solid var(--line);padding-top:8px"><label>Étape</label>${barre(p.n)}<div>${esc(p.etape)}</div><div class="meta">${esc(p.suite)}</div></div>
     <div class="row" style="margin-top:6px">
@@ -476,7 +523,7 @@ async function aide(quel){
 
 // ---------------------------------------------------------------- projet
 async function chargerProjet(){
-  INFOS = await api('/api/projet'); PROJET = INFOS.projet;
+  [INFOS, LANGS] = await Promise.all([api('/api/projet'), api('/api/langues')]); PROJET = INFOS.projet;
   $('#nomProjet').textContent = PROJET.nom; $('#sousProjet').textContent = PROJET.sous_titre || INFOS.logiciel;
   document.title = PROJET.nom + ' — ' + INFOS.logiciel;
   $('#logo').src = '/api/logo?t=' + Date.now();
@@ -528,6 +575,20 @@ async function projet(){
         <div class="row" style="flex-wrap:nowrap"><label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Image<input type="file" accept="image/*" style="display:none" onchange="envoyerRef(${i},this.files[0])"></label><button class="btn small" onclick="supPerso(${i})">✕</button></div></div>`).join('')}</div>
       <div class="row"><button class="btn small" onclick="ajoutPerso()">+ Personnage</button><div class="sp"></div><button class="btn gold" onclick="sauverProjet()">Enregistrer le projet</button></div>
     </div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Versions linguistiques <span class="meta">(mêmes images et musiques ; narration, textes à l'écran, cartons et voix dans chaque langue — une vidéo par langue)</span></h3>
+    <div class="row" style="gap:10px"><span>Langue d'origine des scripts : <b>${esc(LN(LANGS.source))}</b> — voix ${esc(pj.voix.nom)}</span>
+      <button class="btn small" onclick="ecouter($('#p_vn').value.trim(), $('#p_vd').value.trim(), $('#p_vh').value.trim(), LANGS.source)">▶ Écouter</button></div>
+    <div id="versions">${VERS().map(l=>{ const v = LANGS.versions[l]||{}, vx = Object.assign({}, LANGS.voix_defaut[l.split('-')[0]]||{}, v.voix||{});
+      return `<div class="prof" style="grid-template-columns:120px 1.3fr 1.3fr 90px 90px auto" data-l="${l}">
+        <div><label>Langue</label><div style="padding-top:8px"><span class="pill lang">${l.toUpperCase()}</span> ${esc(LN(l))}</div></div>
+        <div><label>Titre de la série dans cette langue</label><input data-k="titre" value="${esc(v.titre||'')}" placeholder="ex. The Final Quest"></div>
+        <div><label>Voix (Edge TTS)</label><input data-k="nom" value="${esc(vx.nom||'')}" list="voix_${l}"><datalist id="voix_${l}">${(LANGS.voix[l.split('-')[0]]||[]).map(x=>`<option>${x}</option>`).join('')}</datalist></div>
+        <div><label>Débit</label><input data-k="debit" value="${esc(vx.debit||'-10%')}"></div>
+        <div><label>Hauteur</label><input data-k="hauteur" value="${esc(vx.hauteur||'-4Hz')}"></div>
+        <div class="row" style="flex-wrap:nowrap;align-self:end"><button class="btn small" onclick="const r=this.closest('.prof');ecouter(r.querySelector('[data-k=nom]').value.trim(),r.querySelector('[data-k=debit]').value.trim(),r.querySelector('[data-k=hauteur]').value.trim(),'${l}')">▶ Écouter</button><button class="btn small" onclick="supVersion('${l}')">✕</button></div></div>`; }).join('') || '<p class="meta">Aucune autre langue pour l\'instant.</p>'}</div>
+    <div class="row"><button class="btn small" onclick="ajoutVersion()">+ Ajouter une langue</button><div class="sp"></div><button class="btn gold" onclick="sauverProjet()">Enregistrer le projet</button></div>
+    <p class="meta">Ensuite : Production › Traduire (IA), relecture dans l'éditeur (Version linguistique › côte à côte), puis Monter. Les vidéos traduites vont dans <code>${esc(win(INFOS.dossiers.rendus))}\\&lt;langue&gt;</code> avec leurs sous-titres .srt.</p>
   </div>
   <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
     <div class="card"><h3>Sources du projet <span class="meta">(livre, script, notes, documents de référence — lues par l'IA)</span></h3>
@@ -586,9 +647,22 @@ async function sauverProjet(silencieux){
   pj.saisons = +$('#p_s').value; pj.episodes_par_saison = +$('#p_e').value; pj.duree_min = +$('#p_d').value; pj.couleur = $('#p_c').value;
   pj.voix = {nom:$('#p_vn').value.trim(), debit:$('#p_vd').value.trim(), hauteur:$('#p_vh').value.trim()};
   pj.volume_musique = +$('#p_vol').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
+  if($('#versions')){ const vs = {}; document.querySelectorAll('#versions .prof').forEach(r => { const g = k => r.querySelector(`[data-k=${k}]`).value.trim();
+    vs[r.dataset.l] = {titre:g('titre'), voix:{nom:g('nom'), debit:g('debit'), hauteur:g('hauteur')}}; }); pj.versions = vs; }
   await api('/api/projet',{method:'PUT',body:JSON.stringify(pj)}); if(!silencieux) toast('Projet enregistré'); await chargerProjet();
 }
 async function ajoutPerso(){ await sauverProjet(true); PROJET.personnages = [...(PROJET.personnages||[]), {tag:'PERSO'+((PROJET.personnages||[]).length+1), nom:'', description:'', reference:''}]; await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); projet(); }
+async function ajoutVersion(){
+  const c = (prompt('Code de la langue à ajouter (ex. en, es, de, pt, it) :')||'').trim().toLowerCase();
+  if(!c) return; if(!/^[a-z]{2,3}(-[a-z]{2,4})?$/.test(c)) return toast('Code de langue invalide');
+  if(c===LANGS.source || VERS().includes(c)) return toast('Cette langue est déjà là');
+  await sauverProjet(true);
+  PROJET.versions = Object.assign({}, PROJET.versions||{}, {[c]: {titre:'', voix: Object.assign({nom:'', debit:'-10%', hauteur:'-4Hz'}, LANGS.voix_defaut[c.split('-')[0]]||{})}});
+  await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); toast(LN(c)+' ajouté'); projet(); }
+async function supVersion(l){
+  if(!confirm('Retirer la version '+LN(l)+' ? Les traductions déjà écrites restent dans les scripts et les vidéos dans les rendus.')) return;
+  await sauverProjet(true); const v = Object.assign({}, PROJET.versions); delete v[l]; PROJET.versions = v;
+  await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); toast('Version retirée'); projet(); }
 async function supPerso(i){ await sauverProjet(true); PROJET.personnages.splice(i,1); await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); projet(); }
 async function envoyer(dest, f){ const r = await fetch('/api/fichier?dest='+encodeURIComponent(dest), {method:'PUT', body:f}); const j = await r.json(); if(!r.ok) throw new Error(j.erreur); return j; }
 async function envoyerSources(fs){ for(const f of fs){ toast('Envoi de '+f.name+'…'); await envoyer('sources/'+f.name, f); } toast(fs.length+' fichier(s) ajouté(s)'); projet(); guide(); }
@@ -639,11 +713,12 @@ async function creerProjet(){
 }
 
 // ---------------------------------------------------------------- tâches
-const NOMS = {monter:'Montage', etat:'Vérification', fiche:'Fiche', ecrire:'IA · écriture', prompts:'IA · prompts', verifier:'IA · relecture images', bible:'IA · bible et plan', exporter:'Export du projet'};
+const NOMS = {monter:'Montage', etat:'Vérification', fiche:'Fiche', ecrire:'IA · écriture', prompts:'IA · prompts', verifier:'IA · relecture images', bible:'IA · bible et plan', exporter:'Export du projet', traduire:'IA · traduction'};
 async function action(cmd, args){
   if(cmd==='monter' && $('#neuf')?.checked) args = [...args, '--neuf'];
   if(cmd==='ecrire' && (!args[0]||!args[1]||!args[2])) return toast('Code, titre et pages sont nécessaires');
-  const j = await api('/api/action', {method:'POST', body:JSON.stringify({cmd, args})}); suivre(j.id, `${NOMS[cmd]} ${args[0]||''}`);
+  const lang = cmd==='traduire' ? args[1] : (args.includes('--langue') ? args[args.indexOf('--langue')+1] : '');
+  const j = await api('/api/action', {method:'POST', body:JSON.stringify({cmd, args})}); suivre(j.id, `${NOMS[cmd]} ${args[0]||''}${lang?' · '+lang.toUpperCase():''}`);
 }
 function suivre(id, titre){
   const el = document.createElement('div'); el.className = 'job';
@@ -654,7 +729,8 @@ function suivre(id, titre){
     const j = await api('/api/job/'+id); const pre = el.querySelector('pre');
     pre.textContent = j.log.split('\n').slice(-60).join('\n'); pre.scrollTop = pre.scrollHeight;
     if(j.etat !== 'en cours'){ clearInterval(t); const p = el.querySelector('.pill'); p.textContent = j.etat; p.className = 'pill ' + (j.etat==='terminé'?'ok':'');
-      if(j.etat==='terminé'){ toast(titre + ' : terminé'); setTimeout(()=>el.classList.add('min'), 4000); if(location.hash.startsWith('#saison')||!location.hash) saison(); } }
+      if(j.etat==='terminé'){ toast(titre + ' : terminé'); setTimeout(()=>el.classList.add('min'), 4000); if(location.hash.startsWith('#saison')||!location.hash) saison();
+        else if(location.hash.startsWith('#episode/') && EP && !DIRTY && ['traduire','prompts'].includes(j.cmd)) episode(EP._ep); } }
   }, 1500);
 }
 function modal(html){ const m = document.createElement('div'); m.className='modal'; m.innerHTML = `<div class="box">${html}<div class="row" style="margin-top:14px"><button class="btn" onclick="this.closest('.modal').remove()">Fermer</button></div></div>`; m.onclick = e => { if(e.target===m) m.remove(); }; document.body.appendChild(m); }

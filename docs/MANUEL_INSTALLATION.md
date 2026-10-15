@@ -1,6 +1,6 @@
 # MKS Movie Producer — Manuel d'installation
 
-Version 1.0 · octobre 2026
+Version 1.1 · octobre 2026
 
 Ce manuel explique comment installer MKS Movie Producer sur un poste, vérifier que tout fonctionne, brancher les modèles d'IA et transférer un projet d'un ordinateur à un autre. L'utilisation au quotidien est décrite dans le **Manuel d'utilisation**.
 
@@ -265,7 +265,8 @@ Sous macOS ou Linux, remplacez `py -3` par `python3`.
 | `lire_bible`, `lire_sources`, `lire_livre` | Contexte de l'œuvre |
 | `lister_episodes`, `lire_episode`, `ecrire_episode` | Scripts des épisodes |
 | `etat_images`, `generer_fiche_flow` | Images manquantes, fiche de prompts |
-| `monter_episode` | Montage d'un épisode |
+| `monter_episode` | Montage d'un épisode, dans la langue d'origine ou une version (`langue`) |
+| `etat_traductions`, `enregistrer_traductions`, `traduire_episode` | Versions linguistiques : état, traductions écrites par Claude, traduction par l'IA de l'application |
 
 ## 9. Organisation des dossiers
 
@@ -300,7 +301,8 @@ L'Ultime Assaut/
   production/
     fiches/            fiches de prompts : E104_fiche_Flow.txt…
     images/E104/       images et vidéos générées : E104-01.png, E104-07.mp4…
-    rendus/            épisodes montés (.mp4)
+    rendus/            épisodes montés (.mp4) et leurs sous-titres (.srt)
+      en/              versions traduites (un sous-dossier par langue)
   _exports/            zips d'export
 ```
 
