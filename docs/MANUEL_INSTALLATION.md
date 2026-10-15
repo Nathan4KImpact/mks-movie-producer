@@ -24,6 +24,8 @@ MKS Movie Producer est une application locale : elle tourne sur votre ordinateur
 | `mcp_server.py` | Serveur MCP pour piloter le projet depuis Claude |
 | `web/index.html` | L'interface |
 | `docs/` | Ce manuel, le manuel d'utilisation et leurs captures |
+| `METTRE_A_JOUR.bat` | Récupère la dernière version depuis GitHub (section 5) |
+| `modele-projet/` | Projet vide déjà organisé, à copier pour démarrer un projet (section 9) |
 | `README.md`, `CLAUDE.md` | Présentation du dépôt ; notes pour Claude Code |
 | `LISEZ-MOI.txt` | Aide-mémoire d'une page |
 
@@ -94,34 +96,98 @@ python3 pilotage.py
 
 L'interface s'ouvre sur `http://localhost:8765`. Sur ces systèmes, les clés d'IA sont rangées dans le Trousseau (macOS) ou le Secret Service (Linux).
 
-## 5. Installation avec Claude Code (zip ou GitHub)
+## 5. Versionner sur GitHub et développer avec Claude Code
 
-Le paquet contient un fichier `CLAUDE.md` qui décrit l'architecture à Claude Code : il peut installer, lancer, dépanner ou faire évoluer l'application.
+Le paquet contient l'historique git du logiciel et un fichier `CLAUDE.md` qui décrit son architecture à Claude Code. Cette procédure, à faire une fois, publie le code sur un dépôt GitHub **privé**, transforme le dossier du logiciel installé en copie versionnée, puis permet de faire évoluer l'application avec Claude Code.
 
-### 5.1 Depuis le zip
+Dans les commandes ci-dessous, remplacez `<compte>` par votre identifiant GitHub et adaptez les chemins. Les commandes se tapent dans **PowerShell** (menu Démarrer › « PowerShell »).
 
-1. Décompressez le zip (section 3.1).
-2. Ouvrez un terminal dans le dossier `MKS-Movie-Producer`, lancez `claude`, puis demandez par exemple :
-   *« Installe MKS Movie Producer depuis ce dossier (lis CLAUDE.md), lance-le, puis ouvre le projet D:\Projets\L'Ultime Assaut. »*
+### 5.1 Prérequis (une fois par poste)
 
-### 5.2 Publier sur GitHub (une fois)
+**Étape 1 — Compte GitHub.** Créez-le sur github.com (Sign up) si nécessaire.
 
-Le zip contient déjà l'historique git. Depuis le dossier décompressé, avec le GitHub CLI connecté (`gh auth login`) :
+**Étape 2 — Git pour Windows.**
 
-```bash
-gh repo create mks-movie-producer --private --source . --push
+```powershell
+winget install --id Git.Git -e
 ```
 
-Le dépôt est **privé** : seuls vous et les personnes invitées y ont accès. Le fichier `.gitignore` exclut déjà les réglages du poste, les clés, les musiques, la police et les fichiers de travail.
+**Étape 3 — Votre identité.** Fermez et rouvrez PowerShell, puis indiquez votre nom et l'adresse de votre compte GitHub (ils signent chaque version) :
 
-### 5.3 Installer depuis GitHub sur un autre poste
+```powershell
+git config --global user.name "Votre Nom"
+git config --global user.email "adresse-de-votre-compte-github@exemple.com"
+```
 
-```bash
-git clone https://github.com/<votre-compte>/mks-movie-producer.git
+**Étape 4 — Claude Code** (abonnement Claude Pro, Max, Team ou Enterprise) :
+
+```powershell
+irm https://claude.ai/install.ps1 | iex
+```
+
+Rouvrez PowerShell et vérifiez avec `claude --version`. Au premier lancement de `claude`, une page de connexion s'ouvre dans le navigateur.
+
+### 5.2 Créer le dépôt sur GitHub
+
+1. Ouvrez github.com/new.
+2. **Repository name** : `mks-movie-producer`. Cochez **Private**.
+3. **Ne cochez rien d'autre** : pas de README, pas de .gitignore, pas de licence. Le dépôt doit être vide.
+4. **Create repository**. Gardez l'adresse affichée : `https://github.com/<compte>/mks-movie-producer.git`.
+
+### 5.3 Envoyer le code (premier push)
+
+Clic droit sur `_exports\MKS-Movie-Producer_v1.0.zip` › **Extraire tout…** vers un dossier temporaire, par exemple `D:\Temp`. Vous obtenez `D:\Temp\MKS-Movie-Producer`, qui contient l'historique (dossier caché `.git`). Puis, dans PowerShell :
+
+```powershell
+cd D:\Temp\MKS-Movie-Producer
+git log --oneline
+git remote add origin https://github.com/<compte>/mks-movie-producer.git
+git push -u origin main
+```
+
+`git log` doit afficher la liste des versions. Au premier `git push`, une fenêtre **Git Credential Manager** s'ouvre : choisissez **Sign in with your browser** et autorisez l'accès. Rechargez la page du dépôt sur GitHub : le code et son historique y sont.
+
+### 5.4 Relier le logiciel installé au dépôt
+
+Le dossier du logiciel que vous utilisez (par exemple `atelier\` dans le projet) devient une copie du dépôt : les mises à jour arriveront par `git pull`, et Claude Code pourra y travailler directement.
+
+```powershell
+cd "D:\Chemin\du\projet\atelier"
+git init -b main
+git remote add origin https://github.com/<compte>/mks-movie-producer.git
+git fetch origin
+git reset --hard origin/main
+git branch --set-upstream-to=origin/main main
+git status
+```
+
+`git reset --hard` remplace uniquement les fichiers **du logiciel** par la version GitHub (identique à celle installée). Les réglages du poste, les clés, les musiques, la police et les fichiers de travail ne sont pas suivis par git (fichier `.gitignore`) et restent en place ; les données du projet, dans le dossier parent, ne sont jamais concernées. `git status` doit répondre *« nothing to commit, working tree clean »* (ou ne lister que des fichiers à vous, comme `MONTER_E104.bat`, que git ignore). Le dossier temporaire `D:\Temp\MKS-Movie-Producer` peut ensuite être supprimé.
+
+### 5.5 Faire évoluer l'application avec Claude Code
+
+**En local (recommandé pour cette application)** : Claude Code travaille dans le dossier du logiciel, sur votre poste, avec ffmpeg, vos musiques et vos projets réels pour tester.
+
+1. PowerShell dans le dossier du logiciel, puis `claude`. Claude lit `CLAUDE.md` automatiquement.
+2. Décrivez l'évolution voulue. Pour un changement important, demandez une branche : *« crée une branche pour cette évolution »*.
+3. Testez : relancez `PILOTAGE.bat`, Ctrl+F5.
+4. Validez : *« commit et push »*. Pour une branche, ouvrez ensuite la **pull request** proposée par GitHub et cliquez sur **Merge**.
+
+**Dans le cloud (claude.ai/code)** : utile depuis un autre ordinateur ou le téléphone, sans rien installer.
+
+1. Ouvrez claude.ai/code, connectez votre compte GitHub, puis installez l'application GitHub **Claude** sur le dépôt `mks-movie-producer` (nécessaire pour un dépôt privé).
+2. Choisissez le dépôt, décrivez la tâche. Claude travaille sur une copie dans le cloud et pousse une branche ; **Create PR**, puis **Merge** sur GitHub.
+3. Sur le poste : double-clic sur `METTRE_A_JOUR.bat` dans le dossier du logiciel (ou `git pull`), puis relancez `PILOTAGE.bat` et Ctrl+F5.
+
+> Les clés d'API, les réglages du poste et les données des projets ne vont jamais sur GitHub. Le dépôt ne contient que le code, l'interface, les manuels et le modèle de projet.
+
+### 5.6 Installer depuis GitHub sur un autre poste
+
+```powershell
+git clone https://github.com/<compte>/mks-movie-producer.git
 cd mks-movie-producer
 ```
 
-Puis `INSTALLER.bat` (Windows) ou `./install.sh` (macOS, Linux), ou demandez à Claude Code de le faire.
+Puis `INSTALLER.bat` (Windows) ou `./install.sh` (macOS, Linux), ou demandez à Claude Code : *« Installe MKS Movie Producer depuis ce dossier (lis CLAUDE.md) puis ouvre le projet D:\Projets\L'Ultime Assaut. »*
 
 ## 6. Vérifier l'installation
 
@@ -238,6 +304,8 @@ L'Ultime Assaut/
   _exports/            zips d'export
 ```
 
+Le dossier **`modele-projet`** du logiciel contient exactement cette organisation, vide, avec un plan de 7 épisodes et une bible à compléter. Pour démarrer sans passer par l'application, copiez-le, renommez-le, puis **Projet › Ouvrir un dossier existant…**
+
 ### Ranger le projet librement
 
 Cette organisation n'est pas imposée. Vous pouvez renommer, regrouper ou déplacer les dossiers dans l'Explorateur : **seuls `projet.json` et `suivi.json` doivent rester à la racine**.
@@ -264,7 +332,7 @@ Ce qui **ne voyage pas** avec le projet, et qu'il faut refaire sur chaque poste 
 
 ## 11. Mettre à jour le logiciel
 
-- **Avec git** : dans le dossier du logiciel, `git pull`, puis relancez `PILOTAGE.bat` et faites Ctrl+F5 dans le navigateur.
+- **Avec git** (logiciel relié à GitHub, section 5.4) : double-clic sur `METTRE_A_JOUR.bat`, ou `git pull` dans le dossier du logiciel, puis relancez `PILOTAGE.bat` et faites Ctrl+F5 dans le navigateur.
 - **Avec un zip** : fermez la fenêtre `PILOTAGE`, remplacez les fichiers du logiciel par ceux du nouveau zip **sans supprimer** `reglages.json`, `poste.json`, `musique\`, `polices\` et `.cles.json` s'il existe. Relancez `PILOTAGE.bat`, puis Ctrl+F5.
 
 Les projets ne sont jamais modifiés par une mise à jour du logiciel.
@@ -294,6 +362,8 @@ Aucun fichier n'est perdu : en cas de doublon, la version déjà présente dans 
 | `INSTALLER.bat` s'arrête après Python | Python vient d'être installé | Fermer la fenêtre et relancer `INSTALLER.bat` |
 | « winget n'est pas reconnu » | App Installer absent (Windows ancien) | Installer « App Installer » depuis le Microsoft Store, ou Python et ffmpeg à la main |
 | La page ne s'ouvre pas | Fenêtre `PILOTAGE` fermée | Relancer `PILOTAGE.bat` |
+| `git push` refusé (« rejected », « fetch first ») | Le dépôt GitHub n'était pas vide (README créé à la création) | Recréer le dépôt vide, ou `git pull --rebase origin main` puis `git push` |
+| Git : « detected dubious ownership » | Dossier créé par un autre compte Windows | Lancer la commande `git config --global --add safe.directory` indiquée dans le message |
 | « Address already in use » | Une autre fenêtre `PILOTAGE` tourne déjà | Fermer l'ancienne fenêtre ; ou changer de port : `set ATELIER_PORT=8766` avant `py -3 pilotage.py` |
 | Interface ancienne ou incomplète | Cache du navigateur | Ctrl+F5 |
 | ffmpeg reste orange après installation | La fenêtre a été ouverte avant l'installation | Fermer et rouvrir `PILOTAGE.bat` |

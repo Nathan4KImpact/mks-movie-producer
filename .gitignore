@@ -9,3 +9,5 @@ polices/
 travail/
 cache/
 *.log
+MONTER_*.bat
+_exports/

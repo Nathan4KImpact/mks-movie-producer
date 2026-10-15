@@ -34,7 +34,12 @@
        "args": ["-3", "<chemin du logiciel>\\mcp_server.py"] } } }
    Claude Code : claude mcp add mks-movie-producer -- py -3 "<chemin>\mcp_server.py"
 
-6. MANUELS
+6. NOUVEAU PROJET ET MISES À JOUR
+   modele-projet : projet vide déjà organisé, à copier puis ouvrir (Projet > Ouvrir).
+   METTRE_A_JOUR.bat : récupère la dernière version depuis GitHub (si le logiciel
+   est relié au dépôt, voir le manuel d'installation, section 5).
+
+7. MANUELS
    docs\MANUEL_INSTALLATION.pdf et docs\MANUEL_UTILISATION.pdf
    (aussi consultables dans l'interface : menu Aide).
 

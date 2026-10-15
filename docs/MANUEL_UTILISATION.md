@@ -271,6 +271,7 @@ Ce tableau indique, pour chaque **rôle**, le dossier du projet que l'applicatio
 
 1. **Projet › Nouveau projet…** Indiquez le nom, le sous-titre, le dossier où le créer, le nombre de saisons, d'épisodes et leur durée, la couleur, la voix, le narrateur éventuel, le style visuel et les règles de la série. **Créer le projet**.
    Le dossier est créé avec sa structure (`bibliotheque` et `production`), son logo et un plan vide, et devient le projet actif.
+   Variante : copiez le dossier `modele-projet` du logiciel, renommez-le, puis **Projet › Ouvrir un dossier existant…**
 2. **Sources** : ajoutez le livre, le script de film ou de série, vos notes et documents de référence.
 3. **Personnages** : décrivez le narrateur et les personnages récurrents ; générez puis déposez leur image de référence.
 4. **Bible et plan** : suivez l'Assistant, **Générer la bible et le plan (IA)**, ou écrivez-les dans l'onglet Bible. Relisez et corrigez la bible : elle guide toute la suite.

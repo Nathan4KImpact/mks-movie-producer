@@ -1,0 +1,65 @@
+[
+ {
+  "code": "E101",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.1",
+  "titre": "Épisode 1.1",
+  "resume": "",
+  "pages": ""
+ },
+ {
+  "code": "E102",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.2",
+  "titre": "Épisode 1.2",
+  "resume": "",
+  "pages": ""
+ },
+ {
+  "code": "E103",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.3",
+  "titre": "Épisode 1.3",
+  "resume": "",
+  "pages": ""
+ },
+ {
+  "code": "E104",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.4",
+  "titre": "Épisode 1.4",
+  "resume": "",
+  "pages": ""
+ },
+ {
+  "code": "E105",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.5",
+  "titre": "Épisode 1.5",
+  "resume": "",
+  "pages": ""
+ },
+ {
+  "code": "E106",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.6",
+  "titre": "Épisode 1.6",
+  "resume": "",
+  "pages": ""
+ },
+ {
+  "code": "E107",
+  "saison": 1,
+  "titre_saison": "Saison 1",
+  "num": "1.7",
+  "titre": "Épisode 1.7",
+  "resume": "",
+  "pages": ""
+ }
+]

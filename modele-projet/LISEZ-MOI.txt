@@ -1,0 +1,14 @@
+﻿MODÈLE DE PROJET — MKS Movie Producer
+=====================================
+
+Pour démarrer un nouveau projet sans passer par l'application :
+
+1. Copier ce dossier où vous voulez et le renommer (ex. D:\Projets\Ma Serie).
+2. Lancer PILOTAGE.bat, puis Projet > Ouvrir un dossier existant… et choisir le dossier copié.
+3. Dans Projet : donner le nom du projet, régénérer le logo, ajouter les sources
+   (livre, script…) et les personnages. L'Assistant guide ensuite.
+
+Organisation : ce qui se prépare dans bibliotheque, ce qui se fabrique dans production.
+Elle peut être modifiée librement : seuls projet.json et suivi.json restent à la racine.
+Les fichiers .gitkeep servent seulement à conserver les dossiers vides ; ils peuvent être supprimés.
+(Ce fichier peut être supprimé.)

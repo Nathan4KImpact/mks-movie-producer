@@ -120,7 +120,7 @@ def texte_sources(limite=180000):
     morceaux, d = [], dossier("sources")
     fichiers = [chemin_livre()] if chemin_livre() else []
     if os.path.isdir(d):
-        fichiers += [os.path.join(d, f) for f in sorted(os.listdir(d)) if os.path.join(d, f) not in fichiers]
+        fichiers += [os.path.join(d, f) for f in sorted(os.listdir(d)) if not f.startswith(".") and os.path.join(d, f) not in fichiers]
     for f in fichiers:
         try:
             t = lire_document(f)

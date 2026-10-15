@@ -182,8 +182,8 @@ def sources():
     if os.path.isdir(d):
         for f in sorted(os.listdir(d)):
             p = os.path.join(d, f)
-            if os.path.isfile(p):
-                out.append({"nom": f, "mo": round(os.path.getsize(p) / 1e6, 2), "livre": livre and os.path.samefile(p, livre)})
+            if os.path.isfile(p) and not f.startswith("."):
+                out.append({"nom": f, "mo": round(os.path.getsize(p) / 1e6, 2), "livre": bool(livre) and os.path.samefile(p, livre)})
     if livre and not any(s["livre"] for s in out):
         out.insert(0, {"nom": cx._rel(livre), "mo": round(os.path.getsize(livre) / 1e6, 2), "livre": True})
     return out

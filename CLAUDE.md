@@ -37,6 +37,11 @@ Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon m�
 et `/aide/…`). Captures dans `docs/images/`. Après modification : `python docs/generer_pdf.py` régénère les PDF
 (nécessite `markdown` et `playwright`). Tenir les manuels à jour quand une fonction change.
 
+## Dépôt et conventions
+Branche `main` (dépôt GitHub privé), messages de commit en français. Le poste de l'utilisateur est une copie du dépôt
+(`git pull` via `METTRE_A_JOUR.bat`) : ne jamais committer de données de projet ni de clés. `modele-projet/` est un projet
+vide généré par `creer_projet()` (+ `.gitkeep`) : le régénérer si `DISPOSITION_NOUVEAU` ou `DEFAUT_PROJET` change.
+
 ## Installer sur un nouveau poste
 Windows : `INSTALLER.bat` puis `PILOTAGE.bat`. macOS/Linux : `./install.sh` puis `python3 pilotage.py`.
 Ne jamais committer : `reglages.json`, `poste.json`, `.cles.json`, `musique/`, `polices/`, `travail/`, `cache/`.

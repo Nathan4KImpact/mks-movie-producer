@@ -1,0 +1,49 @@
+{
+  "nom": "Nouveau projet",
+  "sous_titre": "Mini-série",
+  "type": "serie",
+  "saisons": 1,
+  "episodes_par_saison": 7,
+  "duree_min": 7,
+  "langue": "fr",
+  "livre": "",
+  "voix": {
+    "nom": "fr-FR-HenriNeural",
+    "debit": "-15%",
+    "hauteur": "-6Hz"
+  },
+  "volume_musique": 0.47,
+  "musique_defaut": "Lord_of_the_Land",
+  "musiques": [
+    "Clash_Defiant",
+    "Crusade_-_Heavy_Industry",
+    "Dark_Walk",
+    "Darkest_Child",
+    "Echoes_of_Time_v2",
+    "Ever_Mindful",
+    "Heroic_Age",
+    "Interloper",
+    "Lightless_Dawn",
+    "Long_Note_Four",
+    "Lord_of_the_Land",
+    "Ossuary_6_-_Air",
+    "Prelude_and_Action",
+    "Rising_Game"
+  ],
+  "style_image": "Cinematic film still, photorealistic, vivid colors, dramatic lighting, high detail, 16:9, no text. ",
+  "personnages": [],
+  "regles_ia": "",
+  "logo": "bibliotheque/logo.svg",
+  "couleur": "#d8b46a",
+  "dossiers": {
+    "sources": "bibliotheque/sources",
+    "personnages": "bibliotheque/personnages",
+    "bible": "bibliotheque/bible",
+    "episodes": "bibliotheque/episodes",
+    "musique": "bibliotheque/musique",
+    "fiches": "production/fiches",
+    "images": "production/images",
+    "rendus": "production/rendus",
+    "exports": "_exports"
+  }
+}

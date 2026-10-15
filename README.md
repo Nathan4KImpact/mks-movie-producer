@@ -42,6 +42,7 @@ MonProjet/
   _exports/
 ```
 
+Le dossier `modele-projet/` contient cette organisation, vide, prête à copier.
 Le projet se range **librement** : seuls `projet.json` et `suivi.json` restent à la racine ; chaque dossier
 déplacé est retrouvé d'après son contenu (*Projet › Organisation du projet*).
 
