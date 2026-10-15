@@ -149,6 +149,12 @@ const EXTRAITS = {fr:"Ce que je vais vous raconter, je l'ai vu. Une armée immen
   de:"Was ich euch erzählen werde, habe ich gesehen. Ein gewaltiges Heer rückte vor, und der Berg bebte unter seinen Schritten.",
   pt:"O que vou contar, eu vi. Um exército imenso avançava, e a montanha tremia sob os seus passos.",
   it:"Ciò che sto per raccontarvi, l'ho visto. Un esercito immenso avanzava, e la montagna tremava sotto i suoi passi."};
+function choixVoix(attrs, langue, val){            // vrai menu déroulant (une datalist filtre sur la valeur saisie)
+  const liste = [...new Set([...(LANGS.voix[(langue||'').split('-')[0]]||[]), ...(val?[val]:[])])];
+  return `<select ${attrs} data-avant="${esc(val||'')}" onchange="autreVoix(this)">${liste.map(v=>`<option ${v===val?'selected':''}>${esc(v)}</option>`).join('')}<option value="__autre">Autre voix…</option></select>`; }
+function autreVoix(s){ if(s.value==='__autre'){ const v = (prompt('Nom exact de la voix Edge TTS (ex. en-GB-ThomasNeural) :')||'').trim();
+    if(v){ s.add(new Option(v, v), s.options.length-1); s.value = v; } else s.value = s.dataset.avant; }
+  s.dataset.avant = s.value; }
 async function ecouter(nom, debit, hauteur, langue){
   toast('Préparation de l\'extrait…');
   try { const r = await api('/api/voix/essai',{method:'POST',body:JSON.stringify({nom, debit, hauteur, texte: EXTRAITS[(langue||'').split('-')[0]] || EXTRAITS.en})});
@@ -560,13 +566,12 @@ async function projet(){
           <div><label>Durée (min)</label><input id="p_d" type="number" min="1" value="${pj.duree_min}"></div>
           <div><label>Couleur</label><input id="p_c" type="color" value="${esc(pj.couleur||'#d8b46a')}" style="height:36px;padding:2px"></div>
         </div>
-        <div><label>Voix (Edge TTS)</label><input id="p_vn" value="${esc(pj.voix.nom)}" list="voixListe"></div>
+        <div><label>Voix (Edge TTS)</label>${choixVoix('id="p_vn"', LANGS.source, pj.voix.nom)}</div>
         <div class="mini"><div><label>Débit</label><input id="p_vd" value="${esc(pj.voix.debit)}"></div><div><label>Hauteur</label><input id="p_vh" value="${esc(pj.voix.hauteur)}"></div>
           <div><label>Vol. musique</label><input id="p_vol" type="number" step="0.01" value="${pj.volume_musique}"></div><div><label>Livre (PDF)</label><input id="p_livre" value="${esc(pj.livre||'')}" placeholder="sources/…pdf"></div></div>
         <div class="full"><label>Style ajouté à chaque prompt image (anglais)</label><textarea id="p_sty" rows="2">${esc(pj.style_image)}</textarea></div>
         <div class="full"><label>Règles de la série pour l'IA (ton, narration, direction artistique)</label><textarea id="p_reg" rows="5">${esc(pj.regles_ia||'')}</textarea></div>
       </div>
-      <datalist id="voixListe"><option>fr-FR-HenriNeural</option><option>fr-FR-DeniseNeural</option><option>fr-FR-RemyMultilingualNeural</option><option>fr-FR-VivienneMultilingualNeural</option><option>fr-CA-AntoineNeural</option><option>fr-BE-GerardNeural</option><option>en-US-GuyNeural</option><option>en-US-AndrewNeural</option><option>en-GB-RyanNeural</option></datalist>
       <h3 style="margin-top:6px">Personnages récurrents <span class="meta">(le tag [TAG] dans un prompt est remplacé par la description)</span></h3>
       <div id="persos">${persos.map((x,i)=>`<div class="prof" style="grid-template-columns:110px 1fr 2fr 1.3fr auto" data-i="${i}">
         <div><label>Tag</label><input data-k="tag" value="${esc(x.tag)}"></div><div><label>Nom</label><input data-k="nom" value="${esc(x.nom)}"></div>
@@ -583,7 +588,7 @@ async function projet(){
       return `<div class="prof" style="grid-template-columns:120px 1.3fr 1.3fr 90px 90px auto" data-l="${l}">
         <div><label>Langue</label><div style="padding-top:8px"><span class="pill lang">${l.toUpperCase()}</span> ${esc(LN(l))}</div></div>
         <div><label>Titre de la série dans cette langue</label><input data-k="titre" value="${esc(v.titre||'')}" placeholder="ex. The Final Quest"></div>
-        <div><label>Voix (Edge TTS)</label><input data-k="nom" value="${esc(vx.nom||'')}" list="voix_${l}"><datalist id="voix_${l}">${(LANGS.voix[l.split('-')[0]]||[]).map(x=>`<option>${x}</option>`).join('')}</datalist></div>
+        <div><label>Voix (Edge TTS)</label>${choixVoix('data-k="nom"', l, vx.nom||'')}</div>
         <div><label>Débit</label><input data-k="debit" value="${esc(vx.debit||'-10%')}"></div>
         <div><label>Hauteur</label><input data-k="hauteur" value="${esc(vx.hauteur||'-4Hz')}"></div>
         <div class="row" style="flex-wrap:nowrap;align-self:end"><button class="btn small" onclick="const r=this.closest('.prof');ecouter(r.querySelector('[data-k=nom]').value.trim(),r.querySelector('[data-k=debit]').value.trim(),r.querySelector('[data-k=hauteur]').value.trim(),'${l}')">▶ Écouter</button><button class="btn small" onclick="supVersion('${l}')">✕</button></div></div>`; }).join('') || '<p class="meta">Aucune autre langue pour l\'instant.</p>'}</div>
@@ -697,7 +702,7 @@ async function nouveauProjet(){
     <div class="full"><label>Créer dans le dossier</label><div class="row" style="flex-wrap:nowrap"><input id="n_parent" value="${esc((INFOS.racine||'').replace(/[\\/][^\\/]*$/,''))}"><button class="btn small" onclick="choisirDossier(c=>$('#n_parent').value=c,'Dossier parent du nouveau projet',$('#n_parent').value)">Parcourir…</button></div></div>
     <div class="mini full"><div><label>Saisons</label><input id="n_s" type="number" value="1" min="1"></div><div><label>Épisodes / saison</label><input id="n_e" type="number" value="7" min="1"></div>
       <div><label>Durée (min)</label><input id="n_d" type="number" value="7" min="1"></div><div><label>Couleur</label><input id="n_c" type="color" value="#d8b46a" style="height:36px;padding:2px"></div></div>
-    <div><label>Voix</label><input id="n_v" value="fr-FR-HenriNeural" list="voixListe2"><datalist id="voixListe2"><option>fr-FR-HenriNeural</option><option>fr-FR-DeniseNeural</option><option>fr-FR-RemyMultilingualNeural</option><option>en-US-GuyNeural</option></datalist></div>
+    <div><label>Voix</label>${choixVoix('id="n_v"', 'fr', 'fr-FR-HenriNeural')}</div>
     <div><label>Narrateur (facultatif)</label><input id="n_nar" placeholder="Ex. Le Voyant, Luc l'évangéliste…"></div>
     <div class="full"><label>Style visuel (anglais)</label><textarea id="n_sty" rows="2">Cinematic film still, photorealistic, vivid colors, dramatic lighting, high detail, 16:9, no text. </textarea></div>
     <div class="full"><label>Règles de la série pour l'IA (ton, public, narration)</label><textarea id="n_reg" rows="3" placeholder="Ex. Tu es scénariste de … Ton : … Narration à la première personne par …"></textarea></div>
