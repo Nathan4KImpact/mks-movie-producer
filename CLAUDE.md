@@ -49,3 +49,32 @@ Ne jamais committer : `reglages.json`, `poste.json`, `.cles.json`, `musique/`, `
 ## Vérifications rapides
 `python3 -c "import ast,glob;[ast.parse(open(f).read()) for f in glob.glob('*.py')]"` puis lancer
 `python3 pilotage.py --sans-navigateur` et ouvrir http://localhost:8765.
+
+## Règles permanentes du porteur (toutes les sessions Claude sur ce dépôt)
+
+Reprises de sa mémoire partagée (Google Drive, `CLAUDE.md` à la racine du dossier mémoire), appliquées à tous ses dépôts.
+
+### 1. Nourrir la mémoire partagée après chaque merge de PR
+- Après chaque fusion, relire le diff et se demander : qu'est-ce qui a été appris ici qui resservira **sur un autre projet** ?
+  Si rien de transposable, ne rien écrire.
+- Sinon, écrire ou compléter une fiche `memory/skills/expertise_<sujet>.md` (en français, au format des fiches voisines,
+  **avec les pièges** qui ont coûté cher), mettre à jour `memory/projects/mks-movie-producer.md` et la liste des fiches
+  de l'index `CLAUDE.md` de la mémoire.
+- Le Drive ne modifie que titre et dossier : pour corriger un fichier, en créer un nouveau et déplacer l'ancien dans
+  `memory/archive/`. L'index reste en `.md` (jamais converti en Google Doc).
+- **Ne verser que ce qui est fusionné** : une PR ouverte n'entre pas dans la mémoire.
+
+### 2. Pull requests — toujours ouvrir, ne jamais fusionner sans accord
+- Toute évolution passe par une branche et une PR, créée en fin de travail sans attendre qu'on la demande.
+- **Ne jamais fusionner sans l'accord explicite du porteur** (« tu peux merger »). Sinon : ouvrir la PR, la décrire, s'arrêter.
+- Une PR fusionnée est finie : le travail suivant repart de `main` dans une nouvelle PR. Vérifier l'état réel d'une PR
+  avant de dire qu'elle est à jour.
+
+### 3. Git — historique linéaire, mêmes commits sur la branche et sur `main`
+- Récupérer avec `git pull --rebase`, jamais de commit de fusion local.
+- Fusionner une PR (avec accord) **par avance rapide** : `git fetch`, puis `git push origin <sha de la tête de la PR>:main`.
+  GitHub marque alors la PR comme fusionnée.
+- **Jamais** les boutons « Create a merge commit », « Squash » ni « Rebase and merge » (ce dernier recrée les commits).
+- Seul force-push admis : rebaser la branche de travail sur `origin/main` puis `git push --force-with-lease`, avant la
+  fusion. Jamais sur `main`.
+- Le poste du porteur se met à jour par `git pull --ff-only` (`METTRE_A_JOUR.bat`).
