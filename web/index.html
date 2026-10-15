@@ -30,6 +30,12 @@ h2{font:700 22px var(--serif);letter-spacing:.05em;color:var(--gold2);margin:0 0
 .btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1408;border:0;font-weight:600}
 .btn.ia{border-color:#4a3d6a;background:#221b33}
 .btn.small{padding:4px 9px;font-size:12px}
+.actions-projet{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;margin-top:4px;border:1px solid var(--gold);border-radius:var(--r);background:linear-gradient(180deg,rgba(216,180,106,.10),rgba(216,180,106,.03))}
+.actions-projet .titre{grid-column:1/-1;color:var(--gold2);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;text-align:left}
+.actions-projet .btn{margin:0;padding:10px 12px;font-size:13.5px;text-align:center;white-space:normal;text-transform:none;letter-spacing:0;border-color:#4a3f2c}
+.actions-projet .btn.gold{border:0}
+.actions-projet .plein{grid-column:1/-1}
+@media(max-width:520px){.actions-projet{grid-template-columns:1fr}}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px}
 .card h3{font:700 15px var(--serif);margin:0;letter-spacing:.04em}
@@ -545,14 +551,13 @@ async function projet(){
       <img src="/api/logo?t=${Date.now()}" style="width:180px;height:180px;object-fit:contain">
       <h3 style="font-size:20px">${esc(pj.nom)}</h3><div class="meta">${esc(pj.sous_titre||'')}</div>
       <div class="meta" style="word-break:break-all">${esc(INFOS.racine)}</div>
-      <div class="row" style="justify-content:center">
-        <button class="btn small" onclick="regenLogo(false)">Régénérer le logo</button>
-        <label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
-      </div>
-      <div class="row" style="justify-content:center">
-        <button class="btn small" onclick="ouvrir('projet')">Ouvrir le dossier</button>
-        <button class="btn small" onclick="exporter(false)">Exporter (zip, sans rendus)</button>
-        <button class="btn small" onclick="exporter(true)">Exporter avec rendus</button>
+      <div class="actions-projet">
+        <div class="titre">Actions du projet</div>
+        <button class="btn" onclick="regenLogo(false)">🎨 Régénérer le logo</button>
+        <label class="btn">🖼 Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
+        <button class="btn plein" onclick="ouvrir('projet')">📂 Ouvrir le dossier du projet</button>
+        <button class="btn gold" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
+        <button class="btn gold" onclick="exporter(true)">🎬 Exporter avec rendus</button>
       </div>
       <p class="meta">Pour continuer sur un autre poste : copie ce dossier (ou le zip), installe le logiciel, puis Projet › Ouvrir un dossier. L'avancement est recalculé à partir des fichiers.</p>
     </div>

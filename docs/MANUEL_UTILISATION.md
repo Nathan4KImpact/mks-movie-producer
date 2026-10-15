@@ -218,11 +218,14 @@ L'onglet Projet réunit tout ce qui définit l'œuvre ouverte.
 
 ![Paramètres du projet](images/10_projet.jpg)
 
-### 13.1 Identité et logo
+### 13.1 Identité, logo et actions du projet
+
+Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agissent sur le projet entier :
 
 - **Régénérer le logo** dessine un emblème à partir du nom du projet et de sa couleur.
 - **Importer un logo** remplace le logo par votre propre image (PNG, JPG, SVG).
-- **Ouvrir le dossier** affiche le dossier du projet dans l'Explorateur.
+- **Ouvrir le dossier du projet** affiche le dossier du projet dans l'Explorateur.
+- **Exporter (zip, sans rendus)** et **Exporter avec rendus** (boutons dorés) : voir 13.4.
 
 ### 13.2 Paramètres
 
@@ -248,7 +251,7 @@ Chaque personnage a un **tag** (ex. `VOYANT`), un nom, une **description en angl
 ![Sources et projets du poste](images/11_projet_sources.jpg)
 
 - **Sources du projet** : livre, scripts, notes, documents de référence. Formats lus par l'IA : PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain, CSV, JSON. **Ajouter des fichiers** les copie dans le dossier des sources.
-- **Exporter (zip, sans rendus)** ou **Exporter avec rendus** : crée un zip du projet dans le dossier des exports, pour l'archiver ou le transférer sur un autre poste.
+- **Exporter (zip, sans rendus)** ou **Exporter avec rendus** (cadre *Actions du projet*, sous le logo) : crée un zip du projet dans le dossier des exports, pour l'archiver ou le transférer sur un autre poste.
 - **Projets sur ce poste** : la liste des projets déjà ouverts ; **Ouvrir** bascule sur un autre projet, **✕** le retire de la liste (sans rien supprimer sur le disque).
 - **Ouvrir un dossier existant…** ouvre un projet copié ou transféré. Si le dossier n'est pas encore un projet, l'application propose de l'initialiser.
 
