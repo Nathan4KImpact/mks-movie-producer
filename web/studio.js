@@ -7,7 +7,8 @@
 'use strict';
 
 const ST = {ep: null, sel: 0, t: 0, cur: -1, playing: false, last: 0, raf: 0, zoom: 0, lib: null,
-  onglet: 'medias', filtre: 'episode', recherche: '', voixOn: true, musOn: true,
+  onglet: 'medias', filtre: 'episode', recherche: '', voixOn: true, musOn: true, sonsOn: true,
+  amb: [], sfx: [], sonUrl: {}, aAmb: new Audio(), ambCour: '', sfxJoues: new Set(),
   voixUrl: {}, voixDur: {}, segs: [], mus: [], total: 0, annuler: [], refaire: [],
   aVoix: new Audio(), aMus: new Audio(), aLib: new Audio(), libJoue: '', voixCour: '', musCour: '', vidCour: '',
   gen: false, genEtat: '', rec: null, memoChamp: null, minuteur: 0};
@@ -60,6 +61,7 @@ async function studio(ep, garder){
           <div class="tc" id="stTc">00:00.0 <span>/ 00:00</span></div>
           <label class="st-bascule"><input type="checkbox" ${ST.voixOn?'checked':''} onchange="ST.voixOn=this.checked;stSync(true);if(this.checked)stVoixGen()"> Voix</label>
           <label class="st-bascule"><input type="checkbox" ${ST.musOn?'checked':''} onchange="ST.musOn=this.checked;stSync(true)"> Musique</label>
+          <label class="st-bascule" title="Ambiances et bruitages"><input type="checkbox" ${ST.sonsOn?'checked':''} onchange="ST.sonsOn=this.checked;stSync(true)"> Sons</label>
           <div class="sp"></div><span class="st-etat" id="stEtat"></span>
         </div>
       </section>
@@ -77,10 +79,10 @@ async function studio(ep, garder){
         <button class="btn small" onclick="stZoom(0);this.previousElementSibling.value=0">Tout voir</button>
         <div class="st-legende">
           <span><i style="background:#6fbf8a"></i>voix de synthèse</span><span><i style="background:repeating-linear-gradient(135deg,#4c8a62 0 3px,#5a9c71 3px 6px)"></i>durée estimée</span>
-          <span><i style="background:#7aa6d8"></i>voix importée</span><span><i style="background:#9d86c9"></i>musique</span></div>
+          <span><i style="background:#7aa6d8"></i>voix importée</span><span><i style="background:#9d86c9"></i>musique</span><span><i style="background:#5fa8a0"></i>ambiance</span><span><i style="background:#e0915a"></i>bruitage</span></div>
       </div>
       <div class="st-zone">
-        <div class="st-heads"><div style="height:25px"></div><div style="height:67px">🎞 Vidéo</div><div style="height:27px">Aa Titres</div><div style="height:35px">🎙 Voix</div><div style="height:31px">♫ Musique</div></div>
+        <div class="st-heads"><div style="height:25px"></div><div style="height:67px">🎞 Vidéo</div><div style="height:27px">Aa Titres</div><div style="height:35px">🎙 Voix</div><div style="height:31px">♫ Musique</div><div style="height:27px">≋ Ambiance</div><div style="height:25px">✦ Bruitages</div></div>
         <div class="st-scroll" id="stScroll"><div class="st-inner" id="stInner"></div></div>
       </div>
     </div>
@@ -143,6 +145,18 @@ function stCalcul(){
   sec[0].t0 = 0;
   sec.forEach((x, k) => x.t1 = k + 1 < sec.length ? sec[k + 1].t0 : t);
   ST.mus = sec;
+  // ambiances (champ amb : démarre à ce plan, continue jusqu'au prochain amb ; « aucune » coupe) et bruitages (sfx, sfx_t)
+  const amb = []; let cour = null;
+  EP.shots.forEach((s, i) => {
+    if(s.amb){ if(cour) cour.t1 = ST.segs[i].t0;
+      cour = s.amb === 'aucune' ? null : {t0: ST.segs[i].t0, nom: s.amb, vol: +(s.amb_vol ?? 1), i}; if(cour) amb.push(cour); }
+    else if(cour && s.amb_vol != null) cour.vol = +s.amb_vol;
+  });
+  if(cour) cour.t1 = t;
+  ST.amb = amb;
+  ST.sfx = [];
+  EP.shots.forEach((s, i) => [].concat(s.sfx || []).filter(Boolean).forEach((n, k) =>
+    ST.sfx.push({t: ST.segs[i].t0 + (+(s.sfx_t || 0)) + k * 0.05, nom: n, i})));
   const d = $('#stDuree'); if(d) d.textContent = `${EP.shots.filter(s=>!s.card).length} plans · ${hms(ST.total)}${ST.segs.some(g=>g.v&&!g.v.exact)?' (estimée)':''}`;
 }
 const hms = (t, dix) => { t = Math.max(0, t); const m = Math.floor(t / 60), s = t - m * 60;
@@ -341,7 +355,7 @@ function blocMusique(s, i){
   </div>`;
 }
 function blocSons(s, i){                          // ambiances et bruitages (sons.py) : mêmes champs que la vue Liste
-  if(!SONS.sons.length && !ST.sonsDemandes){ ST.sonsDemandes = true; api('/api/sons').then(r => { SONS = r; stInsp(); }).catch(()=>{}); }
+  if(!SONS.sons.length && !ST.sonsDemandes){ ST.sonsDemandes = true; api('/api/sons').then(r => { SONS = r; stInsp(); stTimeline(); }).catch(()=>{}); }
   let cour = ''; EP.shots.slice(0, i).forEach(x => { if(x.amb) cour = x.amb === 'aucune' ? '' : x.amb; });
   const lib = n => ((SONS.sons.find(x => x.nom === n) || {}).libelle || n);
   return `<div class="bloc"><h4>Sons</h4>
@@ -462,10 +476,14 @@ function stTimeline(){
     return `<div class="st-bloc a ${g.v.fichier?'fic':''} ${g.v.exact?'':'est'} ${g.i===sel?'sel':''}" data-i="${g.i}" style="left:${(g.t0 + 0.45) * p}px;width:${Math.max(3, g.v.d * p)}px" title="${esc(s.vo || '')}">${g.v.fichier ? '🎙 ' : ''}${esc((s.vo || s.voix_fichier || '').slice(0, 80))}</div>`; }).join('');
   const mus = ST.mus.map(m => { const lib = musiqueDe(m.piste); const abs = !lib || !lib.url;
     return `<div class="st-bloc m ${abs?'abs':''}" data-i="${m.i}" style="left:${m.t0 * p}px;width:${Math.max(3, (m.t1 - m.t0) * p - 2)}px" title="${esc(m.piste)}${abs?' (non installée)':''}">♫ ${esc((m.piste || 'aucune').replace(/_/g, ' '))}${m.defaut?' (par défaut)':''}${m.off?` · à ${m.off}s`:''}</div>`; }).join('');
+  const libSon = n => ((SONS.sons.find(x => x.nom === n) || {}).libelle || String(n).replace(/_/g, ' '));
+  const ambs = ST.amb.map(a => `<div class="st-bloc s ${a.i===sel?'sel':''}" data-i="${a.i}" style="left:${a.t0 * p}px;width:${Math.max(3, (a.t1 - a.t0) * p - 2)}px" title="Ambiance : ${esc(libSon(a.nom))} — jusqu'au prochain changement">≋ ${esc(libSon(a.nom))}${a.vol !== 1 ? ` · ${a.vol}` : ''}</div>`).join('');
+  const sfx = ST.sfx.map(x => `<div class="st-sfx ${x.i===sel?'sel':''}" data-i="${x.i}" style="left:${x.t * p}px" title="Bruitage : ${esc(libSon(x.nom))}">✦ ${esc(libSon(x.nom))}</div>`).join('');
   inn.style.width = W + 'px';
   inn.innerHTML = `<div class="st-regle" id="stRegle">${regle}</div>
     <div class="st-piste v" id="stPv">${clips}</div><div class="st-piste t">${titres}</div>
     <div class="st-piste a" id="stPa">${voix}</div><div class="st-piste m" id="stPm">${mus}</div>
+    <div class="st-piste s">${ambs}</div><div class="st-piste x">${sfx}</div>
     <div class="st-tete" id="stTete" style="left:${ST.t * p}px"></div>`;
   stEvenementsTimeline();
 }
@@ -550,12 +568,13 @@ function stLecture(){ ST.playing ? stPause() : stJouer(); }
 function stJouer(){
   if(!ST.segs.length) return; if(ST.t >= ST.total - 0.05) ST.t = 0;
   ST.aLib.pause(); ST.libJoue = '';
-  ST.playing = true; ST.last = performance.now(); ST.voixCour = ''; ST.musCour = '';
+  ST.playing = true; ST.last = performance.now(); ST.voixCour = ''; ST.musCour = ''; ST.ambCour = ''; stPrechargerSons();
+  ST.sfxJoues = new Set(ST.sfx.map((x, k) => x.t < ST.t - 0.05 ? k : -1));
   $('#stPlay').textContent = '❚❚'; ST.raf = requestAnimationFrame(stBoucle);
 }
 function stPause(){
   ST.playing = false; cancelAnimationFrame(ST.raf);
-  ST.aVoix.pause(); ST.aMus.pause(); const v = $('#stVid'); if(v) v.pause();
+  ST.aVoix.pause(); ST.aMus.pause(); ST.aAmb.pause(); ST.ambCour = ''; const v = $('#stVid'); if(v) v.pause();
   const b = $('#stPlay'); if(b) b.textContent = '▶';
 }
 function stBoucle(now){
@@ -564,9 +583,11 @@ function stBoucle(now){
   if(ST.t >= ST.total){ ST.t = ST.total; stFrame(); stPause(); return; }
   stFrame(); stSuivreTete(); ST.raf = requestAnimationFrame(stBoucle);
 }
-function stAller(t){ ST.t = Math.max(0, Math.min(ST.total, t)); ST.voixCour = ''; ST.musCour = ''; stFrame(); }
+function stAller(t){ ST.t = Math.max(0, Math.min(ST.total, t)); ST.voixCour = ''; ST.musCour = ''; ST.ambCour = '';
+  ST.sfxJoues = new Set(ST.sfx.map((x, k) => x.t < ST.t - 0.05 ? k : -1)); stFrame(); }
 function stVoisin(d){ const i = Math.max(0, Math.min(EP.shots.length - 1, ST.sel + d)); stChoisir(i); stAller(ST.segs[i].t0); stSuivreTete(); }
-function stSync(){ ST.voixCour = ''; ST.musCour = ''; if(!ST.voixOn) ST.aVoix.pause(); if(!ST.musOn) ST.aMus.pause(); stFrame(); }
+function stSync(){ ST.voixCour = ''; ST.musCour = ''; ST.ambCour = ''; if(!ST.voixOn) ST.aVoix.pause(); if(!ST.musOn) ST.aMus.pause();
+  if(!ST.sonsOn) ST.aAmb.pause(); stFrame(); }
 
 // dessine l'image à l'instant ST.t (reproduit le moteur : mouvements, titres, fondus, cartons) et cale le son
 function stFrame(){
@@ -630,7 +651,26 @@ function stSon(i, s, g, u){
     const vol = Math.min(1, +(PROJET.volume_musique ?? 0.47)), fin = Math.min(1, (ST.total - ST.t) / 5);
     ST.aMus.volume = Math.max(0, Math.min(1, vol * (parle ? 0.45 : 1) * fin));
   } else if(!ST.aMus.paused){ ST.aMus.pause(); ST.musCour = ''; }
+  // ambiance (extrait en boucle) et bruitages, baissés sous la voix comme la musique
+  const amb = ST.sonsOn && ST.amb.find(a => ST.t >= a.t0 && ST.t < a.t1), ua = amb && stUrlSon(amb.nom);
+  if(ua){
+    if(ST.ambCour !== ua){ ST.ambCour = ua; ST.aAmb.src = ua; ST.aAmb.loop = true; ST.aAmb.play().catch(()=>{}); }
+    const fin = Math.min(1, (amb.t1 - ST.t) / 1.5, (ST.t - amb.t0) / 1.5 + 0.2);
+    ST.aAmb.volume = Math.max(0, Math.min(1, +(PROJET.volume_ambiance ?? 0.8) * amb.vol * 0.6 * (parle ? 0.5 : 1) * fin));
+  } else if(ST.ambCour){ ST.aAmb.pause(); ST.ambCour = ''; }
+  if(ST.sonsOn) ST.sfx.forEach((x, k) => {
+    if(ST.t >= x.t && ST.t < x.t + 0.4 && !ST.sfxJoues.has(k)){ ST.sfxJoues.add(k); const u2 = stUrlSon(x.nom);
+      if(u2){ const a = new Audio(u2); a.volume = Math.min(1, +(PROJET.volume_ambiance ?? 0.8)); a.play().catch(()=>{}); } }
+  });
 }
+// extrait d'écoute d'un son (fichier du projet ou synthèse), demandé une fois au serveur puis gardé
+function stUrlSon(nom){
+  if(ST.sonUrl[nom] !== undefined) return ST.sonUrl[nom];
+  ST.sonUrl[nom] = '';
+  api('/api/sons/essai', {method: 'POST', body: JSON.stringify({nom})}).then(r => { ST.sonUrl[nom] = r.url; }).catch(() => {});
+  return '';
+}
+function stPrechargerSons(){ ST.amb.forEach(a => stUrlSon(a.nom)); ST.sfx.forEach(x => stUrlSon(x.nom)); }
 
 // ---------------------------------------------------------------- clavier
 addEventListener('keydown', e => {

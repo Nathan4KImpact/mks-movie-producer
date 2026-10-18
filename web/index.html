@@ -190,7 +190,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.data
 function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false; $('#main').oninput = null;
   if(typeof studioQuitter === 'function') studioQuitter();
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
-  ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet, aide})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); }
+  ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet, aide})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); logoRejouer(); }
 async function ouvrir(d){ await api('/api/ouvrir',{method:'POST',body:JSON.stringify({dossier:d})}); }
 
 // ---------------------------------------------------------------- saison
@@ -777,9 +777,13 @@ function logoAnime(sel, taille){
   const v = box.querySelector('video'), calme = matchMedia('(prefers-reduced-motion: reduce)').matches;
   v.onerror = () => { box.innerHTML = fixe; };
   v.onloadedmetadata = () => { if(calme){ v.currentTime = Math.max(0, v.duration - 0.05); } else v.play().catch(()=>{}); };
-  const rejouer = () => { if(!calme && (v.ended || v.paused)){ v.currentTime = 0; v.play().catch(()=>{}); } };
-  (box.closest('.marque') || box).addEventListener('mouseenter', rejouer);
+  const rejouer = () => { if(!calme && (v.ended || v.paused)){ v.currentTime = 0; v.play().catch(()=>{}); box.dataset.joue = Date.now(); } };
+  box.dataset.joue = Date.now(); box._rejouer = rejouer;
+  box.onmouseenter = rejouer;                     // survol du logo : rejouer
 }
+// la bannière rejoue son logo animé en changeant de page, au plus une fois par minute (sinon on ne la voit jamais)
+function logoRejouer(){ const b = $('.marque .logo-box');
+  if(b && b._rejouer && Date.now() - (+b.dataset.joue || 0) > 60000) b._rejouer(); }
 async function envoyerLogoAnime(f){ if(!f) return; const ext = f.name.split('.').pop().toLowerCase();
   if(!['webm','mp4','gif','webp','png','svg'].includes(ext)) return toast('Format accepté : WebM (transparent, conseillé), MP4, GIF, WebP, PNG animé ou SVG');
   toast('Import du logo animé…'); await envoyer('logo_anime.'+ext, f); toast('Logo animé importé'); projet(); }
