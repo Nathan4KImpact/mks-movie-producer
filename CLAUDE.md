@@ -11,6 +11,9 @@ Répondre en français à l'utilisateur.
   Vue Studio d'un épisode (montage : moniteur, timeline, inspecteur, bibliothèque) dans `web/studio.js` + `web/studio.css`
   (servis par `/web/…`) ; elle modifie directement `EP` et réutilise `sauver()`. Bibliothèque : `GET /api/bibliotheque?ep=`,
   musiques servies par `/musique/<nom>`, import sans écrasement : `PUT /api/fichier?unique=1&dest=…`.
+  Timeline : pistes Vidéo, Titres, Voix, Musique, Ambiance (`ST.amb`, sections calculées dans `stCalcul` d'après `amb`) et
+  Bruitage (`ST.sfx`, un repère par plan) ; l'aperçu joue les sons via l'extrait de `POST /api/sons/essai` (`stUrlSon`).
+  **Toute couche ajoutée au moteur (`moteur.py`) doit avoir sa piste et son écoute dans le Studio.**
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
@@ -25,7 +28,9 @@ Répondre en français à l'utilisateur.
 - Logo : `projet.json > logo` (fixe, `/api/logo`) et `logo_anime` (facultatif, `/api/logo/anime` : WebM transparent conseillé,
   MP4, GIF, WebP, SVG). Import `PUT /api/fichier?dest=logo_anime.<ext>`, retrait `POST /api/projet/logo_anime`. `PUT /api/projet`
   conserve `logo_anime` si la page ne l'envoie pas. Interface : `logoAnime(sel, taille)` dans `web/index.html` (joué une fois,
-  arrêt sur la dernière image, survol = rejouer ; la bannière ne rejoue pas à chaque navigation).
+  arrêt sur la dernière image, survol = rejouer ; la bannière le rejoue en changeant de page, au plus une fois par minute :
+  `logoRejouer()` appelé par `go()`). Le logo animé est une donnée de projet : absent sur un poste dont les données n'ont pas
+  été copiées.
 - `sons.py` : ambiances et bruitages (voir plus bas). `langues.py` : versions linguistiques (voir plus bas). `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP.
 
 ## Organisation d'un projet (aucun chemin en dur)
@@ -76,7 +81,9 @@ encadrés `>` et images seules sur leur ligne : rester dans ce sous-ensemble de 
 fonction change.
 
 ## Dépôt et conventions
-Branche `main` (dépôt GitHub privé), messages de commit en français. Le poste de l'utilisateur est une copie du dépôt
+Branche `main` (dépôt GitHub privé), messages de commit en français. **Deux PR par demande, pas plus** : celle de ce dépôt
+(code, manuels **et ce `CLAUDE.md`**, mis à jour dans la même PR que l'évolution qui le rend inexact) et celle de la mémoire
+dans `mon-second-cerveau-mks-777`. Pas de PR séparée pour `CLAUDE.md`. Le poste de l'utilisateur est une copie du dépôt
 (`git pull` via `METTRE_A_JOUR.bat`) : ne jamais committer de données de projet ni de clés. `modele-projet/` est un projet
 vide généré par `creer_projet()` (+ `.gitkeep`) : le régénérer si `DISPOSITION_NOUVEAU` ou `DEFAUT_PROJET` change.
 
