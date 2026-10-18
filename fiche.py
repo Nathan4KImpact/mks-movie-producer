@@ -45,6 +45,17 @@ def bloc_sons(e):
     return L
 
 
+def deja_la(ep, s):
+    """Description du média déjà disponible pour ce plan (fichier du projet ou adresse web), sinon ''."""
+    from moteur import trouver_media
+    src, video = trouver_media(ep, {k: v for k, v in s.items() if k != "media"}, None, telecharger=False)
+    if not src:
+        return ""
+    if str(src).startswith("http"):
+        return f"{'vidéo' if video else 'image'} déjà générée (adresse web)"
+    return f"{'vidéo' if video else 'image'} déjà dans le projet ({os.path.basename(src)})"
+
+
 def fiche_flow(ep):
     pj = projet()
     e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
@@ -57,7 +68,8 @@ def fiche_flow(ep):
     L = [f"{pj['nom'].upper()} — {e['id']} « {e.get('title', '')} » — FICHE DE PROMPTS", "=" * 70,
          "Format : 16:9. Copier-coller chaque prompt tel quel (en anglais : meilleur rendu).",
          f"Enregistrer chaque image sous le NOM indiqué dans :  {rel_images}\\{ep}\\  (dossier du projet)"] + refs + \
-        ["Les plans VIDÉO sont listés à la fin (à faire après les images).",
+        ["Les plans VIDÉO sont listés à la fin (à faire après les images). Les plans déjà disponibles sont signalés",
+         "« rien à générer ».",
          "RÉPLIQUE = un personnage parle à l'écran : la vidéo le montre en train de parler ; COUPER LE SON généré",
          "par Flow (nos voix sont ajoutées au montage).", ""]
     for s in e["shots"]:
@@ -69,11 +81,20 @@ def fiche_flow(ep):
         if s.get("media"):                       # média déjà choisi dans la vue Studio : rien à générer
             L += [f"--- {s['k']} : média choisi dans le Studio ({s['media']}) — rien à générer", ""]
             continue
+        deja = deja_la(ep, s)
+        autre = s["k"].split("-")[0]
+        if not deja and autre != ep:             # plan repris d'un autre épisode (bande-annonce…) : même clé, même fichier
+            L += [f"--- {s['k']} : plan repris de l'épisode {autre}, à générer avec sa fiche — rien à générer ici", ""]
+            continue
+        if deja:                                 # image ou vidéo déjà générée (dossier du projet ou adresse web)
+            L += [f"--- {s['k']} : {deja} — rien à générer", ""]
+            continue
         L += [f"--- {s['k']}.png {'  [' + ', '.join(x['tag'] for x in persos) + ']' if persos else ''}",
               (f"RÉPLIQUE — {qui} : « {vo[:140]}{'…' if len(vo) > 140 else ''} »" if qui else
                f"Narration : {vo[:140]}{'…' if len(vo) > 140 else ''}"),
               f"PROMPT : {sty}{p}", ""]
-    vids = [s for s in e["shots"] if s.get("vid_prompt")]
+    vids = [s for s in e["shots"] if s.get("vid_prompt") and not s.get("vid_url")
+            and not str(deja_la(ep, s)).startswith("vidéo") and s["k"].split("-")[0] == ep]          # vidéo déjà faite : rien à refaire
     L += ["=" * 70, f"PLANS VIDÉO ({len(vids)}) — « Frames to Video », image de départ = l'image du même nom",
           "Durée 5 à 8 s, sans son (sauf plans marqués GARDER LE SON : le son de Flow sert alors d'ambiance).",
           "Enregistrer sous le NOM indiqué (.mp4) dans le même dossier.", ""]

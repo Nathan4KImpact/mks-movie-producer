@@ -189,7 +189,7 @@ Quelques précisions :
 
 ![Fiche de prompts](images/05_fiche.jpg)
 
-Chaque bloc donne le **nom du fichier à créer** (`E101-01.png`), le début de la narration et le **prompt complet** prêt à coller, avec un bouton **Copier**. Les plans vidéo sont listés à la fin. **Ouvrir le dossier** affiche les fiches dans l'Explorateur.
+Chaque bloc donne le **nom du fichier à créer** (`E101-01.png`), le début de la narration et le **prompt complet** prêt à coller, avec un bouton **Copier**. Un plan dont l'image ou la vidéo existe déjà (dans le projet ou à une adresse web) est signalé « rien à générer » ; un plan repris d'un autre épisode (par exemple dans la bande-annonce) se génère avec la fiche de cet épisode. Les plans vidéo sont listés à la fin. **Ouvrir le dossier** affiche les fiches dans l'Explorateur.
 
 ### 7.2 Générer et ranger les images
 
