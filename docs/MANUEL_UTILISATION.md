@@ -519,6 +519,7 @@ Sous la voix et la musique, le montage ajoute une troisième couche : les **sons
 - Une **ambiance** couvre une scène : choisie sur un plan (*Ambiance (démarre ici)*), elle continue sur les plans suivants, avec un fondu enchaîné de 2 secondes, jusqu'au prochain changement ou jusqu'à *Couper l'ambiance*.
 - Un **bruitage** est un son ponctuel joué au début d'un plan, décalé de 0,2 seconde (champ `sfx_t` du JSON pour un autre décalage). Un plan peut en avoir plusieurs (`"sfx": ["cor", "epee"]` dans le JSON).
 - Les deux passent sous la musique et sont baissés automatiquement quand un personnage ou le narrateur parle.
+- Dans la **vue Studio**, l'inspecteur du plan sélectionné a un bloc **Sons** avec les mêmes réglages.
 
 | Ambiances | | Bruitages | |
 |---|---|---|---|
