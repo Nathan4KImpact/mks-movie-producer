@@ -193,7 +193,8 @@ async function saison(){
       <div class="meta"><span>${e.medias}/${e.plans} images</span><span>${e.videos} vidéos</span><span>~${e.minutes} min</span><span>${e.rendus.length} rendu(s)</span></div>
       <div class="row"><button class="btn gold" onclick="go('episode','${e.ep}')">Ouvrir</button>
         <button class="btn" onclick="action('monter',['${e.ep}'])">Monter</button>
-        <button class="btn" onclick="fiche('${e.ep}')">Fiche Flow</button></div>
+        <button class="btn" onclick="fiche('${e.ep}')">Fiche Flow</button>
+        <button class="btn" onclick="exporterLots('${e.ep}')" title="Un fichier de prompts par type et par personnage, pour lancer Flow par lots">Exporter les lots</button></div>
       ${Object.entries(e.traductions||{}).map(([l,t])=>`<div class="row" style="gap:6px;flex-wrap:nowrap;border-top:1px solid var(--line);padding-top:8px">
         <span class="pill ${t.complete?'ok':(t.a_revoir?'wait':'lang')}" title="${esc(LN(l))}">${l.toUpperCase()} · ${t.ok}/${t.total}${t.a_revoir?' · '+t.a_revoir+' à revoir':''}</span>
         ${t.rendus.length?`<span class="meta" style="white-space:nowrap">${t.rendus.length} rendu(s)</span>`:''}<div class="sp"></div>
@@ -223,6 +224,7 @@ async function episode(ep, garder){
     <button class="btn" onclick="sauver().then(()=>action('monter',['${ep}']))">Enregistrer et monter</button>
     <label style="margin:0;text-transform:none;letter-spacing:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="neuf" style="width:auto"> depuis zéro</label>
     <button class="btn" onclick="fiche('${ep}')">Fiche Flow</button>
+    <button class="btn" onclick="sauver().then(()=>exporterLots('${ep}'))" title="Un fichier de prompts par type et par personnage, pour lancer Flow par lots">Exporter les lots</button>
     <button class="btn" onclick="recharger()">Rafraîchir les images</button>
     <div class="sp"></div>
     <button class="btn ia" onclick="sauver().then(()=>action('prompts',['${ep}', prompt('Consignes pour la réécriture des prompts (facultatif) :')||'']))">IA · réécrire les prompts</button>
@@ -296,10 +298,23 @@ async function fiche(ep){
   const r = await api('/api/fiche/'+ep);
   const blocs = r.texte.split(/\r?\n--- /).slice(1);
   modal(`<h2>Fiche Flow ${ep}</h2><p class="sub">Enregistrée dans ${esc(r.chemin)}</p>
-    <div class="row" style="margin-bottom:10px"><button class="btn" onclick="ouvrir('fiches')">Ouvrir le dossier</button></div>
+    <div class="row" style="margin-bottom:10px"><button class="btn" onclick="ouvrir('fiches')">Ouvrir le dossier</button>
+      <button class="btn gold" onclick="this.closest('.modal').remove();exporterLots('${ep}')">Exporter les lots</button></div>
     ${blocs.map(b => { const [tete, ...rest] = b.split(/\r?\n/); const pr = (rest.find(l=>l.startsWith('PROMPT :'))||'').slice(9);
       return `<div class="prompt"><div class="row"><span class="k">${esc(tete)}</span><div class="sp"></div><button class="btn small" onclick='navigator.clipboard.writeText(${JSON.stringify(pr)});toast("Copié")'>Copier</button></div><div>${esc(pr)}</div></div>`; }).join('')}`);
 }
+
+// ---------------------------------------------------------------- lots Flow
+async function exporterLots(ep){
+  let r; try { r = await api('/api/lots', {method:'POST', body:JSON.stringify({ep})}); } catch(e){ return toast('Export impossible : ' + e.message); }
+  const lots = Object.entries(r.lots), total = lots.reduce((a, [, n]) => a + n, 0);
+  const lib = k => { const [g, ...t] = k.split('-'); return `${g === 'IMG' ? 'Images' : 'Vidéos'} · ${t.join('-') === 'SANS-REF' ? 'sans référence' : t.join('-').replace(/\+/g, ' + ')}`; };
+  modal(`<h2>Lots Flow ${esc(ep)}</h2><p class="sub">${lots.length} lot(s), ${total} prompt(s) — dans ${esc(win(r.rel))}</p>
+    <div class="row" style="margin-bottom:10px"><button class="btn gold" onclick="ouvrirLots('${ep}')">Ouvrir le dossier des lots</button></div>
+    ${lots.map(([k, n]) => `<div class="check"><span class="okc">■</span><div style="flex:1"><b>${esc(lib(k))}</b><br><span class="meta">${esc(ep)}_${esc(k.replace('-', '_'))}.txt</span></div><span class="meta">${n} prompt(s)</span></div>`).join('')}
+    <p class="meta" style="margin-top:10px">Un lot = une seule image de référence à charger dans Flow, puis tous ses prompts à la suite (un prompt par bloc). ${esc(ep)}_index.csv donne l'ordre des prompts et le nom final de chaque fichier à renommer après téléchargement.</p>`);
+}
+async function ouvrirLots(ep){ await api('/api/ouvrir',{method:'POST',body:JSON.stringify({dossier:'fiches', sous:['lots', ep]})}); }
 
 // ---------------------------------------------------------------- rendus
 let RENDU = null;
@@ -756,7 +771,7 @@ async function creerProjet(){
 }
 
 // ---------------------------------------------------------------- tâches
-const NOMS = {monter:'Montage', etat:'Vérification', fiche:'Fiche', ecrire:'IA · écriture', prompts:'IA · prompts', verifier:'IA · relecture images', bible:'IA · bible et plan', exporter:'Export du projet', traduire:'IA · traduction'};
+const NOMS = {monter:'Montage', etat:'Vérification', fiche:'Fiche', lots:'Lots Flow', ecrire:'IA · écriture', prompts:'IA · prompts', verifier:'IA · relecture images', bible:'IA · bible et plan', exporter:'Export du projet', traduire:'IA · traduction'};
 async function action(cmd, args){
   if(cmd==='monter' && $('#neuf')?.checked) args = [...args, '--neuf'];
   if(cmd==='ecrire' && (!args[0]||!args[1]||!args[2])) return toast('Code, titre et pages sont nécessaires');

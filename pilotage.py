@@ -692,7 +692,7 @@ class H(BaseHTTPRequestHandler):
         try:
             c = self.corps()
             if p == "/api/action":
-                if c.get("cmd") not in ("monter", "etat", "fiche", "ecrire", "prompts", "verifier", "bible", "exporter", "traduire"):
+                if c.get("cmd") not in ("monter", "etat", "fiche", "lots", "ecrire", "prompts", "verifier", "bible", "exporter", "traduire"):
                     return self.envoyer(400, {"erreur": "commande inconnue"})
                 args = [str(a) for a in c.get("args", [])]
                 if c["cmd"] not in ("bible", "exporter") and args and not EP_RE.match(args[0]):
@@ -764,11 +764,22 @@ class H(BaseHTTPRequestHandler):
                 d[c["ep"]]["date"] = time.strftime("%Y-%m-%d %H:%M")
                 json.dump(d, open(cx.chemin("suivi.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
                 return self.envoyer(200, {"ok": True})
+            if p == "/api/lots":                       # export par lots d'une fiche (rapide : réponse directe)
+                ep = str(c.get("ep", ""))
+                if not EP_RE.match(ep):
+                    return self.envoyer(400, {"erreur": "épisode invalide"})
+                from lots import exporter_lots
+                r = exporter_lots(ep)
+                r["rel"] = cx._rel(r["dossier"]).replace("\\", "/")
+                return self.envoyer(200, r)
             if p == "/api/ouvrir":
                 nom = c.get("dossier", "")
                 cible = {"flow": "images"}.get(nom, nom)
+                sous = [str(x) for x in c.get("sous", [])]          # ex. ["lots", "E104"] sous le dossier des fiches
+                if any(not EP_RE.match(x) for x in sous):
+                    return self.envoyer(400, {"erreur": "sous-dossier invalide"})
                 if cible == "projet" or cible in cx.ROLES:
-                    d = cx.racine() if cible == "projet" else cx.dossier(cible, creer=True)
+                    d = cx.racine() if cible == "projet" else cx.dossier(cible, *sous, creer=True)
                     if sys.platform == "win32":
                         os.startfile(d)
                     elif sys.platform == "darwin":

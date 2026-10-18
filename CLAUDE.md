@@ -12,13 +12,16 @@ Répondre en français à l'utilisateur.
   (servis par `/web/…`) ; elle modifie directement `EP` et réutilise `sauver()`. Bibliothèque : `GET /api/bibliotheque?ep=`,
   musiques servies par `/musique/<nom>`, import sans écrasement : `PUT /api/fichier?unique=1&dest=…`.
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
-- `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
+- `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
   (champ `mus` d'un plan = changement de piste), plans recalculés seulement si leur empreinte change (`.sig`), sortie dans le dossier des rendus (jamais d'écrasement).
 - `ia.py` : appels modèles (Anthropic ou compatible OpenAI) selon `reglages.json > ia > par_tache`,
   lecture des sources (PDF, docx, txt…), génération bible/plan/épisodes, relecture d'images.
 - `cles.py` : profils de modèles et clés (keyring, repli `.cles.json`).
 - `fiche.py` : fiche de prompts d'un épisode (tags `[TAG]` de personnages remplacés par leur description).
+- `lots.py` : export par lots d'une fiche (relit la fiche générée : un fichier par type IMG/VID et par combinaison de
+  personnages, + `<EP>_index.csv` ordre → nom final) dans `<dossier fiches>/lots/<EP>/`. Commande `lots`, `POST /api/lots`.
+  Dépend du format des en-têtes de la fiche (`--- E104-01.png  [VOYANT, SAGESSE]`) : le garder compatible si `fiche.py` change.
 - `langues.py` : versions linguistiques (voir plus bas). `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP.
 
 ## Organisation d'un projet (aucun chemin en dur)

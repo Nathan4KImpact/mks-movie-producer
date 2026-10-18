@@ -201,6 +201,26 @@ Chaque bloc donne le **nom du fichier à créer** (`E101-01.png`), le début de 
 
 Pour 4 à 7 plans par épisode, la fiche propose un **prompt vidéo** : dans Flow, utilisez « Frames to Video » avec l'image du plan comme image de départ, 5 à 8 secondes, sans son. Enregistrez la vidéo sous le **même nom en `.mp4`** (`E104-07.mp4`) dans le même dossier. **La vidéo est prioritaire sur l'image** au montage ; elle est ralentie si elle est plus courte que la narration.
 
+### 7.4 Exporter les lots (générer par personnage)
+
+Plutôt que de suivre la fiche plan par plan, on peut la découper en **lots** : un lot regroupe tous les prompts qui demandent **la même image de référence**. On charge cette référence une seule fois dans Flow, puis on lance tous les prompts du lot à la suite (à la main, ou avec une extension de génération par lot).
+
+Cliquez sur **Exporter les lots** : sur la carte de l'épisode (Production), dans la barre d'outils de l'épisode (vues Liste et Studio) ou dans la fenêtre de la Fiche Flow. La fiche est régénérée, puis découpée ; une fenêtre récapitule les lots et **Ouvrir le dossier des lots** affiche les fichiers.
+
+![Lots d'un épisode](images/23_lots.jpg)
+
+Les fichiers sont rangés dans le dossier des fiches, sous `lots\E104\` :
+
+| Fichier | Contenu |
+|---|---|
+| `E104_IMG_VOYANT.txt` | Les prompts d'images où apparaît le Voyant : charger `Voyant_reference.png`, puis lancer les prompts dans l'ordre |
+| `E104_IMG_VOYANT+SAGESSE.txt` | Les images avec plusieurs personnages : charger **toutes** les références nommées |
+| `E104_IMG_SANS-REF.txt` | Les images sans personnage récurrent : aucune référence à charger |
+| `E104_VID_….txt` | Les prompts vidéo, regroupés selon les personnages de leur image de départ |
+| `E104_index.csv` | Pour chaque prompt : son lot, son rang dans le lot et le **nom final du fichier** (`E104-07.png`, `E104-07.mp4`…) |
+
+Dans un fichier de lot, chaque prompt occupe un bloc, séparé du suivant par une ligne vide. Flow nomme les fichiers téléchargés à sa façon : renommez chacun d'après l'**index** (ouvrable dans Excel) avant de le ranger dans le dossier des images. Les plans dont l'image a été choisie dans le Studio ne figurent ni dans la fiche ni dans les lots.
+
 ## 8. Monter un épisode
 
 Cliquez sur **Monter** (Production, éditeur ou Assistant). Le montage :
@@ -376,6 +396,7 @@ Pour automatiser ou dépanner, `ATELIER.bat` ouvre un menu texte. Les mêmes com
 | `py -3 atelier.py traduire E104 en "consignes"` | L'IA traduit les textes manquants ou à revoir (`--tout` pour tout refaire) |
 | `py -3 atelier.py etat E104` | Liste les images manquantes |
 | `py -3 atelier.py fiche E104` | Génère la fiche de prompts |
+| `py -3 atelier.py lots E104` | Exporte la fiche par lots (un fichier par type et par personnage, plus l'index `.csv`) |
 | `py -3 atelier.py ecrire E107 "Titre" 12-14 "consignes"` | L'IA écrit l'épisode |
 | `py -3 atelier.py prompts E106` | L'IA réécrit les prompts |
 | `py -3 atelier.py verifier E104` | L'IA relit les images |

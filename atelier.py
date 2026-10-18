@@ -7,6 +7,7 @@
   python atelier.py traduire E104 en ["consignes"]   [IA] traduit les textes manquants ou à revoir (--tout : tout refaire)
   python atelier.py etat E104              liste les images manquantes
   python atelier.py fiche E104             (re)génère la fiche de prompts
+  python atelier.py lots E104              exporte la fiche par lots (un fichier par type et personnage) + index .csv
   python atelier.py ecrire E107 "Titre" 61-68 ["consignes"]   [IA] écrit l'épisode (pages du livre facultatives)
   python atelier.py prompts E106           [IA] réécrit les prompts dans la direction artistique
   python atelier.py verifier E104          [IA] relit les images et signale celles à refaire
@@ -63,6 +64,13 @@ def executer(cmd, args):
     if cmd == "fiche":
         from fiche import fiche_flow
         p = fiche_flow(args[0]); print("Fiche :", p); return p
+    if cmd == "lots":
+        from lots import exporter_lots
+        r = exporter_lots(args[0])
+        print("Lots :", r["dossier"])
+        for nom, n in r["lots"].items():
+            print(f"  {nom} : {n} prompt(s)")
+        return r
     if cmd == "ecrire":
         from ia import ecrire_episode
         from fiche import fiche_flow

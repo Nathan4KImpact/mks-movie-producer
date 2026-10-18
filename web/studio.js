@@ -37,6 +37,7 @@ async function studio(ep, garder){
       <button class="btn small" onclick="stAnnuler()" title="Annuler (Ctrl+Z)">↶ Annuler</button>
       <button class="btn small" onclick="stRefaire()" title="Rétablir (Ctrl+Y)">↷</button>
       <button class="btn" onclick="fiche('${ep}')">Fiche Flow</button>
+      <button class="btn" onclick="sauver().then(()=>exporterLots('${ep}'))" title="Un fichier de prompts par type et par personnage">Exporter les lots</button>
       <button class="btn" onclick="stRecharger()" title="Relire les médias du dossier (après avoir généré des images)">Rafraîchir</button>
       <button class="btn gold" onclick="sauver()" title="Ctrl+S">Enregistrer</button>
       <button class="btn" onclick="sauver().then(()=>action('monter',['${ep}']))">Enregistrer et monter</button>
