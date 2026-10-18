@@ -200,7 +200,7 @@ Ouvrez l'onglet **Assistant**. Le cadre **Installation et outils** contrôle cha
 | Ligne | Si elle est orange (●) |
 |---|---|
 | ffmpeg installé | Relancer `INSTALLER.bat`, puis fermer et rouvrir `PILOTAGE.bat` |
-| Voix Edge (module edge-tts) | Relancer `INSTALLER.bat` |
+| Voix Edge (module edge-tts) | Relancer `INSTALLER.bat` ; si le module est présent mais que toutes les voix échouent : `python -m pip install -U edge-tts` |
 | Musiques (14/14) | Relancer `INSTALLER.bat` (téléchargement interrompu) |
 | Police des titres | Relancer `INSTALLER.bat` |
 | Sources du projet | Ajouter le livre ou le script : Projet › Sources |
