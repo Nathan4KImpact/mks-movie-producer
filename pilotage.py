@@ -12,7 +12,8 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ICI)
 import contexte as cx
 
-for _t, _e in (("text/javascript", ".js"), ("text/css", ".css"), ("audio/mp4", ".m4a"), ("audio/webm", ".weba")):
+for _t, _e in (("text/javascript", ".js"), ("text/css", ".css"), ("audio/mp4", ".m4a"), ("audio/webm", ".weba"),
+                 ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx")):
     mimetypes.add_type(_t, _e)      # le registre Windows peut associer d'autres types (ex. .js en text/plain)
 PORT = int(os.environ.get("ATELIER_PORT", "8765"))
 EP_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
@@ -492,7 +493,7 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corps)
 
-    def fichier(self, chemin, base):
+    def fichier(self, chemin, base, telecharger=""):
         chemin = os.path.realpath(chemin)
         if not chemin.startswith(os.path.realpath(base) + os.sep) or not os.path.isfile(chemin):
             return self.envoyer(404, {"erreur": "introuvable"})
@@ -512,6 +513,8 @@ class H(BaseHTTPRequestHandler):
         else:
             self.send_response(200)
         self.send_header("Content-Type", ctype)
+        if telecharger:
+            self.send_header("Content-Disposition", f'attachment; filename="{telecharger}"')
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(fin - debut + 1))
@@ -644,6 +647,14 @@ class H(BaseHTTPRequestHandler):
                 if not nom:
                     return self.envoyer(404, {"erreur": "manuel inconnu"})
                 return self.envoyer(200, {"texte": open(os.path.join(ICI, "docs", nom), encoding="utf-8").read()})
+            if p.startswith("/aide/word/"):        # version Word d'un manuel, fabriquée à la demande (jamais commitée)
+                quel = p.split("/")[-1]
+                if quel not in ("installation", "utilisation"):
+                    return self.envoyer(404, {"erreur": "manuel inconnu"})
+                sys.path.insert(0, os.path.join(ICI, "docs"))
+                import generer_docx
+                f = generer_docx.generer(quel)
+                return self.fichier(f, os.path.dirname(f), telecharger=os.path.basename(f))
             if p.startswith("/aide/"):
                 return self.fichier(os.path.join(ICI, "docs", *p.split("/")[2:]), os.path.join(ICI, "docs"))
             if p.startswith("/projet/"):

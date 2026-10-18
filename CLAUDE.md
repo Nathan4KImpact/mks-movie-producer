@@ -68,8 +68,12 @@ main (le serveur remet `de` à jour). Toute IA qui réécrit le JSON complet doi
 
 ## Documentation
 `docs/MANUEL_INSTALLATION.md` et `docs/MANUEL_UTILISATION.md` (servis dans l'interface, menu Aide, via `/api/aide/<nom>`
-et `/aide/…`). Captures dans `docs/images/`. Après modification : `python docs/generer_pdf.py` régénère les PDF
-(nécessite `markdown` et `playwright`). Tenir les manuels à jour quand une fonction change.
+et `/aide/…`). Captures dans `docs/images/`. **Pas de PDF ni de .docx dans le dépôt** (binaires lourds, conflits à chaque PR) :
+la version Word est fabriquée à la demande par `docs/generer_docx.py` (bibliothèque standard seule) — bouton « Télécharger en
+Word » du menu Aide (`GET /aide/word/<installation|utilisation>`, cache `cache/manuels/`, refaite si le .md ou une capture
+change) ou `python docs/generer_docx.py [dossier]`. Le convertisseur gère titres, paragraphes, listes, tableaux, blocs de code,
+encadrés `>` et images seules sur leur ligne : rester dans ce sous-ensemble de Markdown. Tenir les manuels à jour quand une
+fonction change.
 
 ## Dépôt et conventions
 Branche `main` (dépôt GitHub privé), messages de commit en français. Le poste de l'utilisateur est une copie du dépôt
@@ -86,16 +90,19 @@ Ne jamais committer : `reglages.json`, `poste.json`, `.cles.json`, `musique/`, `
 
 ## Règles permanentes du porteur (toutes les sessions Claude sur ce dépôt)
 
-Reprises de sa mémoire partagée (Google Drive, `CLAUDE.md` à la racine du dossier mémoire), appliquées à tous ses dépôts.
+Reprises de sa mémoire partagée — le dépôt GitHub privé `Nathan4KImpact/mon-second-cerveau-mks-777` (index `CLAUDE.md`
+à sa racine) —, appliquées à tous ses dépôts. **La mémoire n'est plus sur Google Drive** (depuis le 12/10/2026, Drive = archive en
+lecture seule) : ne jamais y écrire.
 
 ### 1. Nourrir la mémoire partagée après chaque merge de PR
 - Après chaque fusion, relire le diff et se demander : qu'est-ce qui a été appris ici qui resservira **sur un autre projet** ?
   Si rien de transposable, ne rien écrire.
-- Sinon, écrire ou compléter une fiche `memory/skills/expertise_<sujet>.md` (en français, au format des fiches voisines,
-  **avec les pièges** qui ont coûté cher), mettre à jour `memory/projects/mks-movie-producer.md` et la liste des fiches
-  de l'index `CLAUDE.md` de la mémoire.
-- Le Drive ne modifie que titre et dossier : pour corriger un fichier, en créer un nouveau et déplacer l'ancien dans
-  `memory/archive/`. L'index reste en `.md` (jamais converti en Google Doc).
+- Sinon, dans le dépôt `Nathan4KImpact/mon-second-cerveau-mks-777` (l'ajouter à la session par `add_repo`, accès `push`,
+  puis le cloner) : écrire ou compléter une fiche `memory/skills/expertise_<sujet>.md` (en français, au format des fiches
+  voisines, **avec les pièges** qui ont coûté cher), mettre à jour `memory/projects/mks-movie-producer.md` et la liste des
+  fiches de l'index `CLAUDE.md` de la mémoire.
+- Fichiers modifiés **en place** (l'historique Git sert d'archive), sur une branche et par une PR de ce dépôt-là, fusionnée
+  par avance rapide avec l'accord du porteur (règles 2 et 3).
 - **Ne verser que ce qui est fusionné** : une PR ouverte n'entre pas dans la mémoire.
 
 ### 2. Pull requests — toujours ouvrir, ne jamais fusionner sans accord
@@ -107,7 +114,9 @@ Reprises de sa mémoire partagée (Google Drive, `CLAUDE.md` à la racine du dos
 ### 3. Git — historique linéaire, mêmes commits sur la branche et sur `main`
 - Récupérer avec `git pull --rebase`, jamais de commit de fusion local.
 - Fusionner une PR (avec accord) **par avance rapide** : `git fetch`, puis `git push origin <sha de la tête de la PR>:main`.
-  GitHub marque alors la PR comme fusionnée.
+  GitHub marque alors la PR comme fusionnée — **à condition que la branche de la PR soit poussée avant `main`** : après un
+  rebase, pousser d'abord la branche (`--force-with-lease`), puis `main`. Dans l'autre ordre, GitHub ferme la PR sans la
+  marquer fusionnée, et elle ne peut plus être rouverte (vu sur la PR #7, 18/10/2026).
 - **Jamais** les boutons « Create a merge commit », « Squash » ni « Rebase and merge » (ce dernier recrée les commits).
 - Seul force-push admis : rebaser la branche de travail sur `origin/main` puis `git push --force-with-lease`, avant la
   fusion. Jamais sur `main`.

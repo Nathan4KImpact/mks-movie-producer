@@ -11,3 +11,5 @@ cache/
 *.log
 MONTER_*.bat
 _exports/
+docs/*.pdf
+docs/*.docx

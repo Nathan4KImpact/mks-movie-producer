@@ -7,8 +7,10 @@ montage automatique (voix off et voix des personnages, musique par scène, ambia
 Premier projet réalisé avec : **L'Ultime Assaut** (7 saisons × 7 épisodes).
 
 ## Documentation
-- [Manuel d'installation](docs/MANUEL_INSTALLATION.md) ([PDF](docs/MANUEL_INSTALLATION.pdf))
-- [Manuel d'utilisation](docs/MANUEL_UTILISATION.md) ([PDF](docs/MANUEL_UTILISATION.pdf))
+- [Manuel d'installation](docs/MANUEL_INSTALLATION.md)
+- [Manuel d'utilisation](docs/MANUEL_UTILISATION.md)
+
+Version Word (.docx) à la demande : menu **Aide › Télécharger en Word**, ou `python docs/generer_docx.py`.
 
 Les deux manuels sont aussi consultables dans l'application, menu **Aide**.
 

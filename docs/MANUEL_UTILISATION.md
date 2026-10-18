@@ -4,7 +4,7 @@ Version 1.3 · octobre 2026
 
 MKS Movie Producer transforme un livre, un script ou un ensemble de documents en série vidéo narrée. Les épisodes sont écrits plan par plan, les images sont générées dans l'outil de votre choix (Google Flow, Higgsfield…), puis le montage est automatique : voix off et voix des personnages, musique adaptée à chaque scène, ambiances et bruitages, titres, mouvements de caméra. Les exemples de ce manuel viennent du premier projet réalisé avec l'outil, **L'Ultime Assaut** (7 saisons × 7 épisodes × 7 minutes).
 
-L'installation est décrite dans le **Manuel d'installation**. Ce manuel-ci est aussi consultable dans l'application, menu **Aide**.
+L'installation est décrite dans le **Manuel d'installation**. Ce manuel-ci est aussi consultable dans l'application, menu **Aide**, où le bouton **Télécharger en Word** en donne une version .docx à jour (à imprimer ou à partager).
 
 ## 1. Le principe en une page
 

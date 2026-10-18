@@ -25,7 +25,7 @@ MKS Movie Producer est une application locale : elle tourne sur votre ordinateur
 | `fiche.py`, `logo.py` | Fiches de prompts, logos générés |
 | `mcp_server.py` | Serveur MCP pour piloter le projet depuis Claude |
 | `web/index.html` | L'interface |
-| `docs/` | Ce manuel, le manuel d'utilisation et leurs captures |
+| `docs/` | Ce manuel, le manuel d'utilisation et leurs captures (version Word à la demande : menu **Aide › Télécharger en Word**) |
 | `METTRE_A_JOUR.bat` | Récupère la dernière version depuis GitHub (section 5) |
 | `modele-projet/` | Projet vide déjà organisé, à copier pour démarrer un projet (section 9) |
 | `README.md`, `CLAUDE.md` | Présentation du dépôt ; notes pour Claude Code |

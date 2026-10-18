@@ -577,7 +577,7 @@ async function aide(quel){
   $('#main').innerHTML = `<div class="row" style="margin-bottom:12px"><div class="tabs" style="margin:0">
       <button class="${quel==='utilisation'?'on':''}" onclick="go('aide','utilisation')">Manuel d'utilisation</button>
       <button class="${quel==='installation'?'on':''}" onclick="go('aide','installation')">Manuel d'installation</button></div>
-      <div class="sp"></div><a class="btn small" href="/aide/${quel==='installation'?'MANUEL_INSTALLATION':'MANUEL_UTILISATION'}.pdf" target="_blank">Version PDF</a></div>
+      <div class="sp"></div><a class="btn small" href="/aide/word/${quel}" download title="Version Word (.docx) de ce manuel, fabriquée à partir de la version affichée ici">Télécharger en Word</a></div>
     <div style="display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:start">
       <div class="card" style="position:sticky;top:150px;padding:12px;max-height:calc(100vh - 200px);overflow:auto"><h3>Sommaire</h3>
         ${tdm.map(t=>`<div class="rendu" onclick="document.getElementById('${ancre(t)}').scrollIntoView({behavior:'smooth'})">${esc(t)}</div>`).join('')}</div>
