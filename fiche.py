@@ -53,7 +53,13 @@ def fiche_flow(ep):
     for s in vids:
         parle = parlant(s, pj)
         vp, _ = remplacer_tags(s["vid_prompt"], pj)
-        L += [f"--- {s['k']}.mp4  (image de départ : {s['k']}.png)" + ("  — RÉPLIQUE, couper le son" if parle else ""),
+        depart = f"{s['k']}.png"
+        if s.get("img_url"):                       # image hébergée (Higgsfield…) : donner son lien si elle n'est pas dans le projet
+            from moteur import trouver_media
+            src, est_video = trouver_media(ep, {k: v for k, v in s.items() if k != "vid_url"}, None, telecharger=False)
+            if src and str(src).startswith("http"):
+                depart += f", à télécharger : {src}"
+        L += [f"--- {s['k']}.mp4  (image de départ : {depart})" + ("  — RÉPLIQUE, couper le son" if parle else ""),
               (f"PROMPT : cinematic close shot, {vp}, the character is speaking with natural lip and facial movement, "
                f"steady camera, no subtitles, no text" if parle else
                f"PROMPT : cinematic, slow camera movement, {vp}"), ""]
