@@ -160,7 +160,7 @@ L'écran se compose de cinq zones :
 | **Image ou vidéo** | Cliquer une vignette de l'onglet **Médias**, ou la glisser sur le plan dans la timeline. Les vignettes marquées *utilisé* sont déjà dans l'épisode. | **Importer…** (inspecteur ou bas de la bibliothèque) : le fichier est copié dans le dossier des images de l'épisode. **Adresse web…** : une image ou une vidéo en ligne, téléchargée au montage. |
 | **Voix** | Onglet **Voix** : **Voix du plan N**, ou glisser le fichier sur la piste Voix | **Importer…** un enregistrement (mp3, wav, m4a…), ou **● Enregistrer au micro** directement dans le navigateur |
 | **Musique** | Onglet **Musiques** : **Démarrer au plan N**, glisser la piste sur la piste Musique, ou menu *Changer de musique à partir d'ici* dans l'inspecteur | **Importer une musique…** : elle rejoint les musiques du projet |
-| **Texte** | Qui parle (narrateur ou personnage), narration ou réplique, titre à l'écran, prompts, durée mini : directement dans l'inspecteur. L'aperçu prend la voix du personnage choisi. | — |
+| **Texte** | Qui parle (narrateur ou personnage), narration ou réplique, titre à l'écran, prompts, durée mini : directement dans l'inspecteur. L'aperçu prend la voix du personnage choisi, avec son effet (écho, voix grave, lointaine). | — |
 
 ![Bibliothèque des musiques et inspecteur (voix et musique)](images/22_studio_details.jpg)
 
@@ -429,7 +429,7 @@ Les commandes agissent sur le projet actif. Pour viser un autre projet, définis
 
 Si une image a été **choisie dans la vue Studio** pour ce plan, c'est elle qui est utilisée : cliquez **Retirer le choix** dans l'inspecteur pour revenir au fichier nommé d'après la clé.
 
-**Dans le Studio, la piste Voix est hachurée.** Les voix de l'aperçu ne sont pas encore prêtes (ou la connexion internet manque) : les durées affichées sont estimées d'après le nombre de mots. Le montage, lui, calcule toujours les durées exactes.
+**Dans le Studio, la piste Voix est hachurée.** Les voix de l'aperçu ne sont pas encore prêtes (ou la connexion internet manque) : les durées affichées sont estimées d'après le nombre de mots. Le montage, lui, calcule toujours les durées exactes. Si une voix échoue, la ligne d'état sous le moniteur donne le plan, le personnage et la raison (par exemple *module edge-tts absent* ou le message du service Microsoft). Quand **toutes** les voix échouent alors qu'Internet fonctionne, le module `edge-tts` est souvent trop ancien : dans une invite de commandes, `python -m pip install -U edge-tts`, puis relancer `PILOTAGE.bat`.
 
 **L'Assistant reste sur un épisode que je veux sauter.** Il suit l'ordre du plan. Vous pouvez travailler sur n'importe quel épisode depuis Production ou Plan ; l'Assistant se mettra à jour.
 

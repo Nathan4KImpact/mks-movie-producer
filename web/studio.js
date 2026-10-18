@@ -9,7 +9,7 @@
 const ST = {ep: null, sel: 0, t: 0, cur: -1, playing: false, last: 0, raf: 0, zoom: 0, lib: null,
   onglet: 'medias', filtre: 'episode', recherche: '', voixOn: true, musOn: true, sonsOn: true,
   amb: [], sfx: [], sonUrl: {}, aAmb: new Audio(), ambCour: '', sfxJoues: new Set(),
-  voixUrl: {}, voixDur: {}, segs: [], mus: [], total: 0, annuler: [], refaire: [],
+  voixUrl: {}, voixDur: {}, voixErr: {}, segs: [], mus: [], total: 0, annuler: [], refaire: [],
   aVoix: new Audio(), aMus: new Audio(), aLib: new Audio(), libJoue: '', voixCour: '', musCour: '', vidCour: '',
   gen: false, genEtat: '', rec: null, memoChamp: null, minuteur: 0};
 const MOTS_S = 2.2;                                    // débit estimé de la voix (mots/s) tant qu'elle n'est pas générée
@@ -120,9 +120,9 @@ function stTaille(){
 function voixPlan(s){
   const base = PROJET.voix || {}, p = s.qui && (PROJET.personnages || []).find(x => x.tag === s.qui);
   const code = PROJET.langue || 'fr', pv = (p && p.voix) || {}, v = pv[code] || pv[code.split('-')[0]];
-  return v && v.nom ? {debit: '+0%', hauteur: '+0Hz', ...Object.fromEntries(Object.entries(v).filter(([k, x]) => x))} : base;
+  return v && v.nom ? {debit: '+0%', hauteur: '+0Hz', ...Object.fromEntries(Object.entries(v).filter(([k, x]) => x)), effet: (p && p.effet) || ''} : base;
 }
-const cleVoix = s => { const v = voixPlan(s); return `${v.nom}|${v.debit}|${v.hauteur}|${(s.vo||'').trim()}`; };
+const cleVoix = s => { const v = voixPlan(s); return `${v.nom}|${v.debit}|${v.hauteur}|${v.effet||''}|${(s.vo||'').trim()}`; };
 function dureeVoix(s){
   if(s.voix_fichier){ const d = s._voix && ST.voixDur[s._voix]; return {d: d || 0, exact: !!d, fichier: true}; }
   const k = cleVoix(s), d = ST.voixDur[k];
@@ -426,7 +426,7 @@ async function stMicro(){
 async function voixSynthese(s){
   const k = cleVoix(s); if(ST.voixUrl[k]) return ST.voixUrl[k];
   const v = voixPlan(s);
-  const r = await api('/api/voix/essai', {method: 'POST', body: JSON.stringify({nom: v.nom, debit: v.debit, hauteur: v.hauteur, texte: s.vo})});
+  const r = await api('/api/voix/essai', {method: 'POST', body: JSON.stringify({nom: v.nom, debit: v.debit, hauteur: v.hauteur, effet: v.effet || '', texte: s.vo})});
   ST.voixUrl[k] = r.url; await stMesurer(r.url, k); return r.url;
 }
 function stMesurer(url, cle){
@@ -441,15 +441,22 @@ async function stVoixGen(){
   do {
     ST.genEncore = false;
     const a_faire = EP.shots.filter(s => !s.card && !s.voix_fichier && (s.vo || '').trim() && !ST.voixUrl[cleVoix(s)]);
-    let n = 0;
+    let n = 0, ok = 0;
     for(const s of a_faire){
       if(!ST.ep || !$('.studio')) break;
+      if(ST.voixErr[cleVoix(s)]) continue;                    // déjà en échec : on ne réessaie pas en boucle
       etat(`Voix de l'aperçu : ${++n}/${a_faire.length}…`);
-      try { await voixSynthese(s); }
-      catch(e){ etat('Voix de l\'aperçu indisponible (connexion internet ?) — durées estimées'); ST.gen = false; return; }
+      try { await voixSynthese(s); ok++; }
+      catch(e){ ST.voixErr[cleVoix(s)] = {k: s.k || 'carton', qui: s.qui || '', msg: e.message || String(e)};
+        if(!ok && n >= 3){ break; } }                          // 3 échecs d'entrée : le service est sans doute injoignable
     }
   } while(ST.genEncore);
-  ST.gen = false; etat(EP.shots.some(s => !s.card && (s.vo||'').trim()) ? 'Voix de l\'aperçu prêtes · durées exactes' : '');
+  ST.gen = false;
+  const err = Object.values(ST.voixErr);
+  if(err.length){ const e = err[0];
+    etat(`Voix indisponible pour ${err.length} plan(s) — ${e.k}${e.qui ? ' (' + e.qui + ')' : ''} : ${e.msg.slice(0, 160)} — durées estimées`);
+    console.warn('Voix de l\'aperçu en échec :', err); }
+  else etat(EP.shots.some(s => !s.card && (s.vo||'').trim()) ? 'Voix de l\'aperçu prêtes · durées exactes' : '');
 }
 const etat = t => { const e = $('#stEtat'); if(e) e.textContent = t; };
 

@@ -465,14 +465,27 @@ def essai_voix(c):
     if not re.match(r"^[+-]\d{1,3}%$", debit) or not re.match(r"^[+-]\d{1,3}Hz$", hauteur):
         raise ValueError("Débit (ex. -10%) ou hauteur (ex. -4Hz) invalide")
     d = os.path.join(ICI, "cache", "essais"); os.makedirs(d, exist_ok=True)
-    f = hashlib.sha1(f"{nom}|{debit}|{hauteur}|{texte}".encode("utf-8")).hexdigest()[:12] + ".mp3"
+    from langues import EFFETS
+    effet = (c.get("effet") or "").strip()
+    if effet and effet not in EFFETS:
+        raise ValueError("Effet de voix inconnu : " + effet)
+    f = hashlib.sha1(f"{nom}|{debit}|{hauteur}|{effet}|{texte}".encode("utf-8")).hexdigest()[:12] + ".mp3"
     if not os.path.exists(os.path.join(d, f)):
         txt = os.path.join(d, f + ".txt"); open(txt, "w", encoding="utf-8").write(texte)
+        brut = os.path.join(d, f[:-4] + "_brut.mp3") if effet else os.path.join(d, f)
         r = subprocess.run([sys.executable, "-m", "edge_tts", "--voice", nom, f"--rate={debit}", f"--pitch={hauteur}",
-                            "-f", txt, "--write-media", os.path.join(d, f)], capture_output=True, text=True, timeout=60)
+                            "-f", txt, "--write-media", brut], capture_output=True, text=True, timeout=60)
         os.remove(txt)
-        if r.returncode != 0:
-            raise RuntimeError("Voix Edge indisponible (connexion internet ? nom de voix ?) : " + r.stderr[-200:])
+        if r.returncode != 0 or not os.path.exists(brut):
+            derniere = [l for l in (r.stderr or "").strip().splitlines() if l.strip()][-1:] or ["(aucun message)"]
+            if "No module named edge_tts" in (r.stderr or ""):
+                raise RuntimeError("module edge-tts absent : lancer INSTALLER.bat")
+            raise RuntimeError(f"Voix Edge « {nom} » indisponible : {derniere[0][-180:]} — si toutes les voix échouent, "
+                               "mettre edge-tts à jour : python -m pip install -U edge-tts")
+        if effet:                                   # même effet qu'au montage (écho du Seigneur, voix grave…)
+            import moteur
+            moteur.run([moteur.FFMPEG, "-y", "-i", brut, "-af", EFFETS[effet], os.path.join(d, f)])
+            os.remove(brut)
     return {"url": "/essai/" + f}
 
 

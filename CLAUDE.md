@@ -13,6 +13,8 @@ Répondre en français à l'utilisateur.
   musiques servies par `/musique/<nom>`, import sans écrasement : `PUT /api/fichier?unique=1&dest=…`.
   Timeline : pistes Vidéo, Titres, Voix, Musique, Ambiance (`ST.amb`, sections calculées dans `stCalcul` d'après `amb`) et
   Bruitage (`ST.sfx`, un repère par plan) ; l'aperçu joue les sons via l'extrait de `POST /api/sons/essai` (`stUrlSon`).
+  Voix de l'aperçu : `POST /api/voix/essai` (`effet` du personnage appliqué comme au montage) ; un échec n'arrête plus
+  la génération, `ST.voixErr` garde plan + raison et la ligne d'état l'affiche.
   **Toute couche ajoutée au moteur (`moteur.py`) doit avoir sa piste et son écoute dans le Studio.**
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
