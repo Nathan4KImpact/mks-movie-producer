@@ -322,7 +322,7 @@ def reparer_fichiers(rac=None):
             faits.append(f"{rel} → {_rel(p, rac)}")
             return _rel(p, rac)
         return rel
-    for k in ("livre", "logo"):
+    for k in ("livre", "logo", "logo_anime"):
         if brut.get(k):
             brut[k] = verifier(brut[k])
     for perso in brut.get("personnages", []):
@@ -396,7 +396,7 @@ def deplacer_dossier(role, vers, rac=None):
     ancien = _rel(src, rac) + "/"
     memoriser_dossier(role, vers, rac)
     brut = _lire(os.path.join(rac, "projet.json"), {})
-    for k in ("livre", "logo"):
+    for k in ("livre", "logo", "logo_anime"):
         if brut.get(k, "").replace("\\", "/").startswith(ancien):
             brut[k] = vers + "/" + brut[k].replace("\\", "/")[len(ancien):]
     for perso in brut.get("personnages", []):
@@ -436,6 +436,9 @@ def ranger_racine(appliquer=False, rac=None):
     logo = fichier(pj.get("logo", ""), rac)
     if a_la_racine(logo):
         prevus.append({"role": "logo", "libelle": "Logo", "de": _rel(logo, rac), "vers": "bibliotheque/" + os.path.basename(logo)})
+    anime = fichier(pj.get("logo_anime", ""), rac)
+    if a_la_racine(anime):
+        prevus.append({"role": "logo_anime", "libelle": "Logo animé", "de": _rel(anime, rac), "vers": "bibliotheque/" + os.path.basename(anime)})
     livre = fichier(pj.get("livre", ""), rac)
     if a_la_racine(livre):
         srcs = next((d["vers"] for d in prevus if d["role"] == "sources"), None) or _rel(dossier("sources"), rac)
@@ -444,7 +447,7 @@ def ranger_racine(appliquer=False, rac=None):
         prevus.append({"role": "livre", "libelle": "Livre", "de": _rel(livre, rac), "vers": srcs + "/" + os.path.basename(livre)})
     if appliquer:
         for d in prevus:
-            if d["role"] in ("logo", "livre"):
+            if d["role"] in ("logo", "logo_anime", "livre"):
                 os.makedirs(os.path.dirname(_abs(d["vers"], rac)), exist_ok=True)
                 shutil.move(_abs(d["de"], rac), _abs(d["vers"], rac))
                 brut = _lire(os.path.join(rac, "projet.json"), {}); brut[d["role"]] = d["vers"]

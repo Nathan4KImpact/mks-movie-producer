@@ -18,7 +18,8 @@ body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#2a1f14 0%,var
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,11,16,.92);backdrop-filter:blur(8px);z-index:10}
 header h1{font:700 19px var(--serif);letter-spacing:.08em;margin:0;color:var(--gold2);text-transform:uppercase;white-space:nowrap}
 .appli{font:600 9.5px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
-.marque{display:flex;gap:12px;align-items:center;cursor:pointer}.marque img{width:46px;height:46px;object-fit:contain}.marque .meta{font-size:11px;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.marque{display:flex;gap:12px;align-items:center;cursor:pointer}.marque img,.marque video{width:46px;height:46px;object-fit:contain;display:block}
+.logo-box{position:relative;display:inline-block;flex:none}.marque .meta{font-size:11px;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
 nav{display:flex;gap:4px}
 nav button{background:none;border:0;color:var(--muted);font:500 14px var(--sans);padding:8px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 nav button.on,nav button:hover{color:var(--text);background:var(--panel2)}
@@ -123,7 +124,7 @@ table.org code{background:#0f0d13;border:1px solid var(--line);border-radius:4px
 <body>
 <header>
   <div class="marque" onclick="go('projet')" title="Projet en cours — cliquer pour changer">
-    <img id="logo" src="/api/logo" alt="">
+    <span class="logo-box"><img id="logo" src="/api/logo" alt=""></span>
     <div><div class="appli">MKS Movie Producer</div><h1 id="nomProjet">…</h1><div id="sousProjet" class="meta"></div></div>
   </div>
   <nav>
@@ -588,7 +589,7 @@ async function chargerProjet(){
   [INFOS, LANGS] = await Promise.all([api('/api/projet'), api('/api/langues')]); PROJET = INFOS.projet;
   $('#nomProjet').textContent = PROJET.nom; $('#sousProjet').textContent = PROJET.sous_titre || INFOS.logiciel;
   document.title = PROJET.nom + ' — ' + INFOS.logiciel;
-  $('#logo').src = '/api/logo?t=' + Date.now();
+  logoAnime('.marque .logo-box', 46);
   document.documentElement.style.setProperty('--gold', PROJET.couleur || '#d8b46a');
   return PROJET;
 }
@@ -598,13 +599,15 @@ async function projet(){
   $('#main').innerHTML = `
   <div class="grid" style="grid-template-columns:minmax(320px,1fr) 2fr">
     <div class="card" style="align-items:center;text-align:center">
-      <img src="/api/logo?t=${Date.now()}" style="width:180px;height:180px;object-fit:contain">
+      <span class="logo-box" id="logoProjet" title="${INFOS.logo_anime?'Survoler pour rejouer l\'animation':''}"></span>
       <h3 style="font-size:20px">${esc(pj.nom)}</h3><div class="meta">${esc(pj.sous_titre||'')}</div>
       <div class="meta" style="word-break:break-all">${esc(INFOS.racine)}</div>
       <div class="actions-projet">
         <div class="titre">Actions du projet</div>
         <button class="btn" onclick="regenLogo(false)">🎨 Régénérer le logo</button>
         <label class="btn">🖼 Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
+        <label class="btn ${INFOS.logo_anime?'':'plein'}">✨ ${INFOS.logo_anime?'Changer le logo animé':'Importer un logo animé'}<input type="file" accept="video/webm,video/mp4,image/gif,image/webp,image/png,image/svg+xml" style="display:none" onchange="envoyerLogoAnime(this.files[0])"></label>
+        ${INFOS.logo_anime?'<button class="btn" onclick="retirerLogoAnime()">✕ Retirer le logo animé</button>':''}
         <button class="btn plein" onclick="ouvrir('projet')">📂 Ouvrir le dossier du projet</button>
         <button class="btn gold" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
         <button class="btn gold" onclick="exporter(true)">🎬 Exporter avec rendus</button>
@@ -680,6 +683,7 @@ async function projet(){
     </div>
   </div>
   <div class="card" style="margin-top:16px" id="organisation">${vueOrganisation(org)}</div>`;
+  logoAnime('#logoProjet', 180);
 }
 // ---------------------------------------------------------------- organisation des dossiers
 function vueOrganisation(org){
@@ -758,8 +762,31 @@ async function envoyerRef(i, f){ await sauverProjet(true); const x = PROJET.pers
 async function envoyerSon(nom, f){ const ext = f.name.split('.').pop().toLowerCase();
   if(!['mp3','wav','ogg','flac','m4a','opus'].includes(ext)) return toast('Format audio non pris en charge');
   await envoyer('sons/'+nom+'.'+ext, f); toast('Son enregistré : il remplace la synthèse au prochain montage'); projet(); }
-async function envoyerLogo(f){ const ext = f.name.split('.').pop().toLowerCase(); await envoyer('logo.'+ext, f); toast('Logo importé'); projet(); }
-async function regenLogo(g){ await api('/api/projet/logo',{method:'POST',body:JSON.stringify({generique:g})}); toast('Logo régénéré'); projet(); }
+// logo animé (projet.json > logo_anime) : joué une fois à l'affichage, puis il reste sur sa dernière image ;
+// le survol le rejoue. Sans logo animé, ou si le navigateur ne sait pas le lire, le logo fixe reste affiché.
+function logoAnime(sel, taille){
+  const box = $(sel); if(!box) return;
+  const a = INFOS && INFOS.logo_anime, cle = a ? 'a' + a.v : 'f' + (PROJET.logo || '') + (PROJET.couleur || '');
+  if(box.dataset.cle === cle && box.firstElementChild && !box.dataset.toujours) return;   // la bannière ne rejoue pas à chaque page
+  box.dataset.cle = cle;
+  const fixe = `<img src="/api/logo?t=${Date.now()}" alt="" style="width:${taille}px;height:${taille}px;object-fit:contain;display:block">`;
+  if(!a){ box.innerHTML = fixe; return; }
+  const url = '/api/logo/anime?v=' + a.v;
+  if(a.type !== 'video'){ box.innerHTML = `<img src="${url}" alt="" style="width:${taille}px;height:${taille}px;object-fit:contain;display:block">`; return; }
+  box.innerHTML = `<video muted playsinline preload="auto" src="${url}" style="width:${taille}px;height:${taille}px;object-fit:contain;display:block"></video>`;
+  const v = box.querySelector('video'), calme = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  v.onerror = () => { box.innerHTML = fixe; };
+  v.onloadedmetadata = () => { if(calme){ v.currentTime = Math.max(0, v.duration - 0.05); } else v.play().catch(()=>{}); };
+  const rejouer = () => { if(!calme && (v.ended || v.paused)){ v.currentTime = 0; v.play().catch(()=>{}); } };
+  (box.closest('.marque') || box).addEventListener('mouseenter', rejouer);
+}
+async function envoyerLogoAnime(f){ if(!f) return; const ext = f.name.split('.').pop().toLowerCase();
+  if(!['webm','mp4','gif','webp','png','svg'].includes(ext)) return toast('Format accepté : WebM (transparent, conseillé), MP4, GIF, WebP, PNG animé ou SVG');
+  toast('Import du logo animé…'); await envoyer('logo_anime.'+ext, f); toast('Logo animé importé'); projet(); }
+async function retirerLogoAnime(){ if(!confirm('Retirer le logo animé ? Le logo fixe reprend sa place (le fichier n\'est pas effacé).')) return;
+  await api('/api/projet/logo_anime',{method:'POST',body:'{}'}); toast('Logo animé retiré'); projet(); }
+async function envoyerLogo(f){ $('.marque .logo-box').dataset.cle = ''; const ext = f.name.split('.').pop().toLowerCase(); await envoyer('logo.'+ext, f); toast('Logo importé'); projet(); }
+async function regenLogo(g){ $('.marque .logo-box').dataset.cle = ''; await api('/api/projet/logo',{method:'POST',body:JSON.stringify({generique:g})}); toast('Logo régénéré'); projet(); }
 function exporter(r){ action('exporter', r?['--rendus']:[]); toast('Export lancé : le zip arrivera dans le dossier _exports du projet'); }
 async function ouvrirProjet(c, init){
   const r = await api('/api/projet/ouvrir',{method:'POST',body:JSON.stringify({chemin:c, initialiser:!!init})});

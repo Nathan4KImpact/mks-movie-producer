@@ -33,6 +33,9 @@ def chemin_ep(ep):
 
 
 AUD_EXT = (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac")
+# logo animé du projet (projet.json > logo_anime) : vidéo (de préférence WebM transparent) ou image animée
+LOGO_VIDEO = (".webm", ".mp4")
+LOGO_ANIME_RE = re.compile(r"^logo_anime\.(webm|mp4|gif|webp|png|svg)$", re.I)
 
 
 def url_projet(p):
@@ -369,8 +372,11 @@ def infos_projet():
     pj, ps = cx.projet(), cx.poste()
     projets = [dict(x, existe=os.path.isdir(x["chemin"])) for x in ps.get("projets", [])]
     dossiers = {r: cx._rel(cx.dossier(r)) for r in cx.ROLES}
+    anime = cx.fichier(pj.get("logo_anime", "")) if pj.get("logo_anime") else ""
     return {"projet": cx.projet(), "racine": cx.racine(), "projets": projets, "logiciel": cx.NOM_LOGICIEL, "app": ICI,
-            "est_projet": cx.est_projet(cx.racine()), "dossiers": dossiers}
+            "est_projet": cx.est_projet(cx.racine()), "dossiers": dossiers,
+            "logo_anime": {"type": "video" if anime.lower().endswith(LOGO_VIDEO) else "image",
+                           "v": int(os.path.getmtime(anime))} if anime else None}
 
 
 def creer_projet(d):
@@ -537,6 +543,12 @@ class H(BaseHTTPRequestHandler):
                                     "text/html; charset=utf-8")
             if p == "/api/projet":
                 return self.envoyer(200, infos_projet())
+            if p == "/api/logo/anime":
+                pj = cx.projet()
+                f = cx.fichier(pj.get("logo_anime", "")) if pj.get("logo_anime") else ""
+                if not f:
+                    return self.envoyer(404, {"erreur": "pas de logo animé"})
+                return self.fichier(f, cx.racine())
             if p == "/api/logo":
                 pj = cx.projet()
                 f = cx.fichier(pj.get("logo") or "logo.svg")
@@ -649,6 +661,10 @@ class H(BaseHTTPRequestHandler):
                 return self.envoyer(200, {"ok": True})
             if p == "/api/projet":
                 pj = self.corps()
+                actuel = cx.projet()
+                for k in ("logo_anime",):          # posé par un import : une page ouverte avant ne doit pas l'effacer
+                    if k not in pj and actuel.get(k):
+                        pj[k] = actuel[k]
                 cx.sauver_projet(pj)
                 cx.definir_projet_actif(cx.racine())
                 return self.envoyer(200, {"ok": True})
@@ -664,7 +680,7 @@ class H(BaseHTTPRequestHandler):
                 parties = [x for x in dest.split("/") if x]
                 if ".." in parties or not parties:
                     return self.envoyer(400, {"erreur": "destination non autorisée"})
-                if len(parties) == 1 and re.match(r"^logo\.(svg|png|jpg|jpeg|webp)$", parties[0]):
+                if len(parties) == 1 and (re.match(r"^logo\.(svg|png|jpg|jpeg|webp)$", parties[0]) or LOGO_ANIME_RE.match(parties[0])):
                     cible = cx.chemin(parties[0])
                 elif len(parties) > 1 and parties[0].lower() in ALIAS_ROLES:
                     cible = cx.dossier(ALIAS_ROLES[parties[0].lower()], *parties[1:], creer=True)
@@ -684,7 +700,7 @@ class H(BaseHTTPRequestHandler):
                             break
                         f.write(bloc); n -= len(bloc)
                 if len(parties) == 1:
-                    pj = cx.projet(); pj["logo"] = parties[0]; cx.sauver_projet(pj)
+                    pj = cx.projet(); pj["logo_anime" if LOGO_ANIME_RE.match(parties[0]) else "logo"] = parties[0]; cx.sauver_projet(pj)
                 cx.oublier_index()
                 return self.envoyer(200, {"ok": True, "chemin": cible, "rel": cx._rel(cible).replace("\\", "/")})
             return self.envoyer(404, {"erreur": "introuvable"})
@@ -738,6 +754,9 @@ class H(BaseHTTPRequestHandler):
                 d = cx.poste()
                 d["projets"] = [x for x in d.get("projets", []) if x["chemin"] != c["chemin"]]
                 cx.sauver_poste(d)
+                return self.envoyer(200, {"ok": True})
+            if p == "/api/projet/logo_anime":       # retirer le logo animé (le fichier reste sur le disque)
+                pj = cx.projet(); pj.pop("logo_anime", None); cx.sauver_projet(pj)
                 return self.envoyer(200, {"ok": True})
             if p == "/api/projet/logo":
                 from logo import logo_pour, logo_generique

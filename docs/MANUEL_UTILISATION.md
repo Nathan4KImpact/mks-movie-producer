@@ -303,8 +303,11 @@ Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agis
 
 - **Régénérer le logo** dessine un emblème à partir du nom du projet et de sa couleur.
 - **Importer un logo** remplace le logo par votre propre image (PNG, JPG, SVG).
+- **Importer un logo animé** ajoute une version animée du logo (ex. un « sting » réalisé dans Claude Design). Il se joue une fois à l'ouverture de l'application, dans la bannière, puis reste sur sa dernière image ; le **survol** du logo le rejoue. Sur la page Projet, il se rejoue à chaque visite. Le logo fixe reste utilisé ailleurs (logo généré, exports) et reprend sa place si le navigateur ne peut pas lire l'animation. **Retirer le logo animé** revient au logo fixe (le fichier n'est pas effacé).
 - **Ouvrir le dossier du projet** affiche le dossier du projet dans l'Explorateur.
 - **Exporter (zip, sans rendus)** et **Exporter avec rendus** (boutons dorés) : voir 13.4.
+
+> **Format conseillé pour un logo animé : WebM à fond transparent** (codec VP9 avec couche alpha), carré, environ 600 × 600, quelques secondes, **terminé sur le logo complet** (pas sur un fondu au noir) puisque l'animation s'arrête sur sa dernière image. Un MP4 fonctionne aussi, mais son fond est opaque : un carré sombre apparaît autour du logo. GIF, WebP ou PNG animés et SVG animé sont acceptés. Le fichier est noté dans `projet.json > logo_anime` ; il peut être rangé n'importe où dans le projet.
 
 ### 13.2 Paramètres
 

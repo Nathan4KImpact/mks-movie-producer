@@ -22,6 +22,10 @@ Répondre en français à l'utilisateur.
 - `lots.py` : export par lots d'une fiche (relit la fiche générée : un fichier par type IMG/VID et par combinaison de
   personnages, + `<EP>_index.csv` ordre → nom final) dans `<dossier fiches>/lots/<EP>/`. Commande `lots`, `POST /api/lots`.
   Dépend du format des en-têtes de la fiche (`--- E104-01.png  [VOYANT, SAGESSE]`) : le garder compatible si `fiche.py` change.
+- Logo : `projet.json > logo` (fixe, `/api/logo`) et `logo_anime` (facultatif, `/api/logo/anime` : WebM transparent conseillé,
+  MP4, GIF, WebP, SVG). Import `PUT /api/fichier?dest=logo_anime.<ext>`, retrait `POST /api/projet/logo_anime`. `PUT /api/projet`
+  conserve `logo_anime` si la page ne l'envoie pas. Interface : `logoAnime(sel, taille)` dans `web/index.html` (joué une fois,
+  arrêt sur la dernière image, survol = rejouer ; la bannière ne rejoue pas à chaque navigation).
 - `sons.py` : ambiances et bruitages (voir plus bas). `langues.py` : versions linguistiques (voir plus bas). `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP.
 
 ## Organisation d'un projet (aucun chemin en dur)
