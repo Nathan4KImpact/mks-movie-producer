@@ -43,6 +43,9 @@ def fiche_flow(ep):
         p, persos = remplacer_tags(s.get("p", ""), pj)
         vo = s.get("vo", "")
         qui = nom_de(s.get("qui"), pj)
+        if s.get("media"):                       # média déjà choisi dans la vue Studio : rien à générer
+            L += [f"--- {s['k']} : média choisi dans le Studio ({s['media']}) — rien à générer", ""]
+            continue
         L += [f"--- {s['k']}.png {'  [' + ', '.join(x['tag'] for x in persos) + ']' if persos else ''}",
               (f"RÉPLIQUE — {qui} : « {vo[:140]}{'…' if len(vo) > 140 else ''} »" if qui else
                f"Narration : {vo[:140]}{'…' if len(vo) > 140 else ''}"),

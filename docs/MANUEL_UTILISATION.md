@@ -72,7 +72,12 @@ Une carte par épisode écrit, avec :
 
 ## 6. Éditeur d'épisode
 
-**Ouvrir** une carte affiche tous les plans de l'épisode, dans l'ordre.
+**Ouvrir** une carte affiche l'épisode dans l'une des deux vues, au choix, grâce au sélecteur **☰ Liste / 🎬 Studio** placé en tête de la barre d'outils :
+
+- **Liste** : tous les plans les uns sous les autres, avec tous leurs champs (la vue décrite ci-dessous) ;
+- **Studio** : une interface de montage, avec moniteur d'aperçu, timeline et bibliothèque de médias (voir *Vue Studio* plus bas).
+
+Le choix est mémorisé : le prochain épisode ouvert s'affiche dans la même vue. On peut basculer à tout moment, même avec des modifications non enregistrées : elles sont conservées.
 
 ![Éditeur d'épisode](images/03_episode.jpg)
 
@@ -80,6 +85,7 @@ Une carte par épisode écrit, avec :
 
 | Bouton | Effet |
 |---|---|
+| **☰ Liste / 🎬 Studio** | Choisit la vue de l'épisode |
 | **Enregistrer** | Enregistre le script. Il s'encadre d'or quand il y a des modifications non enregistrées. |
 | **Enregistrer et monter** | Enregistre puis lance le montage |
 | **depuis zéro** | À cocher avant de monter pour tout recalculer (voix comprises) |
@@ -121,7 +127,55 @@ Les lignes en pointillés (◆) sont des **cartons** : un écran titre avec un *
 
 ### Musiques disponibles
 
-Clash Defiant, Crusade - Heavy Industry, Dark Walk, Darkest Child, Echoes of Time v2, Ever Mindful, Heroic Age, Interloper, Lightless Dawn, Long Note Four, Lord of the Land, Ossuary 6 - Air, Prelude and Action, Rising Game. Si aucun plan ne précise de musique, la piste par défaut du projet est utilisée sur tout l'épisode.
+Clash Defiant, Crusade - Heavy Industry, Dark Walk, Darkest Child, Echoes of Time v2, Ever Mindful, Heroic Age, Interloper, Lightless Dawn, Long Note Four, Lord of the Land, Ossuary 6 - Air, Prelude and Action, Rising Game. Si aucun plan ne précise de musique, la piste par défaut du projet est utilisée sur tout l'épisode. Des musiques propres au projet peuvent être ajoutées depuis la vue Studio (onglet **Musiques** de la bibliothèque).
+
+### Vue Studio : monter l'épisode comme dans un logiciel de montage
+
+La vue **🎬 Studio** présente le même épisode à la manière d'un logiciel de montage (CapCut, Premiere…). Tout ce qui y est modifié est enregistré dans le même fichier que la vue Liste, avec le même bouton **Enregistrer** (ou **Ctrl+S**).
+
+![Vue Studio](images/21_studio.jpg)
+
+L'écran se compose de cinq zones :
+
+| Zone | Rôle |
+|---|---|
+| **Barre du haut** | Titre de l'épisode (modifiable), durée totale, **↶ Annuler / ↷ Rétablir**, Fiche Flow, Rafraîchir, Enregistrer, Enregistrer et monter |
+| **Bibliothèque** (à gauche) | Onglets **Médias**, **Voix** et **Musiques** : tout ce qui peut être placé dans un plan, avec recherche et filtre *Cet épisode / Personnages / Tout le projet* |
+| **Moniteur** (au centre) | Aperçu de l'épisode : image ou vidéo du plan, mouvement de caméra, titre à l'écran, cartons, voix et musique. Boutons de lecture, position, cases **Voix** et **Musique** pour couper l'une ou l'autre |
+| **Inspecteur** (à droite) | Tous les réglages du plan sélectionné : image ou vidéo, mouvement, prompts, narration, titre, durée mini, voix, musique |
+| **Timeline** (en bas) | Les plans bout à bout à l'échelle du temps, sur quatre pistes : **Vidéo**, **Titres**, **Voix**, **Musique** |
+
+**L'aperçu.** Il reproduit le montage : même durée de plan (narration + 1,5 s, au moins la durée mini), mêmes mouvements de caméra, même apparition des titres, mêmes fondus, musique qui baisse sous la voix. Les voix de l'aperçu sont générées en arrière-plan à l'ouverture (connexion internet nécessaire, comme pour le montage) ; tant qu'elles ne sont pas prêtes, les durées sont **estimées** (blocs hachurés sur la piste Voix) et deviennent exactes ensuite. L'aperçu est une maquette rapide : le rendu final reste celui du montage (**Enregistrer et monter**).
+
+**La timeline.** Cliquer un plan le sélectionne et place la tête de lecture à son début ; cliquer ou glisser sur la règle déplace la tête de lecture. Le curseur **Zoom** élargit la timeline, **Tout voir** la remet à la largeur de l'écran. Les boutons au-dessus permettent d'ajouter un **plan** ou un **carton** après le plan sélectionné, de **dupliquer**, de **déplacer** ou de **supprimer** un plan. On peut aussi **glisser un plan** sur un autre pour changer l'ordre. Un plan sans image apparaît hachuré de rouge.
+
+**Changer les éléments d'un plan.** Sélectionnez le plan, puis :
+
+| Élément | Depuis la bibliothèque du projet | Depuis l'ordinateur ou ailleurs |
+|---|---|---|
+| **Image ou vidéo** | Cliquer une vignette de l'onglet **Médias**, ou la glisser sur le plan dans la timeline. Les vignettes marquées *utilisé* sont déjà dans l'épisode. | **Importer…** (inspecteur ou bas de la bibliothèque) : le fichier est copié dans le dossier des images de l'épisode. **Adresse web…** : une image ou une vidéo en ligne, téléchargée au montage. |
+| **Voix** | Onglet **Voix** : **Voix du plan N**, ou glisser le fichier sur la piste Voix | **Importer…** un enregistrement (mp3, wav, m4a…), ou **● Enregistrer au micro** directement dans le navigateur |
+| **Musique** | Onglet **Musiques** : **Démarrer au plan N**, glisser la piste sur la piste Musique, ou menu *Changer de musique à partir d'ici* dans l'inspecteur | **Importer une musique…** : elle rejoint les musiques du projet |
+| **Texte** | Qui parle (narrateur ou personnage), narration ou réplique, titre à l'écran, prompts, durée mini : directement dans l'inspecteur. L'aperçu prend la voix du personnage choisi. | — |
+
+![Bibliothèque des musiques et inspecteur (voix et musique)](images/22_studio_details.jpg)
+
+Quelques précisions :
+
+- **Rien n'est écrasé** : un fichier importé qui porte le même nom qu'un fichier existant est renommé (`photo-2.jpg`). Les imports se rangent dans le dossier des images de l'épisode (`…\E104\`), les voix dans son sous-dossier `voix\`, les musiques dans le dossier des musiques du projet.
+- **Retirer le choix** rend au plan son image d'origine, celle qui porte le nom de sa clé (`E104-03.png`). La Fiche Flow n'en demande plus la génération tant qu'une image est choisie dans le Studio.
+- **Voix importée** : elle remplace la voix de synthèse pour la version d'origine uniquement ; les versions traduites gardent leur voix de synthèse. Cochez **Synthèse** pour revenir à la voix du projet.
+- **Musique** : le réglage *Début dans la piste* fait démarrer la musique plus loin que son début (ex. 30 s pour sauter une introduction). Le volume général reste celui de **Projet › Vol. musique**.
+- Les **versions linguistiques** (textes traduits côte à côte) se relisent dans la vue **Liste**.
+
+| Raccourci (hors saisie de texte) | Effet |
+|---|---|
+| **Espace** | Lecture / pause |
+| **← / →** | Plan précédent / suivant |
+| **Début** | Retour au début de l'épisode |
+| **Suppr** | Supprimer le plan sélectionné |
+| **Ctrl+Z / Ctrl+Y** | Annuler / rétablir |
+| **Ctrl+S** | Enregistrer |
 
 ## 7. Fiche de prompts et génération des images
 
@@ -342,6 +396,10 @@ Les commandes agissent sur le projet actif. Pour viser un autre projet, définis
 ## 19. Questions fréquentes
 
 **J'ai remplacé une image mais le film n'a pas changé.** Vérifiez que la nouvelle image porte exactement le même nom et se trouve dans le dossier des images de l'épisode (indiqué dans la fiche), puis remontez. Un fichier `.mp4` du même nom est prioritaire sur l'image.
+
+Si une image a été **choisie dans la vue Studio** pour ce plan, c'est elle qui est utilisée : cliquez **Retirer le choix** dans l'inspecteur pour revenir au fichier nommé d'après la clé.
+
+**Dans le Studio, la piste Voix est hachurée.** Les voix de l'aperçu ne sont pas encore prêtes (ou la connexion internet manque) : les durées affichées sont estimées d'après le nombre de mots. Le montage, lui, calcule toujours les durées exactes.
 
 **L'Assistant reste sur un épisode que je veux sauter.** Il suit l'ordre du plan. Vous pouvez travailler sur n'importe quel épisode depuis Production ou Plan ; l'Assistant se mettra à jour.
 

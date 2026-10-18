@@ -8,6 +8,9 @@ Répondre en français à l'utilisateur.
   du PROJET actif (dossier de données, voir README). `racine()` = projet actif (variable `STUDIO_PROJET`,
   sinon `poste.json`, sinon dossier parent). `projet()` lit `projet.json`. `migrer()` convertit l'ancien format.
 - `pilotage.py` : serveur HTTP local (127.0.0.1:8765) + API JSON ; interface dans `web/index.html` (vanilla JS).
+  Vue Studio d'un épisode (montage : moniteur, timeline, inspecteur, bibliothèque) dans `web/studio.js` + `web/studio.css`
+  (servis par `/web/…`) ; elle modifie directement `EP` et réutilise `sauver()`. Bibliothèque : `GET /api/bibliotheque?ep=`,
+  musiques servies par `/musique/<nom>`, import sans écrasement : `PUT /api/fichier?unique=1&dest=…`.
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
@@ -34,6 +37,9 @@ Réplique : `"qui": "SAGESSE"` sur un plan = `vo` dit par ce personnage (mots pr
 `personnages[].voix.<langue>` (+ `effet` echo|grave|lointain, `sans_visage`) ; sans `qui` ni voix → narrateur
 (`langues.voix_plan`). La fiche marque les RÉPLIQUES et demande des vidéos où le personnage parle (son Flow coupé).
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
+Champs posés par la vue Studio (facultatifs) : `media` (image/vidéo choisie, chemin relatif au projet, PRIORITAIRE sur la clé),
+`voix_fichier` (narration enregistrée/importée, remplace la synthèse pour la langue d'origine seulement), `mus_off` (décalage
+en s dans la piste `mus`). Les résoudre par `contexte.fichier(rel)` ; `ia._garder_traductions` les recolle après une réécriture IA.
 
 ## Versions linguistiques (`langues.py`)
 Une seule série, plusieurs langues : plans, images et musiques communs ; textes et voix par langue, une vidéo par langue.

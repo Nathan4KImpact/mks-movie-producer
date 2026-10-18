@@ -12,6 +12,8 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ICI)
 import contexte as cx
 
+for _t, _e in (("text/javascript", ".js"), ("text/css", ".css"), ("audio/mp4", ".m4a"), ("audio/webm", ".weba")):
+    mimetypes.add_type(_t, _e)      # le registre Windows peut associer d'autres types (ex. .js en text/plain)
 PORT = int(os.environ.get("ATELIER_PORT", "8765"))
 EP_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG")
@@ -30,8 +32,20 @@ def chemin_ep(ep):
     return cx.dossier("episodes", ep + ".json")
 
 
-def media_local(ep, k):
-    """(url, type) du média d'un plan : dans le dossier des images, sinon n'importe où dans le projet."""
+AUD_EXT = (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac")
+
+
+def url_projet(p):
+    return "/projet/" + "/".join(urllib.parse.quote(x) for x in cx._rel(p).replace("\\", "/").split("/"))
+
+
+def media_local(ep, k, s=None):
+    """(url, type) du média d'un plan : média choisi dans le Studio (champ « media »), sinon le fichier nommé
+    d'après la clé dans le dossier des images, sinon n'importe où dans le projet."""
+    if s and s.get("media"):
+        p = cx.fichier(s["media"])
+        if p:
+            return url_projet(p), "video" if p.lower().endswith(VID_EXT) else "image"
     d = cx.dossier("images", ep)
     for ext in VID_EXT:
         if os.path.exists(os.path.join(d, k + ext)):
@@ -42,8 +56,20 @@ def media_local(ep, k):
     if k:
         p, video = cx.chercher_media(k)
         if p:
-            return "/projet/" + urllib.parse.quote(cx._rel(p)), "video" if video else "image"
+            return url_projet(p), "video" if video else "image"
     return None, None
+
+
+def media_info(ep, s):
+    """{url, type, rel} du média d'un plan, rel = chemin relatif au projet (pour la vue Studio)."""
+    f, t = media_local(ep, s.get("k", ""), s)
+    if not f:
+        return {"url": "", "type": "", "rel": ""}
+    if f.startswith("/flow/"):
+        rel = cx._rel(cx.dossier("images", *[urllib.parse.unquote(x) for x in f.split("/")[2:]]))
+    else:
+        rel = urllib.parse.unquote(f[len("/projet/"):])
+    return {"url": f, "type": t, "rel": rel.replace("\\", "/")}
 
 
 def fichiers_rendus(langue=None):
@@ -66,7 +92,7 @@ def etat_episode(ep, rendus=None):
     plans = [s for s in e["shots"] if not s.get("card")]
     ok = vid = 0
     for s in plans:
-        f, t = media_local(ep, s.get("k", ""))
+        f, t = media_local(ep, s.get("k", ""), s)
         if f or s.get("img_url") or s.get("vid_url"):
             ok += 1
         if t == "video" or (not f and s.get("vid_url")):
@@ -107,9 +133,12 @@ def lire_episode(ep):
     for s in e["shots"]:
         if s.get("card"):
             continue
-        f, t = media_local(ep, s.get("k", ""))
+        m = media_info(ep, s); f, t = m["url"], m["type"]
+        if s.get("voix_fichier"):
+            v = cx.fichier(s["voix_fichier"])
+            s["_voix"] = url_projet(v) if v else ""
         if f:
-            s["_media"] = f; s["_type"] = t
+            s["_media"] = f; s["_type"] = t; s["_rel"] = m["rel"]
         elif s.get("vid_url"):
             s["_media"] = s["vid_url"]; s["_type"] = "video"
         elif s.get("img_url"):
@@ -137,6 +166,66 @@ def sauver_episode(ep, e):
         for k in [k for k in el if k.startswith("_")]:
             el.pop(k)
     _sauver(ep, e)
+
+
+# ---------------------------------------------------------------- bibliothèque du Studio
+def dossiers_musique():
+    return [cx.dossier("musique"), os.path.join(ICI, "musique")]
+
+
+def fichier_musique(nom):
+    for d in dossiers_musique():
+        for ext in AUD_EXT:
+            f = os.path.join(d, nom + ext)
+            if os.path.isfile(f):
+                return f
+    return ""
+
+
+def bibliotheque(ep=""):
+    """Tout ce que la vue Studio peut placer dans un plan : images et vidéos du projet (rangées par dossier),
+    fichiers audio (voix enregistrées) et musiques (bibliothèque du logiciel + musiques propres au projet)."""
+    rac = cx.racine()
+    exclus = [os.path.realpath(cx.dossier(r)) for r in ("rendus", "exports")]
+    mus = os.path.realpath(cx.dossier("musique"))
+    medias, audios, n = [], [], 0
+    for d, _, fichiers in cx.index_projet(rac):
+        rd = os.path.realpath(d)
+        if any(rd == x or rd.startswith(x + os.sep) for x in exclus):
+            continue
+        groupe = cx._rel(d, rac).replace("\\", "/") if os.path.abspath(d) != os.path.abspath(rac) else "."
+        for f in sorted(fichiers):
+            ext = os.path.splitext(f)[1].lower()
+            if ext not in IMG_EXT + VID_EXT + AUD_EXT or f.lower().startswith("logo."):
+                continue
+            p = os.path.join(d, f)
+            el = {"nom": f, "rel": cx._rel(p, rac).replace("\\", "/"), "url": url_projet(p), "groupe": groupe}
+            if ext in AUD_EXT:
+                if rd != mus and not rd.startswith(mus + os.sep):      # les musiques ont leur propre onglet
+                    audios.append(el)
+            else:
+                el["type"] = "video" if ext in VID_EXT else "image"
+                medias.append(el)
+            n += 1
+            if n > 4000:
+                break
+    pj = cx.projet()
+    musiques, vus = [], set()
+    for d in dossiers_musique():
+        for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            nom, ext = os.path.splitext(f)
+            if ext.lower() in AUD_EXT and nom not in vus:
+                vus.add(nom)
+                musiques.append({"nom": nom, "url": "/musique/" + urllib.parse.quote(f),
+                                 "projet": os.path.realpath(d) == os.path.realpath(cx.dossier("musique"))})
+    for nom in pj.get("musiques", []):          # pistes déclarées mais pas (encore) installées
+        if nom not in vus:
+            musiques.append({"nom": nom, "url": "", "absente": True})
+    dossier_ep = cx._rel(cx.dossier("images", ep), rac).replace("\\", "/") if ep and EP_RE.match(ep) else ""
+    rels = {r: cx._rel(cx.dossier(r), rac).replace("\\", "/") for r in ("images", "personnages")}
+    return {"medias": medias, "audios": audios, "musiques": musiques, "dossier_episode": dossier_ep, "dossiers": rels,
+            "voix": pj.get("voix", {}), "volume_musique": pj.get("volume_musique", 0.47),
+            "musique_defaut": pj.get("musique_defaut", "")}
 
 
 # ---------------------------------------------------------------- suivi, plan, assistant
@@ -363,7 +452,7 @@ def essai_voix(c):
     """Court extrait d'une voix Edge TTS (pour choisir la voix d'une langue avant de monter un épisode)."""
     import hashlib
     nom, debit, hauteur = (c.get("nom") or "").strip(), (c.get("debit") or "+0%").strip(), (c.get("hauteur") or "+0Hz").strip()
-    texte = (c.get("texte") or "").strip()[:600]
+    texte = (c.get("texte") or "").strip()[:3000]
     if not re.match(r"^[a-z]{2,3}-[A-Za-z]{2,4}-[A-Za-z]+Neural$", nom) or not texte:
         raise ValueError("Voix ou texte invalide")
     if not re.match(r"^[+-]\d{1,3}%$", debit) or not re.match(r"^[+-]\d{1,3}Hz$", hauteur):
@@ -495,6 +584,21 @@ class H(BaseHTTPRequestHandler):
                                 "langue": langue or lg.source(cx.projet()), "srt": f[:-4] + ".srt" if os.path.exists(srt) else "",
                                 "mo": round(st.st_size / 1e6, 1), "date": time.strftime("%d/%m %H:%M", time.localtime(st.st_mtime))})
                 return self.envoyer(200, out)
+            if p == "/api/media":
+                ep = q.get("ep", [""])[0]
+                if not EP_RE.match(ep):
+                    return self.envoyer(400, {"erreur": "épisode invalide"})
+                return self.envoyer(200, media_info(ep, {"k": q.get("k", [""])[0]}))
+            if p.startswith("/web/") and p.endswith((".js", ".css")):
+                return self.fichier(os.path.join(ICI, "web", p.split("/")[-1]), os.path.join(ICI, "web"))
+            if p == "/api/bibliotheque":
+                return self.envoyer(200, bibliotheque(q.get("ep", [""])[0]))
+            if p.startswith("/musique/"):
+                nom = os.path.splitext(p.split("/")[-1])[0]
+                f = fichier_musique(nom)
+                if not f:
+                    return self.envoyer(404, {"erreur": "musique introuvable"})
+                return self.fichier(f, os.path.dirname(f))
             if p == "/api/langues":
                 import langues as lg
                 pj = cx.projet()
@@ -563,6 +667,11 @@ class H(BaseHTTPRequestHandler):
                 else:
                     return self.envoyer(400, {"erreur": "destination non autorisée"})
                 os.makedirs(os.path.dirname(cible), exist_ok=True)
+                if urllib.parse.parse_qs(u.query).get("unique") and os.path.exists(cible):   # import : jamais d'écrasement
+                    base, ext = os.path.splitext(cible); k = 2
+                    while os.path.exists(f"{base}-{k}{ext}"):
+                        k += 1
+                    cible = f"{base}-{k}{ext}"
                 n = int(self.headers.get("Content-Length", 0))
                 with open(cible, "wb") as f:
                     while n > 0:
@@ -573,7 +682,7 @@ class H(BaseHTTPRequestHandler):
                 if len(parties) == 1:
                     pj = cx.projet(); pj["logo"] = parties[0]; cx.sauver_projet(pj)
                 cx.oublier_index()
-                return self.envoyer(200, {"ok": True, "chemin": cible, "rel": cx._rel(cible)})
+                return self.envoyer(200, {"ok": True, "chemin": cible, "rel": cx._rel(cible).replace("\\", "/")})
             return self.envoyer(404, {"erreur": "introuvable"})
         except Exception as ex:
             return self.envoyer(500, {"erreur": str(ex)})

@@ -6,6 +6,7 @@
 <title>MKS Movie Producer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="/web/studio.css" rel="stylesheet">
 <style>
 :root{
   --bg:#0d0b10; --panel:#16131b; --panel2:#1d1924; --line:#2c2634; --text:#ece6da; --muted:#a39a8c;
@@ -30,6 +31,10 @@ h2{font:700 22px var(--serif);letter-spacing:.05em;color:var(--gold2);margin:0 0
 .btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1408;border:0;font-weight:600}
 .btn.ia{border-color:#4a3d6a;background:#221b33}
 .btn.small{padding:4px 9px;font-size:12px}
+.vue-switch{display:inline-flex;background:#0f0d13;border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.vue-switch button{background:none;border:0;color:var(--muted);font:600 12.5px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.vue-switch button.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1408}
+.vue-switch button:not(.on):hover{color:var(--text);background:var(--panel2)}
 .actions-projet{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;margin-top:4px;border:1px solid var(--gold);border-radius:var(--r);background:linear-gradient(180deg,rgba(216,180,106,.10),rgba(216,180,106,.03))}
 .actions-projet .titre{grid-column:1/-1;color:var(--gold2);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;text-align:left}
 .actions-projet .btn{margin:0;padding:10px 12px;font-size:13.5px;text-align:center;white-space:normal;text-transform:none;letter-spacing:0;border-color:#4a3f2c}
@@ -171,6 +176,7 @@ const MOUV = ['in','out','left','right','up','down','still'];
 
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false; $('#main').oninput = null;
+  if(typeof studioQuitter === 'function') studioQuitter();
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   ({assistant, saison, plan, bible, rendus, nouveau, reglages, episode, projet, aide})[v](arg); location.hash = v + (arg?'/'+arg:''); guide(); }
 async function ouvrir(d){ await api('/api/ouvrir',{method:'POST',body:JSON.stringify({dossier:d})}); }
@@ -198,6 +204,8 @@ async function saison(){
 
 // ---------------------------------------------------------------- épisode
 async function episode(ep, garder){
+  if(vueEpisode() === 'studio') return studio(ep, garder);
+  if(typeof studioQuitter === 'function') studioQuitter();
   EP = garder || await api('/api/episode/'+ep); EP._ep = ep;
   await chargerProjet(); VL = langueAffichee(); RETOUCHE = new Set();
   const trv = (el, i, champ, lib, zone) => { const t = (el.versions||{})[VL]||{};
@@ -210,6 +218,7 @@ async function episode(ep, garder){
   ${VL?`<div class="tr" data-i="e" style="max-width:640px;margin:4px 0 8px"><label>Titre (${VL.toUpperCase()}) ${STR[(EP._tr||{})[VL]]||''}</label><input data-l="title" value="${esc(((EP.versions||{})[VL]||{}).title)}"></div>`:''}
   <p class="sub">${EP.shots.filter(s=>!s.card).length} plans · les images se rangent dans ${esc(win(INFOS.dossiers.images))}\\${ep}\\ sous leur clé (ex. ${ep}-01.png)</p>
   <div class="toolbar">
+    ${choixVue()}
     <button class="btn gold" onclick="sauver()">Enregistrer</button>
     <button class="btn" onclick="sauver().then(()=>action('monter',['${ep}']))">Enregistrer et monter</button>
     <label style="margin:0;text-transform:none;letter-spacing:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="neuf" style="width:auto"> depuis zéro</label>
@@ -245,7 +254,7 @@ async function episode(ep, garder){
         <div class="full mini">
           <div><label>Mouvement</label><select data-f="m">${MOUV.map(m=>`<option ${m===(s.m||'in')?'selected':''}>${m}</option>`).join('')}</select></div>
           <div><label>Titre à l'écran</label><input data-f="title" value="${esc(s.title)}"></div>
-          <div><label>Musique (démarre ici)</label><select data-f="mus">${mus.map(m=>`<option value="${m}" ${m===(s.mus||'')?'selected':''}>${m?m.replace(/_/g,' '):'—'}</option>`).join('')}</select></div>
+          <div><label>Musique (démarre ici)</label><select data-f="mus">${[...new Set([...mus, s.mus||''])].map(m=>`<option value="${m}" ${m===(s.mus||'')?'selected':''}>${m?m.replace(/_/g,' '):'—'}</option>`).join('')}</select></div>
           <div><label>Durée mini (s)</label><input data-f="min" type="number" step="0.5" value="${s.min??''}"></div>
         </div>
         <div class="full"><label>Prompt vidéo (si plan animé)</label><input data-f="vid_prompt" value="${esc(s.vid_prompt)}"></div>
@@ -256,6 +265,7 @@ async function episode(ep, garder){
 function marquerSale(){ DIRTY = true; $('.toolbar .gold').classList.add('dirty'); }
 function lireForm(){
   EP.title = $('#titre').value;
+  if(!$('#shots')) return;                       // vue Studio : l'épisode est modifié directement dans EP
   document.querySelectorAll('#shots [data-i]').forEach(row => {
     const s = EP.shots[+row.dataset.i];
     row.querySelectorAll('[data-f]').forEach(el => {
@@ -274,6 +284,7 @@ function lireForm(){
 }
 async function sauver(){ lireForm(); const e = JSON.parse(JSON.stringify(EP)); const ep = e._ep; delete e._ep;
   await api('/api/episode/'+ep, {method:'PUT', body:JSON.stringify(e)}); DIRTY=false; toast('Épisode enregistré');
+  document.querySelectorAll('.toolbar .dirty').forEach(b=>b.classList.remove('dirty'));
   if(RETOUCHE.size){ RETOUCHE = new Set(); episode(ep); } }
 async function recharger(){ if(DIRTY) await sauver(); episode(EP._ep); }
 function copier(i){ const s = EP.shots[i]; let p = (s.p||'');
@@ -769,8 +780,17 @@ function modal(html){ const m = document.createElement('div'); m.className='moda
 function toast(t){ const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;top:76px;transform:translateX(-50%);background:var(--gold);color:#1b1408;padding:8px 16px;border-radius:8px;font-weight:600;z-index:40'; document.body.appendChild(d); setTimeout(()=>d.remove(), 2200); }
 window.onbeforeunload = () => DIRTY ? true : undefined;
 
+// ---------------------------------------------------------------- vue d'un épisode : Liste ou Studio
+function vueEpisode(){ try { return localStorage.getItem('ua_vue_ep') === 'studio' ? 'studio' : 'liste'; } catch(e){ return 'liste'; } }
+function choixVue(){ const v = vueEpisode();
+  return `<div class="vue-switch" title="Affichage de l'épisode"><button class="${v==='liste'?'on':''}" onclick="changerVue('liste')">☰ Liste</button><button class="${v==='studio'?'on':''}" onclick="changerVue('studio')">🎬 Studio</button></div>`; }
+function changerVue(v){ if(v === vueEpisode()) return; if($('#shots')) lireForm();
+  try { localStorage.setItem('ua_vue_ep', v); } catch(e){}
+  const d = DIRTY; episode(EP._ep, EP).then(()=>{ if(d) marquerSale(); }); }
+
 // démarrage
 const [v, a] = (location.hash.slice(1)||'assistant').split('/'); chargerProjet().then(()=>go(['assistant','saison','plan','bible','rendus','nouveau','reglages','episode','projet','aide'].includes(v)?v:'assistant', a));
 </script>
+<script src="/web/studio.js"></script>
 </body>
 </html>

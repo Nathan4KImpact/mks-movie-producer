@@ -45,6 +45,12 @@ def slug(t):
 def trouver_media(ep, s, wd, telecharger=True):
     """Renvoie (chemin, est_video) pour un plan, ou (None, False) si introuvable."""
     k = s.get("k")
+    if s.get("media"):                          # média choisi dans la bibliothèque ou importé (vue Studio)
+        from contexte import fichier
+        p = fichier(s["media"])
+        if p:
+            return p, os.path.splitext(p)[1].lower() in (".mp4", ".mov", ".webm")
+        log(f"  média introuvable : {s['media']} (repli sur la clé {k})")
     rep = dossier("images", ep)
     if k:
         for ext in (".mp4", ".mov", ".webm"):
@@ -215,7 +221,7 @@ def musique(total, sections, wd):
     for k, (t0, piste, off) in enumerate(sections):
         t1 = sections[k + 1][0] if k + 1 < len(sections) else total
         L = (t1 - t0) + (XF if k + 1 < len(sections) else 0)
-        f = next((os.path.join(d, piste + ext) for d in dossiers for ext in (".mp3", ".wav", ".m4a")
+        f = next((os.path.join(d, piste + ext) for d in dossiers for ext in (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac")
                   if os.path.exists(os.path.join(d, piste + ext))), "")
         if not f:
             log(f"  (musique absente : {piste}, section ignorée)")
@@ -270,7 +276,14 @@ def monter(ep, reprendre=True, langue=None):
             clips.append(nom + ".mp4"); segs.append((L, None)); continue
         vo = s.get("vo", "").strip()
         a, d = None, 0.0
-        if vo:
+        if s.get("voix_fichier") and not langue:     # narration enregistrée ou importée (langue d'origine seulement)
+            from contexte import fichier
+            a = fichier(s["voix_fichier"]) or None
+            if a:
+                d = duree(a)
+            else:
+                log(f"  voix introuvable : {s['voix_fichier']} (repli sur la voix de synthèse)")
+        if a is None and vo:
             a = voix(vo, os.path.join(wd, nom + ".mp3"), lg.voix_plan(s, langue, pj)); d = duree(a)
         L = round(max(float(s.get("min", 4.0)), d + float(s.get("pad", 1.5))), 2)
         src, est_video = trouver_media(ep, s, wd)
