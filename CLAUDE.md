@@ -102,12 +102,14 @@ lecture seule) : ne jamais y écrire.
   voisines, **avec les pièges** qui ont coûté cher), mettre à jour `memory/projects/mks-movie-producer.md` et la liste des
   fiches de l'index `CLAUDE.md` de la mémoire.
 - Fichiers modifiés **en place** (l'historique Git sert d'archive), sur une branche et par une PR de ce dépôt-là, fusionnée
-  par avance rapide avec l'accord du porteur (règles 2 et 3).
+  par avance rapide (règle 3) **sans attendre l'accord du porteur** : droit qu'il a donné le 18/10/2026, pour le seul dépôt
+  de mémoire. Fusionner une PR de la mémoire ne redéclenche pas cette règle 1.
 - **Ne verser que ce qui est fusionné** : une PR ouverte n'entre pas dans la mémoire.
 
 ### 2. Pull requests — toujours ouvrir, ne jamais fusionner sans accord
 - Toute évolution passe par une branche et une PR, créée en fin de travail sans attendre qu'on la demande.
 - **Ne jamais fusionner sans l'accord explicite du porteur** (« tu peux merger »). Sinon : ouvrir la PR, la décrire, s'arrêter.
+  Seule exception : les PR du dépôt de mémoire `mon-second-cerveau-mks-777` (règle 1).
 - Une PR fusionnée est finie : le travail suivant repart de `main` dans une nouvelle PR. Vérifier l'état réel d'une PR
   avant de dire qu'elle est à jour.
 
