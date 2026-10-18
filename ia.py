@@ -238,6 +238,8 @@ def traduire_episode(ep, langue, consignes="", tout=False):
             lot.append({"i": i, "type": "carton", "card": el.get("card", ""), "sub": el.get("sub", "")})
         else:
             d = {"i": i, "type": "plan", "vo": el.get("vo", "")}
+            if el.get("qui"):
+                d["type"] = f"réplique de {el['qui']} (paroles prononcées, à garder au style direct)"
             if el.get("title"):
                 d["title"] = el["title"]
             lot.append(d)

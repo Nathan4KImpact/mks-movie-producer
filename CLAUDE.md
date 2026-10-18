@@ -30,6 +30,9 @@ Nouveau projet : `DISPOSITION_NOUVEAU` (bibliotheque/… et production/…). `ra
 ## Format d'un épisode (`<dossier episodes>/E104.json`)
 `{"id":"S1E04","title":"…","shots":[{"k":"E104-01","vo":"narration","p":"prompt image anglais","m":"in|out|left|right|up|down|still",
 "title":"MOT À L'ÉCRAN","min":5,"mus":"Heroic_Age","vid_prompt":"…"},{"card":"TITRE","sub":"…","dur":7}, …]}`
+Réplique : `"qui": "SAGESSE"` sur un plan = `vo` dit par ce personnage (mots prononcés seulement) avec sa voix
+`personnages[].voix.<langue>` (+ `effet` echo|grave|lointain, `sans_visage`) ; sans `qui` ni voix → narrateur
+(`langues.voix_plan`). La fiche marque les RÉPLIQUES et demande des vidéos où le personnage parle (son Flow coupé).
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
 
 ## Versions linguistiques (`langues.py`)

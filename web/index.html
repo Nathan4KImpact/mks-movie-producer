@@ -64,6 +64,8 @@ textarea.vo{min-height:64px;font-size:14px}
 .tr label{color:var(--blue)} .tr textarea,.tr input{border-color:#2b3a4f;background:#141a24}
 .pill.lang{background:#1b2636;color:var(--blue)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+.voixperso{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:4px;border-top:1px dashed var(--line)}
+.vp{display:flex;align-items:center;gap:5px}.vp select{width:auto;max-width:250px}.vp input{width:62px}
 #jobs{position:fixed;right:16px;bottom:16px;width:min(560px,calc(100vw - 32px));z-index:20}
 .job{background:#0b0a0e;border:1px solid var(--line);border-radius:var(--r);margin-top:8px;overflow:hidden}
 .job .hd{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--panel);cursor:pointer}
@@ -235,7 +237,9 @@ async function episode(ep, garder){
       <div><div class="thumb">${s._media ? (s._type==='video' ? `<video src="${s._media}" muted loop onmouseenter="this.play()" onmouseleave="this.pause()"></video><span class="pill ok tag">vidéo</span>` : `<img loading="lazy" src="${s._media}">`) : `image manquante<br>${esc(s.k)}.png`}</div>
         <div class="row" style="margin-top:6px"><button class="btn small" onclick="copier(${i})">Copier le prompt</button></div></div>
       <div class="fields">
-        <div class="full"><label>Narration</label><textarea class="vo" data-f="vo">${esc(s.vo)}</textarea></div>
+        <div class="full"><div class="row" style="gap:8px;margin-bottom:3px"><label style="margin:0">${s.qui?'Réplique de':'Narration'}</label>
+          <select data-f="qui" style="width:auto;padding:2px 6px;font-size:12px" title="Qui parle dans ce plan" onchange="this.previousElementSibling.textContent=this.value?'Réplique de':'Narration'">${quiOptions(s.qui)}</select></div>
+          <textarea class="vo" data-f="vo">${esc(s.vo)}</textarea></div>
         ${VL?trv(s,i,'vo','Narration',true)+(s.title||((s.versions||{})[VL]||{}).title?trv(s,i,'title','Titre à l\'écran'):''):''}
         <div class="full"><label>Prompt image ${(PROJET.personnages||[]).filter(x=>(s.p||'').includes('['+x.tag+']')).map(x=>`<span class="pill wait">${esc(x.tag)}</span>`).join(' ')}</label><textarea data-f="p" rows="2">${esc(s.p)}</textarea></div>
         <div class="full mini">
@@ -582,7 +586,15 @@ async function projet(){
         <div><label>Tag</label><input data-k="tag" value="${esc(x.tag)}"></div><div><label>Nom</label><input data-k="nom" value="${esc(x.nom)}"></div>
         <div><label>Description (anglais)</label><input data-k="description" value="${esc(x.description||'')}"></div>
         <div><label>Image de référence</label><input data-k="reference" value="${esc(x.reference||'')}"></div>
-        <div class="row" style="flex-wrap:nowrap"><label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Image<input type="file" accept="image/*" style="display:none" onchange="envoyerRef(${i},this.files[0])"></label><button class="btn small" onclick="supPerso(${i})">✕</button></div></div>`).join('')}</div>
+        <div class="row" style="flex-wrap:nowrap"><label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Image<input type="file" accept="image/*" style="display:none" onchange="envoyerRef(${i},this.files[0])"></label><button class="btn small" onclick="supPerso(${i})">✕</button></div>
+        <div class="voixperso">${[LANGS.source, ...VERS()].map(l => { const v = (x.voix||{})[l]||{};
+          return `<div class="vp" data-vl="${l}"><span class="pill lang">${l.toUpperCase()}</span>${selVoixPerso(l, v.nom)}
+            <input data-vk="debit" value="${esc(v.debit||'')}" placeholder="débit" title="Débit (ex. -10%)">
+            <input data-vk="hauteur" value="${esc(v.hauteur||'')}" placeholder="hauteur" title="Hauteur (ex. -4Hz)">
+            <button class="btn small" title="Écouter" onclick="const r=this.closest('.vp');ecouter(r.querySelector('[data-vk=nom]').value||voixNarrateur('${l}').nom, r.querySelector('[data-vk=debit]').value||'+0%', r.querySelector('[data-vk=hauteur]').value||'+0Hz','${l}')">▶</button></div>`; }).join('')}
+          <div class="vp"><label style="margin:0">Effet</label><select data-p="effet"><option value="">aucun</option>${['echo','grave','lointain'].map(e=>`<option ${x.effet===e?'selected':''}>${e}</option>`).join('')}</select>
+            <label style="margin:0;display:flex;gap:4px;align-items:center;text-transform:none;letter-spacing:0" title="Visage jamais montré : pas de vidéo où il parle"><input type="checkbox" data-p="sans_visage" style="width:auto" ${x.sans_visage?'checked':''}>sans visage</label></div>
+        </div></div>`).join('')}</div>
       <div class="row"><button class="btn small" onclick="ajoutPerso()">+ Personnage</button><div class="sp"></div><button class="btn gold" onclick="sauverProjet()">Enregistrer le projet</button></div>
     </div>
   </div>
@@ -650,7 +662,17 @@ async function deplacerRole(role, libelle, actuel){
   catch(e){ toast(e.message); } }
 
 function lirePersos(){ document.querySelectorAll('#persos .prof').forEach(row=>{ const x = PROJET.personnages[+row.dataset.i];
-  row.querySelectorAll('[data-k]').forEach(el=>{ x[el.dataset.k] = el.value.trim(); }); x.tag = (x.tag||'').toUpperCase().replace(/[^A-Z0-9_]/g,''); }); }
+  row.querySelectorAll('[data-k]').forEach(el=>{ x[el.dataset.k] = el.value.trim(); }); x.tag = (x.tag||'').toUpperCase().replace(/[^A-Z0-9_]/g,'');
+  const vx = {}; row.querySelectorAll('.vp[data-vl]').forEach(vp => { const g = k => vp.querySelector(`[data-vk=${k}]`).value.trim();
+    if(g('nom')) vx[vp.dataset.vl] = {nom:g('nom'), debit:g('debit')||'+0%', hauteur:g('hauteur')||'+0Hz'}; });
+  if(Object.keys(vx).length) x.voix = vx; else delete x.voix;
+  const ef = row.querySelector('[data-p=effet]').value; if(ef) x.effet = ef; else delete x.effet;
+  if(row.querySelector('[data-p=sans_visage]').checked) x.sans_visage = true; else delete x.sans_visage; }); }
+function selVoixPerso(l, val){ const liste = [...new Set([...(LANGS.voix[l.split('-')[0]]||[]), ...(val?[val]:[])])];
+  return `<select data-vk="nom" data-avant="${esc(val||'')}" onchange="autreVoix(this)"><option value="">— voix du narrateur —</option>${liste.map(v=>`<option ${v===val?'selected':''}>${esc(v)}</option>`).join('')}<option value="__autre">Autre voix…</option></select>`; }
+function voixNarrateur(l){ return l===LANGS.source ? PROJET.voix : Object.assign({}, LANGS.voix_defaut[l.split('-')[0]]||{}, (LANGS.versions[l]||{}).voix||{}); }
+function quiOptions(qui){ const ps = PROJET.personnages||[];
+  return `<option value="">Narrateur</option>${ps.map(p=>`<option value="${esc(p.tag)}" ${p.tag===qui?'selected':''}>${esc(p.nom||p.tag)}</option>`).join('')}${qui && !ps.some(p=>p.tag===qui)?`<option selected value="${esc(qui)}">${esc(qui)} (inconnu)</option>`:''}`; }
 async function sauverProjet(silencieux){
   lirePersos(); const pj = PROJET;
   pj.nom = $('#p_nom').value.trim()||pj.nom; pj.sous_titre = $('#p_sous').value.trim();

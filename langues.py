@@ -23,15 +23,18 @@ NOMS = {"fr": "français", "en": "anglais", "es": "espagnol", "de": "allemand", 
         "ko": "coréen", "ru": "russe", "pl": "polonais", "ro": "roumain", "hi": "hindi", "id": "indonésien"}
 
 VOIX_PROPOSEES = {
-    "fr": ["fr-FR-HenriNeural", "fr-FR-RemyMultilingualNeural", "fr-FR-DeniseNeural", "fr-CA-AntoineNeural", "fr-BE-GerardNeural"],
-    "en": ["en-US-AndrewNeural", "en-US-ChristopherNeural", "en-US-GuyNeural", "en-GB-RyanNeural", "en-GB-ThomasNeural",
-           "en-US-BrianNeural", "en-AU-WilliamNeural"],
-    "es": ["es-ES-AlvaroNeural", "es-MX-JorgeNeural"],
-    "de": ["de-DE-ConradNeural", "de-DE-KillianNeural"],
-    "pt": ["pt-BR-AntonioNeural", "pt-PT-DuarteNeural"],
-    "it": ["it-IT-DiegoNeural"],
+    "fr": ["fr-FR-HenriNeural", "fr-FR-RemyMultilingualNeural", "fr-FR-DeniseNeural", "fr-FR-VivienneMultilingualNeural",
+           "fr-FR-EloiseNeural", "fr-CA-AntoineNeural", "fr-CA-JeanNeural", "fr-CA-ThierryNeural", "fr-CA-SylvieNeural",
+           "fr-BE-GerardNeural", "fr-BE-CharlineNeural", "fr-CH-FabriceNeural", "fr-CH-ArianeNeural"],
+    "en": ["en-US-AndrewNeural", "en-US-ChristopherNeural", "en-US-GuyNeural", "en-US-BrianNeural", "en-US-EricNeural",
+           "en-US-RogerNeural", "en-GB-RyanNeural", "en-GB-ThomasNeural", "en-AU-WilliamNeural",
+           "en-US-JennyNeural", "en-US-AriaNeural", "en-US-EmmaNeural", "en-US-AnaNeural", "en-GB-SoniaNeural",
+           "en-GB-LibbyNeural", "en-GB-MaisieNeural"],
+    "es": ["es-ES-AlvaroNeural", "es-MX-JorgeNeural", "es-ES-ElviraNeural", "es-MX-DaliaNeural"],
+    "de": ["de-DE-ConradNeural", "de-DE-KillianNeural", "de-DE-KatjaNeural", "de-DE-AmalaNeural"],
+    "pt": ["pt-BR-AntonioNeural", "pt-PT-DuarteNeural", "pt-BR-FranciscaNeural", "pt-PT-RaquelNeural"],
+    "it": ["it-IT-DiegoNeural", "it-IT-ElsaNeural", "it-IT-IsabellaNeural"],
 }
-
 CODE_RE = re.compile(r"^[a-z]{2,3}(-[A-Za-z]{2,4})?$")
 CHAMPS_PLAN = ("vo", "title")
 CHAMPS_CARTON = ("card", "sub")
@@ -64,6 +67,36 @@ def voix_de(langue, pj):
     v = dict(VOIX_DEFAUT.get(langue.split("-")[0], pj["voix"]))
     v.update({k: x for k, x in ((versions(pj).get(langue) or {}).get("voix") or {}).items() if x})
     return v
+
+
+def personnage(tag, pj):
+    return next((p for p in pj.get("personnages", []) if p.get("tag") == tag), None)
+
+
+def voix_plan(s, langue, pj):
+    """Voix d'un plan : celle du personnage qui parle (« qui ») dans cette langue, sinon celle du narrateur.
+    personnages[].voix = {"fr": {"nom", "debit", "hauteur"}, "en": {...}} ; personnages[].effet = "echo" (facultatif)."""
+    base = voix_de(langue, pj)
+    p = personnage(s.get("qui"), pj) if s.get("qui") else None
+    if not p:
+        return base
+    code = langue or source(pj)
+    pv = (p.get("voix") or {})
+    v = pv.get(code) or pv.get(code.split("-")[0])
+    if not v or not v.get("nom"):
+        return base                     # personnage sans voix dans cette langue : le narrateur lit la réplique
+    out = {"debit": "+0%", "hauteur": "+0Hz"}
+    out.update({k: x for k, x in v.items() if x})
+    if p.get("effet"):
+        out["effet"] = p["effet"]
+    return out
+
+
+EFFETS = {                              # filtres ffmpeg appliqués après la synthèse
+    "echo": "aecho=0.8:0.7:70|140:0.28|0.16",
+    "grave": "asetrate=24000*0.92,aresample=24000,atempo=1.087",
+    "lointain": "highpass=f=250,lowpass=f=3500,aecho=0.8:0.5:40:0.2",
+}
 
 
 VOIX_DEFAUT = {

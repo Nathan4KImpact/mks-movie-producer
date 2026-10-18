@@ -1,6 +1,6 @@
 # MKS Movie Producer — Manuel d'installation
 
-Version 1.1 · octobre 2026
+Version 1.2 · octobre 2026
 
 Ce manuel explique comment installer MKS Movie Producer sur un poste, vérifier que tout fonctionne, brancher les modèles d'IA et transférer un projet d'un ordinateur à un autre. L'utilisation au quotidien est décrite dans le **Manuel d'utilisation**.
 

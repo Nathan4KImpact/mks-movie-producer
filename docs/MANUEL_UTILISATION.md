@@ -1,6 +1,6 @@
 # MKS Movie Producer — Manuel d'utilisation
 
-Version 1.1 · octobre 2026
+Version 1.2 · octobre 2026
 
 MKS Movie Producer transforme un livre, un script ou un ensemble de documents en série vidéo narrée. Les épisodes sont écrits plan par plan, les images sont générées dans l'outil de votre choix (Google Flow, Higgsfield…), puis le montage est automatique : voix off, musique adaptée à chaque scène, titres, mouvements de caméra. Les exemples de ce manuel viennent du premier projet réalisé avec l'outil, **L'Ultime Assaut** (7 saisons × 7 épisodes × 7 minutes).
 
@@ -99,7 +99,7 @@ Une carte par épisode écrit, avec :
 | Numéro et clé | La clé (ex. `E101-02`) est le **nom de fichier** de l'image ou de la vidéo du plan |
 | Vignette | L'image ou la vidéo du plan trouvée dans le projet ; survolez une vidéo pour la lire |
 | **Copier le prompt** | Copie le prompt complet (style de la série + description des personnages) |
-| **Narration** | Texte lu par la voix off. Sa longueur fixe la durée du plan. |
+| **Narration / Réplique de** | Le menu choisit **qui parle** : *Narrateur* (voix off) ou un personnage du projet. Une réplique contient seulement les mots prononcés, sans guillemets ni « dit-il », et elle est lue avec la voix de ce personnage. La longueur du texte fixe la durée du plan. |
 | **Prompt image** | Description de l'image, en anglais. Un tag de personnage comme `[VOYANT]` est remplacé par sa description. |
 | **Mouvement** | Mouvement de caméra sur une image fixe (voir tableau) |
 | **Titre à l'écran** | Mot-clé affiché en bas de l'image (ex. ORGUEIL) |
@@ -127,7 +127,7 @@ Clash Defiant, Crusade - Heavy Industry, Dark Walk, Darkest Child, Echoes of Tim
 
 ### 7.1 La fiche
 
-**Fiche Flow** génère le fichier `E104_fiche_Flow.txt` dans le dossier des fiches et l'affiche :
+**Fiche Flow** génère le fichier `E104_fiche_Flow.txt` dans le dossier des fiches et l'affiche. Les plans où un personnage parle y sont marqués **RÉPLIQUE** ; leur prompt vidéo demande un personnage qui parle (mouvement des lèvres), avec le texte de la réplique et sa durée approximative. **Coupez le son généré par Flow** sur ces vidéos : la voix du personnage est ajoutée au montage.
 
 ![Fiche de prompts](images/05_fiche.jpg)
 
@@ -245,6 +245,17 @@ Cliquez sur **Enregistrer le projet** après modification.
 ### 13.3 Personnages récurrents
 
 Chaque personnage a un **tag** (ex. `VOYANT`), un nom, une **description en anglais** et une **image de référence**. Dans un prompt, `[VOYANT]` est remplacé par la description, et la fiche rappelle d'ajouter l'image de référence. **Image** dépose la référence dans le dossier des personnages ; **+ Personnage** en ajoute un.
+
+**Voix des personnages.** Sous chaque personnage, une ligne par langue du projet (`FR`, `EN`…) règle la voix qui lit ses répliques : voix Edge TTS, débit, hauteur, et **▶** pour l'écouter. Sans voix choisie dans une langue, ses répliques sont lues par le narrateur de cette langue.
+
+| Réglage | Effet |
+|---|---|
+| **Effet** `echo` | Léger écho, par exemple pour une voix divine ou céleste |
+| **Effet** `grave` | Voix plus basse et plus lourde (créatures, ennemi) |
+| **Effet** `lointain` | Voix filtrée et un peu distante (voix entendue de loin, souvenir) |
+| **sans visage** | Le personnage n'est jamais montré de face : ses répliques ne demandent pas de vidéo où il parle |
+
+Pour une série conversationnelle, déclarez les personnages qui parlent avant d'écrire les épisodes : l'IA d'écriture utilise leurs tags pour faire parler chacun avec sa voix.
 
 ### 13.4 Sources, export et projets du poste
 

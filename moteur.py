@@ -122,16 +122,21 @@ def empreinte_media(src):
 
 def voix(texte, dst, v=None):
     v = v or projet()["voix"]
-    sig = signature(texte, v.get("nom"), v.get("debit"), v.get("hauteur"))
+    sig = signature(texte, v.get("nom"), v.get("debit"), v.get("hauteur"), v.get("effet"))
     if a_jour(dst, sig):
         return dst
     txt = dst + ".txt"
     open(txt, "w", encoding="utf-8").write(texte)
+    brut = dst[:-4] + "_brut.mp3" if v.get("effet") else dst
     for _ in range(3):
         r = subprocess.run([sys.executable, "-m", "edge_tts", "--voice", v["nom"],
-                            f"--rate={v['debit']}", f"--pitch={v['hauteur']}",
-                            "-f", txt, "--write-media", dst], capture_output=True, text=True)
-        if r.returncode == 0 and os.path.exists(dst):
+                            f"--rate={v.get('debit', '+0%')}", f"--pitch={v.get('hauteur', '+0Hz')}",
+                            "-f", txt, "--write-media", brut], capture_output=True, text=True)
+        if r.returncode == 0 and os.path.exists(brut):
+            if brut != dst:                 # effet de voix (écho du Seigneur…)
+                from langues import EFFETS
+                run([FFMPEG, "-y", "-i", brut, "-af", EFFETS.get(v["effet"], "anull"), dst])
+                os.remove(brut)
             marquer(dst, sig)
             return dst
     raise RuntimeError("Voix Edge indisponible (connexion internet ?) : " + r.stderr[-300:])
@@ -266,7 +271,7 @@ def monter(ep, reprendre=True, langue=None):
         vo = s.get("vo", "").strip()
         a, d = None, 0.0
         if vo:
-            a = voix(vo, os.path.join(wd, nom + ".mp3"), v_langue); d = duree(a)
+            a = voix(vo, os.path.join(wd, nom + ".mp3"), lg.voix_plan(s, langue, pj)); d = duree(a)
         L = round(max(float(s.get("min", 4.0)), d + float(s.get("pad", 1.5))), 2)
         src, est_video = trouver_media(ep, s, wd)
         sig = signature("plan", L, empreinte_media(src), est_video, s.get("m", s.get("motion", "in")), s.get("title", ""))

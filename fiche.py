@@ -7,6 +7,21 @@ sys.path.insert(0, ICI)
 from contexte import projet, dossier, remplacer_tags, fichier, racine, _rel
 
 
+def nom_de(tag, pj):
+    if not tag:
+        return ""
+    p = next((x for x in pj.get("personnages", []) if x.get("tag") == tag), None)
+    return p.get("nom", tag) if p else tag
+
+
+def parlant(s, pj):
+    """Plan où l'on voit un personnage parler (synchro labiale demandée), sauf personnage « sans visage »."""
+    if not s.get("qui"):
+        return False
+    p = next((x for x in pj.get("personnages", []) if x.get("tag") == s["qui"]), {})
+    return not p.get("sans_visage")
+
+
 def fiche_flow(ep):
     pj = projet()
     e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
@@ -19,21 +34,31 @@ def fiche_flow(ep):
     L = [f"{pj['nom'].upper()} — {e['id']} « {e.get('title', '')} » — FICHE DE PROMPTS", "=" * 70,
          "Format : 16:9. Copier-coller chaque prompt tel quel (en anglais : meilleur rendu).",
          f"Enregistrer chaque image sous le NOM indiqué dans :  {rel_images}\\{ep}\\  (dossier du projet)"] + refs + \
-        ["Les plans VIDÉO sont listés à la fin (à faire après les images).", ""]
+        ["Les plans VIDÉO sont listés à la fin (à faire après les images).",
+         "RÉPLIQUE = un personnage parle à l'écran : la vidéo le montre en train de parler ; COUPER LE SON généré",
+         "par Flow (nos voix sont ajoutées au montage).", ""]
     for s in e["shots"]:
         if "k" not in s:
             continue
         p, persos = remplacer_tags(s.get("p", ""), pj)
         vo = s.get("vo", "")
+        qui = nom_de(s.get("qui"), pj)
         L += [f"--- {s['k']}.png {'  [' + ', '.join(x['tag'] for x in persos) + ']' if persos else ''}",
-              f"Narration : {vo[:140]}{'…' if len(vo) > 140 else ''}",
+              (f"RÉPLIQUE — {qui} : « {vo[:140]}{'…' if len(vo) > 140 else ''} »" if qui else
+               f"Narration : {vo[:140]}{'…' if len(vo) > 140 else ''}"),
               f"PROMPT : {sty}{p}", ""]
     vids = [s for s in e["shots"] if s.get("vid_prompt")]
     L += ["=" * 70, f"PLANS VIDÉO ({len(vids)}) — « Frames to Video », image de départ = l'image du même nom",
           "Durée 5 à 8 s, sans son. Enregistrer sous le NOM indiqué (.mp4) dans le même dossier.", ""]
     for s in vids:
-        L += [f"--- {s['k']}.mp4  (image de départ : {s['k']}.png)",
-              f"PROMPT : cinematic, slow camera movement, {s['vid_prompt']}", ""]
+        parle = parlant(s, pj)
+        vp, _ = remplacer_tags(s["vid_prompt"], pj)
+        L += [f"--- {s['k']}.mp4  (image de départ : {s['k']}.png)" + ("  — RÉPLIQUE, couper le son" if parle else ""),
+              (f"PROMPT : cinematic close shot, {vp}, the character is speaking with natural lip and facial movement, "
+               f"steady camera, no subtitles, no text" if parle else
+               f"PROMPT : cinematic, slow camera movement, {vp}"), ""]
+        if parle:
+            L.insert(len(L) - 1, f"Réplique ({len(s.get('vo', '').split())} mots, ≈ {max(3, round(len(s.get('vo', '').split()) / 2.3))} s) : « {s.get('vo', '')} »")
     out = dossier("fiches", f"{ep}_fiche_Flow.txt", creer=False)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w", encoding="utf-8-sig").write("\r\n".join(L))

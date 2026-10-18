@@ -563,6 +563,10 @@ Format technique (obligatoire) :
   "m" (mouvement : in, out, left, right, up, down, still), optionnels "title" (mot-clé en capitales affiché à l'écran),
   "min" (durée mini en s), "mus" (changement de musique à ce plan), "vid_prompt" (pour 4 à 7 plans à animer).
 - Personnages récurrents : mettre leur tag au début de "p" quand ils sont visibles de face : {tags}.
+- Répliques : quand un personnage parle, un plan par réplique avec "qui" (son tag) et, dans "vo", seulement les mots
+  prononcés (sans guillemets ni « dit-il ») ; le prompt image le montre en train de parler et "vid_prompt" décrit
+  son attitude pendant qu'il parle. Sans "qui", "vo" est lu par le narrateur. Préférer les dialogues à la narration
+  chaque fois que la source rapporte des paroles ou un échange.
 - Deux cartons : après les 1 ou 2 premiers plans {{"card":"{titre_carton}","sub":"Saison X · Épisode Y — Titre","dur":7}}
   et à la fin {{"card":"À SUIVRE","sub":"Épisode suivant — Titre","dur":6}}.
 - Durée visée : {duree} minutes, soit environ {mots} mots de narration.
