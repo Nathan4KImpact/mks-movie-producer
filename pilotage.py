@@ -20,7 +20,7 @@ IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG")
 VID_EXT = (".mp4", ".mov", ".webm")
 # envoi de fichiers : le premier segment de la destination désigne un rôle (ou son ancien nom de dossier)
 ALIAS_ROLES = {"sources": "sources", "characters": "personnages", "personnages": "personnages", "musique": "musique",
-               "flow": "images", "images": "images", "bible": "bible"}
+               "sons": "sons", "flow": "images", "images": "images", "bible": "bible"}
 JOBS = {}
 ETAPES = ["À écrire", "Script écrit", "Fiche prête", "Images en cours", "Prêt à monter", "Monté", "Validé"]
 
@@ -604,6 +604,10 @@ class H(BaseHTTPRequestHandler):
                 pj = cx.projet()
                 return self.envoyer(200, {"source": lg.source(pj), "versions": lg.versions(pj), "noms": lg.NOMS,
                                           "voix": lg.VOIX_PROPOSEES, "voix_defaut": lg.VOIX_DEFAUT})
+            if p == "/api/sons":
+                import sons
+                return self.envoyer(200, {"sons": sons.liste(), "dossier": cx._rel(cx.dossier("sons")),
+                                          "volume_ambiance": cx.projet().get("volume_ambiance", 0.8)})
             if p.startswith("/essai/"):
                 return self.fichier(os.path.join(ICI, "cache", "essais", p.split("/")[-1]), os.path.join(ICI, "cache", "essais"))
             if p == "/api/jobs":
@@ -756,6 +760,12 @@ class H(BaseHTTPRequestHandler):
                 t0 = time.time()
                 rep = ia.appeler("Réponds en un seul mot.", "Dis simplement : OK", max_tokens=20, pid=c["profil"])
                 return self.envoyer(200, {"ok": True, "reponse": rep.strip()[:80], "secondes": round(time.time() - t0, 1)})
+            if p == "/api/sons/essai":
+                import sons
+                nom = (c.get("nom") or "").strip()
+                if not re.match(r"^[A-Za-z0-9_-]{1,60}$", nom) or not sons.connu(nom) or sons.nom_propre(nom) == "aucune":
+                    return self.envoyer(400, {"erreur": "son inconnu"})
+                return self.envoyer(200, {"url": "/essai/" + os.path.basename(sons.essai(nom))})
             if p == "/api/voix/essai":
                 return self.envoyer(200, essai_voix(c))
             if p == "/api/valider":

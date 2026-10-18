@@ -14,6 +14,7 @@
   },
   "versions": {},
   "volume_musique": 0.47,
+  "volume_ambiance": 0.8,
   "musique_defaut": "Lord_of_the_Land",
   "musiques": [
     "Clash_Defiant",
@@ -42,6 +43,7 @@
     "bible": "bibliotheque/bible",
     "episodes": "bibliotheque/episodes",
     "musique": "bibliotheque/musique",
+    "sons": "bibliotheque/sons",
     "fiches": "production/fiches",
     "images": "production/images",
     "rendus": "production/rendus",

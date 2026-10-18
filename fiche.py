@@ -22,6 +22,29 @@ def parlant(s, pj):
     return not p.get("sans_visage")
 
 
+def bloc_sons(e):
+    """Sons de l'épisode : d'où ils viendront au montage, et comment en obtenir un vrai enregistrement."""
+    import sons
+    u = sons.utilises(e)
+    if not u:
+        return []
+    rel = _rel(dossier("sons")).replace("/", "\\")
+    L = ["=" * 70, f"SONS DE L'ÉPISODE ({len(u)}) — ambiances et bruitages ajoutés au montage",
+         "« synthèse » = son de repli fabriqué par l'outil (déjà utilisable). Pour un rendu réaliste, déposer un vrai son",
+         f"(enregistrement libre de droits ou générateur de bruitages, avec le prompt ci-dessous) dans :  {rel}\\<nom>.mp3", ""]
+    for n, plans in u.items():
+        c = sons.CATALOGUE.get(n, {})
+        f = sons.fichier_son(n)
+        L += [f"--- {n}  ({c.get('nom', 'son du projet')}, {c.get('type', 'fichier')}) — "
+              + (f"fichier : {os.path.basename(f)}" if f else ("synthèse" if c else "INTROUVABLE"))
+              + f" — plans : {', '.join(plans[:12])}{'…' if len(plans) > 12 else ''}"]
+        if c.get("en"):
+            L += [f"PROMPT SON : {c['en']}" + (f", {c.get('duree', 4)} seconds" if c.get("type") == "bruitage"
+                                               else ", seamless loop, 30 seconds")]
+        L += [""]
+    return L
+
+
 def fiche_flow(ep):
     pj = projet()
     e = json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
@@ -52,9 +75,20 @@ def fiche_flow(ep):
               f"PROMPT : {sty}{p}", ""]
     vids = [s for s in e["shots"] if s.get("vid_prompt")]
     L += ["=" * 70, f"PLANS VIDÉO ({len(vids)}) — « Frames to Video », image de départ = l'image du même nom",
-          "Durée 5 à 8 s, sans son. Enregistrer sous le NOM indiqué (.mp4) dans le même dossier.", ""]
+          "Durée 5 à 8 s, sans son (sauf plans marqués GARDER LE SON : le son de Flow sert alors d'ambiance).",
+          "Enregistrer sous le NOM indiqué (.mp4) dans le même dossier.", ""]
+    import sons
+    amb_courante = ""
+    ambiance_de = {}
+    for s in e["shots"]:                           # ambiance en cours à chaque plan (pour le son des vidéos)
+        if s.get("amb"):
+            amb_courante = "" if sons.nom_propre(s["amb"]) == "aucune" else sons.nom_propre(s["amb"])
+        if s.get("k"):
+            ambiance_de[s["k"]] = amb_courante
     for s in vids:
         parle = parlant(s, pj)
+        garde = bool(s.get("son_video")) and not parle
+        son_en = sons.CATALOGUE.get(ambiance_de.get(s["k"], ""), {}).get("en", "")
         vp, _ = remplacer_tags(s["vid_prompt"], pj)
         depart = f"{s['k']}.png"
         if s.get("img_url"):                       # image hébergée (Higgsfield…) : donner son lien si elle n'est pas dans le projet
@@ -62,12 +96,15 @@ def fiche_flow(ep):
             src, est_video = trouver_media(ep, {k: v for k, v in s.items() if k != "vid_url"}, None, telecharger=False)
             if src and str(src).startswith("http"):
                 depart += f", à télécharger : {src}"
-        L += [f"--- {s['k']}.mp4  (image de départ : {depart})" + ("  — RÉPLIQUE, couper le son" if parle else ""),
+        L += [f"--- {s['k']}.mp4  (image de départ : {depart})" + ("  — RÉPLIQUE, couper le son" if parle else
+                                                                  "  — GARDER LE SON" if garde else ""),
               (f"PROMPT : cinematic close shot, {vp}, the character is speaking with natural lip and facial movement, "
                f"steady camera, no subtitles, no text" if parle else
-               f"PROMPT : cinematic, slow camera movement, {vp}"), ""]
+               f"PROMPT : cinematic, slow camera movement, {vp}" + (f", realistic ambient sound: {son_en}, no music, no dialogue"
+                                                                   if garde and son_en else "")), ""]
         if parle:
             L.insert(len(L) - 1, f"Réplique ({len(s.get('vo', '').split())} mots, ≈ {max(3, round(len(s.get('vo', '').split()) / 2.3))} s) : « {s.get('vo', '')} »")
+    L += bloc_sons(e)
     out = dossier("fiches", f"{ep}_fiche_Flow.txt", creer=False)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w", encoding="utf-8-sig").write("\r\n".join(L))

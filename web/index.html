@@ -65,6 +65,8 @@ textarea,input,select{width:100%;background:#0f0d13;border:1px solid var(--line)
 textarea:focus,input:focus,select:focus{outline:none;border-color:var(--gold)}
 textarea.vo{min-height:64px;font-size:14px}
 .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mini.sons{grid-template-columns:1.4fr 1.4fr .7fr .7fr}
+.sonsliste{display:grid;gap:0;margin:8px 0}.sd{color:var(--muted);font-size:12px}.cd{background:#0f0d13;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font:12px monospace}a.lien{color:var(--gold)}.sonl{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-bottom:1px solid var(--line,#2a2620);padding:6px 0}
 .dirty{box-shadow:0 0 0 1px var(--gold) inset}
 .tr label{color:var(--blue)} .tr textarea,.tr input{border-color:#2b3a4f;background:#141a24}
 .pill.lang{background:#1b2636;color:var(--blue)}
@@ -149,7 +151,7 @@ const api = async (u, o={}) => { const r = await fetch(u, {headers:{'Content-Typ
 const win = p => (p||'').replace(/\//g, '\\');
 const esc = s => (s??'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let CONFIG = null, PROJET = null, INFOS = null, EP = null, DIRTY = false;
-let LANGS = {source:'fr', versions:{}, noms:{}, voix:{}, voix_defaut:{}}, VL = '', RETOUCHE = new Set();
+let LANGS = {source:'fr', versions:{}, noms:{}, voix:{}, voix_defaut:{}}, VL = '', RETOUCHE = new Set(), SONS = {sons:[]};
 const LN = c => LANGS.noms[(c||'').split('-')[0]] || c;
 const VERS = () => Object.keys(LANGS.versions||{});
 const STR = {ok:'<span class="pill ok">traduit</span>', manquante:'<span class="pill">à traduire</span>', a_revoir:'<span class="pill wait">à revoir</span>', rien:''};
@@ -173,6 +175,15 @@ async function ecouter(nom, debit, hauteur, langue){
   try { const r = await api('/api/voix/essai',{method:'POST',body:JSON.stringify({nom, debit, hauteur, texte: EXTRAITS[(langue||'').split('-')[0]] || EXTRAITS.en})});
     new Audio(r.url).play(); } catch(e){ toast(e.message); } }
 const MOUV = ['in','out','left','right','up','down','still'];
+async function ecouterSon(nom){
+  nom = (nom||'').split('+')[0]; if(!nom || nom==='aucune') return toast('Choisis d\'abord un son');
+  toast('Préparation de l\'extrait…');
+  try { const r = await api('/api/sons/essai',{method:'POST',body:JSON.stringify({nom})}); new Audio(r.url).play(); } catch(e){ toast(e.message); } }
+function optionsSons(type, val, vide){            // menu des ambiances (type 'ambiance') ou des bruitages ('bruitage')
+  const l = SONS.sons.filter(x => x.type===type || x.type==='fichier');
+  const conn = new Set(l.map(x=>x.nom)), extra = val && !conn.has(val) && val!=='aucune' ? [`<option selected>${esc(val)}</option>`] : [];
+  return `<option value="">${vide}</option>${type==='ambiance'?`<option value="aucune" ${val==='aucune'?'selected':''}>— couper l'ambiance</option>`:''}`
+    + l.map(x=>`<option value="${x.nom}" ${x.nom===val?'selected':''}>${esc(x.libelle)}${x.source==='fichier'?' ♪':''}</option>`).join('') + extra.join(''); }
 
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
 function go(v, arg){ if(DIRTY && !confirm('Modifications non enregistrées. Quitter quand même ?')) return; DIRTY=false; $('#main').oninput = null;
@@ -208,7 +219,8 @@ async function episode(ep, garder){
   if(vueEpisode() === 'studio') return studio(ep, garder);
   if(typeof studioQuitter === 'function') studioQuitter();
   EP = garder || await api('/api/episode/'+ep); EP._ep = ep;
-  await chargerProjet(); VL = langueAffichee(); RETOUCHE = new Set();
+  await chargerProjet(); VL = langueAffichee(); RETOUCHE = new Set(); SONS = await api('/api/sons').catch(()=>({sons:[]}));
+  let ambCourante = '';
   const trv = (el, i, champ, lib, zone) => { const t = (el.versions||{})[VL]||{};
     return zone ? `<div class="full tr"><label>${lib} (${VL.toUpperCase()}) ${STR[(el._tr||{})[VL]]||''}</label><textarea class="vo" data-l="${champ}" rows="3">${esc(t[champ])}</textarea></div>`
                 : `<div class="tr"><label>${lib} (${VL.toUpperCase()})</label><input data-l="${champ}" value="${esc(t[champ])}"></div>`; };
@@ -259,6 +271,12 @@ async function episode(ep, garder){
           <div><label>Musique (démarre ici)</label><select data-f="mus">${[...new Set([...mus, s.mus||''])].map(m=>`<option value="${m}" ${m===(s.mus||'')?'selected':''}>${m?m.replace(/_/g,' '):'—'}</option>`).join('')}</select></div>
           <div><label>Durée mini (s)</label><input data-f="min" type="number" step="0.5" value="${s.min??''}"></div>
         </div>
+        <div class="full mini sons">
+          <div><label>Ambiance (démarre ici)</label><div class="row" style="flex-wrap:nowrap;gap:4px"><select data-f="amb">${optionsSons('ambiance', s.amb||'', ambCourante?'… continue : '+esc(ambCourante):'—')}</select><button class="btn small" title="Écouter" onclick="ecouterSon(this.previousElementSibling.value||'${ambCourante}')">▶</button></div></div>
+          <div><label>Bruitage (début du plan)</label><div class="row" style="flex-wrap:nowrap;gap:4px"><select data-f="sfx">${optionsSons('bruitage', [].concat(s.sfx||[]).join('+'), '—')}</select><button class="btn small" title="Écouter" onclick="ecouterSon(this.previousElementSibling.value)">▶</button></div></div>
+          <div><label>Niveau ambiance</label><input data-f="amb_vol" type="number" step="0.1" min="0" placeholder="1" value="${s.amb_vol??''}"></div>
+          <div><label title="Garder le son de la vidéo (ex. horde générée avec son par Flow)">Son de la vidéo</label><label style="margin:8px 0 0;display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0"><input type="checkbox" data-f="son_video" style="width:auto" ${s.son_video?'checked':''}> garder</label></div>
+        </div>${(()=>{ if(s.amb) ambCourante = s.amb==='aucune' ? '' : s.amb; return ''; })()}
         <div class="full"><label>Prompt vidéo (si plan animé)</label><input data-f="vid_prompt" value="${esc(s.vid_prompt)}"></div>
       </div>
     </div>`).join('')}</div>`;
@@ -272,7 +290,9 @@ function lireForm(){
     const s = EP.shots[+row.dataset.i];
     row.querySelectorAll('[data-f]').forEach(el => {
       const f = el.dataset.f; let v = el.value;
-      if(['min','dur'].includes(f)){ if(v==='') { delete s[f]; return; } v = +v; }
+      if(el.type==='checkbox'){ if(el.checked) s[f] = true; else delete s[f]; return; }
+      if(['min','dur','amb_vol'].includes(f)){ if(v==='') { delete s[f]; return; } v = +v; }
+      if(f==='sfx' && v.includes('+')) v = v.split('+');
       if(v==='' && f!=='vo') delete s[f]; else s[f] = v;
     });
   });
@@ -573,7 +593,7 @@ async function chargerProjet(){
   return PROJET;
 }
 async function projet(){
-  await chargerProjet(); const [src, org] = await Promise.all([api('/api/sources'), api('/api/organisation')]); const pj = PROJET;
+  await chargerProjet(); const [src, org, sonsP] = await Promise.all([api('/api/sources'), api('/api/organisation'), api('/api/sons').catch(()=>({sons:[]}))]); const pj = PROJET;
   const persos = pj.personnages || [];
   $('#main').innerHTML = `
   <div class="grid" style="grid-template-columns:minmax(320px,1fr) 2fr">
@@ -603,7 +623,7 @@ async function projet(){
         </div>
         <div><label>Voix (Edge TTS)</label>${choixVoix('id="p_vn"', LANGS.source, pj.voix.nom)}</div>
         <div class="mini"><div><label>Débit</label><input id="p_vd" value="${esc(pj.voix.debit)}"></div><div><label>Hauteur</label><input id="p_vh" value="${esc(pj.voix.hauteur)}"></div>
-          <div><label>Vol. musique</label><input id="p_vol" type="number" step="0.01" value="${pj.volume_musique}"></div><div><label>Livre (PDF)</label><input id="p_livre" value="${esc(pj.livre||'')}" placeholder="sources/…pdf"></div></div>
+          <div><label>Vol. musique</label><input id="p_vol" type="number" step="0.01" value="${pj.volume_musique}"></div><div><label>Vol. ambiances</label><input id="p_vamb" type="number" step="0.05" value="${pj.volume_ambiance??0.8}"></div><div><label>Livre (PDF)</label><input id="p_livre" value="${esc(pj.livre||'')}" placeholder="sources/…pdf"></div></div>
         <div class="full"><label>Style ajouté à chaque prompt image (anglais)</label><textarea id="p_sty" rows="2">${esc(pj.style_image)}</textarea></div>
         <div class="full"><label>Règles de la série pour l'IA (ton, narration, direction artistique)</label><textarea id="p_reg" rows="5">${esc(pj.regles_ia||'')}</textarea></div>
       </div>
@@ -623,6 +643,14 @@ async function projet(){
         </div></div>`).join('')}</div>
       <div class="row"><button class="btn small" onclick="ajoutPerso()">+ Personnage</button><div class="sp"></div><button class="btn gold" onclick="sauverProjet()">Enregistrer le projet</button></div>
     </div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Sons et bruitages <span class="meta">(ambiances sous la musique, baissées quand on parle ; dans l'éditeur : « Ambiance » et « Bruitage » sur chaque plan)</span></h3>
+    <p class="sd">Chaque son vient d'un <b>fichier du projet</b> s'il existe (<span class="cd">${esc(win(sonsP.dossier||'bibliotheque/sons'))}\\&lt;nom&gt;.mp3</span>), sinon d'une <b>synthèse de repli</b> faite par ffmpeg : utilisable tout de suite, mais moins riche. Pour un vrai son : un enregistrement libre de droits ou un générateur de bruitages avec le prompt anglais proposé, puis <b>Fichier…</b> pour l'enregistrer sous le bon nom.</p>
+    <div class="sonsliste">${sonsP.sons.map(x=>`<div class="sonl"><button class="btn small" title="Écouter" onclick="ecouterSon('${x.nom}')">▶</button>
+      <div><div><b>${esc(x.libelle)}</b> <span class="sd">${x.nom} · ${x.type}</span> <span class="pill ${x.source==='fichier'?'ok':'wait'}">${x.source==='fichier'?'fichier : '+esc(x.fichier):'synthèse'}</span></div>
+      ${x.prompt_en?`<div class="sd">${esc(x.prompt_en)} · <a href="#" class="lien" onclick='navigator.clipboard.writeText(${JSON.stringify(x.prompt_en)});toast("Prompt copié");return false'>copier le prompt</a></div>`:''}</div>
+      <label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Fichier…<input type="file" accept="audio/*" style="display:none" onchange="envoyerSon('${x.nom}',this.files[0])"></label></div>`).join('')}</div>
+    <div class="row"><button class="btn small" onclick="ouvrir('sons')">Ouvrir le dossier des sons</button></div>
   </div>
   <div class="card" style="margin-top:16px"><h3>Versions linguistiques <span class="meta">(mêmes images et musiques ; narration, textes à l'écran, cartons et voix dans chaque langue — une vidéo par langue)</span></h3>
     <div class="row" style="gap:10px"><span>Langue d'origine des scripts : <b>${esc(LN(LANGS.source))}</b> — voix ${esc(pj.voix.nom)}</span>
@@ -704,7 +732,7 @@ async function sauverProjet(silencieux){
   pj.nom = $('#p_nom').value.trim()||pj.nom; pj.sous_titre = $('#p_sous').value.trim();
   pj.saisons = +$('#p_s').value; pj.episodes_par_saison = +$('#p_e').value; pj.duree_min = +$('#p_d').value; pj.couleur = $('#p_c').value;
   pj.voix = {nom:$('#p_vn').value.trim(), debit:$('#p_vd').value.trim(), hauteur:$('#p_vh').value.trim()};
-  pj.volume_musique = +$('#p_vol').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
+  pj.volume_musique = +$('#p_vol').value; pj.volume_ambiance = +$('#p_vamb').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
   if($('#versions')){ const vs = {}; document.querySelectorAll('#versions .prof').forEach(r => { const g = k => r.querySelector(`[data-k=${k}]`).value.trim();
     vs[r.dataset.l] = {titre:g('titre'), voix:{nom:g('nom'), debit:g('debit'), hauteur:g('hauteur')}}; }); pj.versions = vs; }
   await api('/api/projet',{method:'PUT',body:JSON.stringify(pj)}); if(!silencieux) toast('Projet enregistré'); await chargerProjet();
@@ -727,6 +755,9 @@ async function envoyerSources(fs){ for(const f of fs){ toast('Envoi de '+f.name+
 async function envoyerRef(i, f){ await sauverProjet(true); const x = PROJET.personnages[i]; const ext = f.name.split('.').pop().toLowerCase();
   const dest = 'Characters/'+(x.tag||'perso').toLowerCase()+'_reference.'+ext; x.reference = (await envoyer(dest, f)).rel;
   await api('/api/projet',{method:'PUT',body:JSON.stringify(PROJET)}); toast('Image de référence enregistrée'); projet(); }
+async function envoyerSon(nom, f){ const ext = f.name.split('.').pop().toLowerCase();
+  if(!['mp3','wav','ogg','flac','m4a','opus'].includes(ext)) return toast('Format audio non pris en charge');
+  await envoyer('sons/'+nom+'.'+ext, f); toast('Son enregistré : il remplace la synthèse au prochain montage'); projet(); }
 async function envoyerLogo(f){ const ext = f.name.split('.').pop().toLowerCase(); await envoyer('logo.'+ext, f); toast('Logo importé'); projet(); }
 async function regenLogo(g){ await api('/api/projet/logo',{method:'POST',body:JSON.stringify({generique:g})}); toast('Logo régénéré'); projet(); }
 function exporter(r){ action('exporter', r?['--rendus']:[]); toast('Export lancé : le zip arrivera dans le dossier _exports du projet'); }

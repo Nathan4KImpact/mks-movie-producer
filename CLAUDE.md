@@ -22,12 +22,12 @@ Répondre en français à l'utilisateur.
 - `lots.py` : export par lots d'une fiche (relit la fiche générée : un fichier par type IMG/VID et par combinaison de
   personnages, + `<EP>_index.csv` ordre → nom final) dans `<dossier fiches>/lots/<EP>/`. Commande `lots`, `POST /api/lots`.
   Dépend du format des en-têtes de la fiche (`--- E104-01.png  [VOYANT, SAGESSE]`) : le garder compatible si `fiche.py` change.
-- `langues.py` : versions linguistiques (voir plus bas). `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP.
+- `sons.py` : ambiances et bruitages (voir plus bas). `langues.py` : versions linguistiques (voir plus bas). `logo.py` : logos SVG générés. `mcp_server.py` : outils MCP.
 
 ## Organisation d'un projet (aucun chemin en dur)
 Seuls `projet.json` et `suivi.json` sont à la racine. Les dossiers de travail s'obtiennent TOUJOURS par
 `contexte.dossier(rôle, *sous_parties)` — rôles : `sources`, `personnages`, `bible`, `episodes`, `fiches`, `images`,
-`rendus`, `exports`, `musique` (voir `ROLES`). La carte est dans `projet.json > dossiers` ; un dossier déplacé est
+`rendus`, `exports`, `musique`, `sons` (voir `ROLES`). La carte est dans `projet.json > dossiers` ; un dossier déplacé est
 retrouvé d'après son contenu (`detecter`) puis mémorisé. Les fichiers notés en relatif (livre, logo, références)
 passent par `contexte.fichier(rel)` (recherche par nom), et `reparer_fichiers()` met `projet.json` à jour.
 Média d'un plan hors du dossier des images : `chercher_media(clé)`. Ne jamais écrire `chemin("Flow", …)`.
@@ -39,6 +39,12 @@ Nouveau projet : `DISPOSITION_NOUVEAU` (bibliotheque/… et production/…). `ra
 Réplique : `"qui": "SAGESSE"` sur un plan = `vo` dit par ce personnage (mots prononcés seulement) avec sa voix
 `personnages[].voix.<langue>` (+ `effet` echo|grave|lointain, `sans_visage`) ; sans `qui` ni voix → narrateur
 (`langues.voix_plan`). La fiche marque les RÉPLIQUES et demande des vidéos où le personnage parle (son Flow coupé).
+Sons (`sons.py`) : `"amb": "horde"` = ambiance qui démarre à ce plan et continue jusqu'au prochain `amb` (`"aucune"` coupe,
+`amb_vol` = niveau) ; `"sfx": "cor"` ou liste = bruitage au début du plan (`sfx_t` décalage) ; `"son_video": true` garde le son
+de la vidéo du plan. Source : `<dossier sons>/<nom>.mp3|wav…` sinon synthèse ffmpeg de repli (`sons.CATALOGUE`, recettes
+`aevalsrc`/`anoisesrc` ; incrémenter `VERSION` si une recette change). Mixage : voix + musique + sons, ces deux derniers
+baissés par la voix (`sidechaincompress`) ; `projet.json > volume_ambiance`. Les IA qui réécrivent le JSON recollent ces
+champs (`ia.GARDES`).
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
 Champs posés par la vue Studio (facultatifs) : `media` (image/vidéo choisie, chemin relatif au projet, PRIORITAIRE sur la clé),
 `voix_fichier` (narration enregistrée/importée, remplace la synthèse pour la langue d'origine seulement), `mus_off` (décalage

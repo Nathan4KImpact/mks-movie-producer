@@ -98,6 +98,14 @@ def etat_images(ep):
     return {"episode": ep, "manquants": manquants, "images": images, "videos": videos}
 
 
+def a_un_son(f):
+    try:
+        return bool(run([FFPROBE, "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
+                         "-of", "csv=p=0", f]).strip())
+    except RuntimeError:
+        return False
+
+
 def charger_episode(ep):
     return json.load(open(dossier("episodes", ep + ".json"), encoding="utf-8"))
 
@@ -264,7 +272,7 @@ def monter(ep, reprendre=True, langue=None):
     if not reprendre and os.path.isdir(wd):
         shutil.rmtree(wd)
     os.makedirs(wd, exist_ok=True)
-    clips, segs, manquants, textes = [], [], [], {}
+    clips, segs, manquants, textes, sons_video = [], [], [], {}, []
     for i, s in enumerate(e["shots"]):
         nom = f"p{i:03d}"
         if s.get("card"):
@@ -297,6 +305,11 @@ def monter(ep, reprendre=True, langue=None):
                 plan(s, L, src, wd, nom, est_video)
             marquer(os.path.join(wd, nom + ".mp4"), sig)
         clips.append(nom + ".mp4"); segs.append((L, a)); textes[len(segs) - 1] = (vo, d)
+        if s.get("son_video") and est_video and src and a_un_son(src):     # son de la vidéo gardé (horde générée avec son…)
+            sv = f"sv{i:03d}.wav"
+            run([FFMPEG, "-y", "-i", src, "-vn", "-af", f"loudnorm=I=-26:TP=-3,apad=whole_dur={L},atrim=0:{L},"
+                 f"afade=t=in:d=0.3,afade=t=out:st={max(0, L - 0.5):.2f}:d=0.5", "-ar", "44100", "-ac", "2", sv], cwd=wd)
+            sons_video.append((i, sv, float(s.get("son_video_vol", 1))))
         log(f"  plan {i + 1}/{len(e['shots'])} {s.get('k', '')} ok ({L:.1f} s)")
     open(os.path.join(wd, "liste.txt"), "w", encoding="utf-8").write("".join(f"file '{c}'\n" for c in clips))
     run([FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", "liste.txt", "-c", "copy", "video.mp4"], cwd=wd)
@@ -320,12 +333,24 @@ def monter(ep, reprendre=True, langue=None):
         sections = [(0.0, projet().get("musique_defaut", "Lord_of_the_Land"), 0.0)]
     sections[0] = (0.0, sections[0][1], sections[0][2])
     musique(total, sections, wd)
-    vol = projet().get("volume_musique", 0.47)
-    run([FFMPEG, "-y", "-i", "voix.wav", "-i", "fond.wav", "-filter_complex",
-         f"[0:a]loudnorm=I=-16:TP=-1.5,asplit=2[v1][v2];[1:a]volume={vol}[b];"
-         f"[b][v1]sidechaincompress=threshold=0.03:ratio=4:attack=30:release=600[bd];"
-         f"[bd][v2]amix=inputs=2:normalize=0,atrim=0:{total:.2f}[m]",
-         "-map", "[m]", "-ar", "44100", "mix.wav"], cwd=wd)
+    import sons
+    bruits = sons.piste(e["shots"], debuts, [L for L, _ in segs], total, wd,
+                        [(debuts[i], f, v) for i, f, v in sons_video], signature, a_jour, marquer)
+    vol = pj.get("volume_musique", 0.47)
+    if bruits:                       # ambiances et bruitages : sous la musique, baissés aussi quand on parle
+        va = pj.get("volume_ambiance", 0.8)
+        run([FFMPEG, "-y", "-i", "voix.wav", "-i", "fond.wav", "-i", bruits, "-filter_complex",
+             f"[0:a]loudnorm=I=-16:TP=-1.5,asplit=3[v1][v2][v3];[1:a]volume={vol}[b];[2:a]volume={va}[s];"
+             f"[b][v1]sidechaincompress=threshold=0.03:ratio=4:attack=30:release=600[bd];"
+             f"[s][v3]sidechaincompress=threshold=0.03:ratio=3:attack=40:release=700[sd];"
+             f"[bd][sd][v2]amix=inputs=3:normalize=0,alimiter=limit=0.97,atrim=0:{total:.2f}[m]",
+             "-map", "[m]", "-ar", "44100", "mix.wav"], cwd=wd)
+    else:
+        run([FFMPEG, "-y", "-i", "voix.wav", "-i", "fond.wav", "-filter_complex",
+             f"[0:a]loudnorm=I=-16:TP=-1.5,asplit=2[v1][v2];[1:a]volume={vol}[b];"
+             f"[b][v1]sidechaincompress=threshold=0.03:ratio=4:attack=30:release=600[bd];"
+             f"[bd][v2]amix=inputs=2:normalize=0,atrim=0:{total:.2f}[m]",
+             "-map", "[m]", "-ar", "44100", "mix.wav"], cwd=wd)
     nom_sortie = f"{e['id']}_{slug(e.get('title', ''))}{lg.suffixe(langue, pj)}.mp4"
     sortie = dossier("rendus", *([langue] if langue else []), nom_sortie, creer=True)
     os.makedirs(os.path.dirname(sortie), exist_ok=True)

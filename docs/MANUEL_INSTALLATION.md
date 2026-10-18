@@ -1,6 +1,6 @@
 # MKS Movie Producer — Manuel d'installation
 
-Version 1.2 · octobre 2026
+Version 1.3 · octobre 2026
 
 Ce manuel explique comment installer MKS Movie Producer sur un poste, vérifier que tout fonctionne, brancher les modèles d'IA et transférer un projet d'un ordinateur à un autre. L'utilisation au quotidien est décrite dans le **Manuel d'utilisation**.
 
@@ -18,6 +18,8 @@ MKS Movie Producer est une application locale : elle tourne sur votre ordinateur
 | `pilotage.py` | Serveur local et interface web |
 | `atelier.py` | Ligne de commande : monter, fiche, écrire, exporter… |
 | `moteur.py` | Montage vidéo (ffmpeg), voix off, musique |
+| `sons.py` | Ambiances et bruitages (fichiers du projet ou synthèse ffmpeg) |
+| `langues.py` | Versions linguistiques, voix des personnages, sous-titres |
 | `ia.py`, `cles.py` | Appels aux modèles d'IA, gestion des clés |
 | `contexte.py` | Projet actif, réglages, migration |
 | `fiche.py`, `logo.py` | Fiches de prompts, logos générés |
@@ -297,6 +299,7 @@ L'Ultime Assaut/
     personnages/       images de référence des personnages
     bible/             bible.md et plan.json (le plan des épisodes)
     episodes/          scripts des épisodes : E101.json, E102.json…
+    sons/              facultatif : ambiances et bruitages (horde.mp3…), sinon synthèse
     logo.svg           logo affiché dans la bannière
   production/
     fiches/            fiches de prompts : E104_fiche_Flow.txt…
@@ -312,7 +315,7 @@ Le dossier **`modele-projet`** du logiciel contient exactement cette organisatio
 
 Cette organisation n'est pas imposée. Vous pouvez renommer, regrouper ou déplacer les dossiers dans l'Explorateur : **seuls `projet.json` et `suivi.json` doivent rester à la racine**.
 
-- Chaque dossier a un **rôle** (sources, personnages, bible, épisodes, fiches, images, rendus, exports, musique). Le dossier de chaque rôle est noté dans `projet.json`.
+- Chaque dossier a un **rôle** (sources, personnages, bible, épisodes, fiches, images, rendus, exports, musique, sons). Le dossier de chaque rôle est noté dans `projet.json`.
 - Si un dossier a été déplacé, l'application le **retrouve d'après son contenu** : des scripts `.json` d'épisodes, un `plan.json`, des fiches `_fiche_Flow.txt`, des sous-dossiers d'images nommés comme les épisodes, etc. Elle met alors `projet.json` à jour.
 - Le livre, le logo et les images de référence déplacés sont retrouvés **par leur nom de fichier**, n'importe où dans le projet.
 - Une image de plan rangée hors du dossier des images (par exemple dans un ancien dossier `Flow`) est elle aussi retrouvée par son nom.

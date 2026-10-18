@@ -274,7 +274,7 @@ function stInsp(){
   if(s.card){
     el.innerHTML = `<div class="hd">Carton <span class="meta" style="margin-left:auto;letter-spacing:0;text-transform:none">${hms(g.t0,1)} · ${g.L.toFixed(1)} s</span></div>
     <div class="st-scrollv"><div class="bloc"><h4>Texte</h4>${champ('card','Titre')}${champ('sub','Sous-titre')}${champ('dur','Durée (s)','number','step="0.5" min="1"')}</div>
-    ${blocMusique(s, i)}</div>`;
+    ${blocMusique(s, i)}${blocSons(s, i)}</div>`;
   } else {
     const v = dureeVoix(s), pv = voixPlan(s);
     const persos = (PROJET.personnages || []).filter(x => (s.p || '').includes('[' + x.tag + ']'));
@@ -318,6 +318,7 @@ function stInsp(){
         <span class="meta">La voix importée sert à la version d'origine ; les versions traduites gardent la synthèse.</span>
       </div>
       ${blocMusique(s, i)}
+      ${blocSons(s, i)}
     </div>`;
   }
   el.querySelectorAll('[data-st]').forEach(x => {
@@ -339,11 +340,27 @@ function blocMusique(s, i){
     <span class="meta">Volume de la musique : ${PROJET.volume_musique ?? 0.47} (Projet) — elle baisse automatiquement sous la voix.</span>
   </div>`;
 }
+function blocSons(s, i){                          // ambiances et bruitages (sons.py) : mêmes champs que la vue Liste
+  if(!SONS.sons.length && !ST.sonsDemandes){ ST.sonsDemandes = true; api('/api/sons').then(r => { SONS = r; stInsp(); }).catch(()=>{}); }
+  let cour = ''; EP.shots.slice(0, i).forEach(x => { if(x.amb) cour = x.amb === 'aucune' ? '' : x.amb; });
+  const lib = n => ((SONS.sons.find(x => x.nom === n) || {}).libelle || n);
+  return `<div class="bloc"><h4>Sons</h4>
+    <div class="meta">Ambiance en cours avant ce plan : <b style="color:var(--text)">${esc(cour ? lib(cour) : 'aucune')}</b></div>
+    <div><label>Ambiance à partir d'ici</label><div class="st-btns" style="flex-wrap:nowrap"><select data-st="amb">${optionsSons('ambiance', s.amb || '', cour ? '— l\'ambiance en cours continue' : '—')}</select>
+      <button class="btn small" title="Écouter" onclick="ecouterSon(this.previousElementSibling.value || '${cour}')">▶</button></div></div>
+    <div><label>Bruitage au début du plan</label><div class="st-btns" style="flex-wrap:nowrap"><select data-st="sfx">${optionsSons('bruitage', [].concat(s.sfx || []).join('+'), '—')}</select>
+      <button class="btn small" title="Écouter" onclick="ecouterSon(this.previousElementSibling.value)">▶</button></div></div>
+    <div class="st-2"><div><label>Niveau de l'ambiance</label><input data-st="amb_vol" type="number" min="0" step="0.1" placeholder="1" value="${esc(s.amb_vol ?? '')}"></div>
+      ${s._type === 'video' ? `<div><label>Son de la vidéo</label><label style="margin:6px 0 0;display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0"><input type="checkbox" style="width:auto" ${s.son_video ? 'checked' : ''} onchange="stChamp('son_video', this.checked ? true : '')"> garder</label></div>` : '<div></div>'}</div>
+    <span class="meta">Volume des ambiances : ${PROJET.volume_ambiance ?? 0.8} (Projet) — fichiers ou synthèse, voir Projet › Sons et bruitages.</span>
+  </div>`;
+}
 // modifie un champ du plan sélectionné ; texte = saisie au clavier (l'inspecteur n'est pas redessiné)
 function stChamp(f, v, texte){
   const s = EP.shots[ST.sel]; if(!s) return;
   if(!texte) memo();
-  if(['min', 'dur', 'mus_off'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
+  if(['min', 'dur', 'mus_off', 'amb_vol'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
+  else if(f === 'sfx' && typeof v === 'string' && v.includes('+')) s[f] = v.split('+');
   else if(v === '' && f !== 'vo') delete s[f]; else s[f] = v;
   if(f === 'mus' && !v) delete s.mus_off;
   if(f === 'qui'){ stInsp(); if(ST.voixOn) stVoixGen(); }

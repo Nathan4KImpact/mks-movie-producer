@@ -202,9 +202,12 @@ def ameliorer_prompts(ep, consignes=""):
     return e2
 
 
+GARDES = ("media", "voix_fichier", "mus_off", "qui", "amb", "amb_vol", "sfx", "sfx_t", "sfx_vol", "son_video", "son_video_vol", "img_url", "vid_url")
+
+
 def _garder_traductions(avant, apres):
-    """Le modèle réécrit tout le JSON : on recolle les traductions et les choix de la vue Studio (média, voix
-    importée) qu'il aurait omis (même clé de plan)."""
+    """Le modèle réécrit tout le JSON : on recolle les traductions, les choix de la vue Studio (média, voix importée)
+    et les champs de production (répliques, sons, médias hébergés) qu'il aurait omis (même clé de plan)."""
     if avant.get("versions") and not apres.get("versions"):
         apres["versions"] = avant["versions"]
     par_cle = {s.get("k") or f"#{i}": s for i, s in enumerate(avant.get("shots", []))}
@@ -212,8 +215,8 @@ def _garder_traductions(avant, apres):
         a = par_cle.get(s.get("k") or f"#{i}")
         if a and a.get("versions") and not s.get("versions"):
             s["versions"] = a["versions"]
-        for c in ("media", "voix_fichier", "mus_off"):      # choix faits dans la vue Studio
-            if a and a.get(c) and not s.get(c):
+        for c in GARDES:                                    # choix du Studio, répliques, sons, médias hébergés
+            if a and c in a and c not in s:
                 s[c] = a[c]
 
 

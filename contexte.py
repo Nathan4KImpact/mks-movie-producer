@@ -30,6 +30,7 @@ DEFAUT_PROJET = {
     "voix": {"nom": "fr-FR-HenriNeural", "debit": "-15%", "hauteur": "-6Hz"},
     "versions": {},
     "volume_musique": 0.47,
+    "volume_ambiance": 0.8,
     "musique_defaut": "Lord_of_the_Land",
     "musiques": ["Clash_Defiant", "Crusade_-_Heavy_Industry", "Dark_Walk", "Darkest_Child", "Echoes_of_Time_v2",
                  "Ever_Mindful", "Heroic_Age", "Interloper", "Lightless_Dawn", "Long_Note_Four", "Lord_of_the_Land",
@@ -128,6 +129,7 @@ ROLES = {
     "rendus":      ("Rendus",       "Épisodes montés",            "fichiers .mp4 produits par le montage",    ("rendu", "render", "montage", "video")),
     "exports":     ("_exports",     "Exports",                    "zips d'export du projet",                  ("export",)),
     "musique":     ("bibliotheque/musique", "Musiques du projet",         "facultatif : pistes propres à ce projet",  ("musique", "music")),
+    "sons":        ("bibliotheque/sons", "Sons et bruitages",         "facultatif : ambiances et bruitages (horde.mp3…), sinon synthèse", ("sons", "sound", "bruit", "sfx", "ambiance")),
 }
 CODE_EP = re.compile(r"^(?:[A-Z]{1,4}\d{2,4}|BA)$", re.I)
 IMG = (".png", ".jpg", ".jpeg", ".webp")
@@ -220,8 +222,8 @@ def _score(role, d, sous, fichiers, pj):
     if role == "exports":
         n = sum(f.endswith(".zip") for f in low)
         return n + bonus if n and bonus else 0
-    if role == "musique":
-        n = sum(f.endswith((".mp3", ".wav", ".m4a")) for f in low)
+    if role in ("musique", "sons"):
+        n = sum(f.endswith((".mp3", ".wav", ".m4a", ".ogg", ".flac", ".opus")) for f in low)
         return n if n and bonus else 0
     return 0
 
@@ -408,9 +410,10 @@ def deplacer_dossier(role, vers, rac=None):
 
 # Rangement recommandé : ce qu'on prépare dans bibliotheque/, ce qu'on fabrique dans production/.
 GROUPES = {"sources": "bibliotheque", "personnages": "bibliotheque", "bible": "bibliotheque", "episodes": "bibliotheque",
-           "musique": "bibliotheque", "fiches": "production", "images": "production", "rendus": "production"}
+           "musique": "bibliotheque", "sons": "bibliotheque", "fiches": "production", "images": "production", "rendus": "production"}
 DISPOSITION_NOUVEAU = {"sources": "bibliotheque/sources", "personnages": "bibliotheque/personnages",
                        "bible": "bibliotheque/bible", "episodes": "bibliotheque/episodes", "musique": "bibliotheque/musique",
+                       "sons": "bibliotheque/sons",
                        "fiches": "production/fiches", "images": "production/images", "rendus": "production/rendus",
                        "exports": "_exports"}
 
@@ -495,7 +498,7 @@ def migrer():
     if os.path.exists(ancien_cfg) and not est_projet(rac):
         c = _lire(ancien_cfg, {})
         pj = dict(DEFAUT_PROJET)
-        for k in ("voix", "volume_musique", "musique_defaut", "musiques", "style_image"):
+        for k in ("voix", "volume_musique", "volume_ambiance", "musique_defaut", "musiques", "style_image"):
             if k in c:
                 pj[k] = c[k]
         if "Ultime" in c.get("livre_pdf", "") or os.path.exists(os.path.join(APP, "episodes", "E101.json")):
@@ -561,7 +564,9 @@ REGLES_FORMAT = """
 Format technique (obligatoire) :
 - Chaque plan : "k" (clé ex. {code}-01), "vo" (narration), "p" (prompt image EN ANGLAIS, sans le préfixe de style),
   "m" (mouvement : in, out, left, right, up, down, still), optionnels "title" (mot-clé en capitales affiché à l'écran),
-  "min" (durée mini en s), "mus" (changement de musique à ce plan), "vid_prompt" (pour 4 à 7 plans à animer).
+  "min" (durée mini en s), "mus" (changement de musique à ce plan), "vid_prompt" (pour 4 à 7 plans à animer),
+  "amb" (ambiance sonore qui démarre à ce plan et continue : {ambiances} ; "aucune" pour couper),
+  "sfx" (bruitage ponctuel au début du plan : {bruitages}).
 - Personnages récurrents : mettre leur tag au début de "p" quand ils sont visibles de face : {tags}.
 - Répliques : quand un personnage parle, un plan par réplique avec "qui" (son tag) et, dans "vo", seulement les mots
   prononcés (sans guillemets ni « dit-il ») ; le prompt image le montre en train de parler et "vid_prompt" décrit
@@ -571,6 +576,8 @@ Format technique (obligatoire) :
   et à la fin {{"card":"À SUIVRE","sub":"Épisode suivant — Titre","dur":6}}.
 - Durée visée : {duree} minutes, soit environ {mots} mots de narration.
 - "mus" : 6 à 8 changements par épisode, choisis selon le ton de la scène, uniquement parmi : {musiques}.
+- Sons : une "amb" dès le premier plan puis à chaque changement de lieu ou d'état (horde qui avance, armée qui
+  s'éveille, louange, bataille…) ; 3 à 8 "sfx" par épisode sur les moments forts (cor, rugissement, tonnerre…).
 Réponds UNIQUEMENT avec le JSON complet de l'épisode."""
 
 
@@ -581,4 +588,12 @@ def regles_ia(code="E101", pj=None):
     tags = ", ".join(f"[{p['tag']}] = {p['nom']}" for p in pj.get("personnages", [])) or "aucun"
     return base + REGLES_FORMAT.format(code=code, tags=tags, titre_carton=pj["nom"].upper(),
                                        duree=pj.get("duree_min", 7), mots=int(pj.get("duree_min", 7) * 110),
-                                       musiques=", ".join(pj.get("musiques", [])))
+                                       musiques=", ".join(pj.get("musiques", [])), **_noms_sons())
+
+
+def _noms_sons():
+    try:
+        from sons import CATALOGUE
+    except Exception:
+        return {"ambiances": "", "bruitages": ""}
+    return {t + "s": ", ".join(n for n, x in CATALOGUE.items() if x["type"] == t) for t in ("ambiance", "bruitage")}

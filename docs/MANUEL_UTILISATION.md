@@ -1,8 +1,8 @@
 # MKS Movie Producer — Manuel d'utilisation
 
-Version 1.2 · octobre 2026
+Version 1.3 · octobre 2026
 
-MKS Movie Producer transforme un livre, un script ou un ensemble de documents en série vidéo narrée. Les épisodes sont écrits plan par plan, les images sont générées dans l'outil de votre choix (Google Flow, Higgsfield…), puis le montage est automatique : voix off, musique adaptée à chaque scène, titres, mouvements de caméra. Les exemples de ce manuel viennent du premier projet réalisé avec l'outil, **L'Ultime Assaut** (7 saisons × 7 épisodes × 7 minutes).
+MKS Movie Producer transforme un livre, un script ou un ensemble de documents en série vidéo narrée. Les épisodes sont écrits plan par plan, les images sont générées dans l'outil de votre choix (Google Flow, Higgsfield…), puis le montage est automatique : voix off et voix des personnages, musique adaptée à chaque scène, ambiances et bruitages, titres, mouvements de caméra. Les exemples de ce manuel viennent du premier projet réalisé avec l'outil, **L'Ultime Assaut** (7 saisons × 7 épisodes × 7 minutes).
 
 L'installation est décrite dans le **Manuel d'installation**. Ce manuel-ci est aussi consultable dans l'application, menu **Aide**.
 
@@ -111,6 +111,10 @@ Le choix est mémorisé : le prochain épisode ouvert s'affiche dans la même vu
 | **Titre à l'écran** | Mot-clé affiché en bas de l'image (ex. ORGUEIL) |
 | **Musique (démarre ici)** | Change de piste à partir de ce plan, avec un fondu enchaîné de 3 secondes |
 | **Durée mini (s)** | Durée minimale du plan, même si la narration est courte |
+| **Ambiance (démarre ici)** | Fond sonore qui commence à ce plan et continue jusqu'au prochain changement : horde qui avance, armée en marche, louange, bataille, vent… *Couper l'ambiance* ramène le silence. Le menu rappelle l'ambiance en cours. ▶ pour l'écouter (section 21) |
+| **Bruitage (début du plan)** | Son ponctuel joué au début du plan : cor, rugissement, tonnerre, épée, volée de flèches… ▶ pour l'écouter |
+| **Niveau ambiance** | Volume de l'ambiance qui démarre à ce plan (1 = normal, 1,5 = plus fort, 0,5 = plus discret) |
+| **Son de la vidéo · garder** | Garde le son de la vidéo du plan (par exemple une horde générée **avec** son par Flow) ; il s'ajoute à l'ambiance |
 | **Prompt vidéo** | Description du mouvement si le plan doit être animé (section 7.3) |
 
 | Mouvement | Effet |
@@ -199,7 +203,7 @@ Chaque bloc donne le **nom du fichier à créer** (`E101-01.png`), le début de 
 
 ### 7.3 Les plans animés
 
-Pour 4 à 7 plans par épisode, la fiche propose un **prompt vidéo** : dans Flow, utilisez « Frames to Video » avec l'image du plan comme image de départ, 5 à 8 secondes, sans son. Enregistrez la vidéo sous le **même nom en `.mp4`** (`E104-07.mp4`) dans le même dossier. **La vidéo est prioritaire sur l'image** au montage ; elle est ralentie si elle est plus courte que la narration.
+Pour 4 à 7 plans par épisode, la fiche propose un **prompt vidéo** : dans Flow, utilisez « Frames to Video » avec l'image du plan comme image de départ, 5 à 8 secondes, sans son. Exception : les plans marqués **GARDER LE SON** dans la fiche (case *Son de la vidéo* cochée), dont le prompt décrit le son attendu ; on garde alors le son généré, qui sert d'ambiance. Enregistrez la vidéo sous le **même nom en `.mp4`** (`E104-07.mp4`) dans le même dossier. **La vidéo est prioritaire sur l'image** au montage ; elle est ralentie si elle est plus courte que la narration.
 
 ### 7.4 Exporter les lots (générer par personnage)
 
@@ -229,7 +233,8 @@ Cliquez sur **Monter** (Production, éditeur ou Assistant). Le montage :
 2. anime chaque image selon son mouvement, ajoute le titre à l'écran et les fondus ;
 3. insère les cartons ;
 4. place la musique par sections, la baisse automatiquement sous la voix et termine par un fondu ;
-5. exporte en **1920 × 1080, 25 images/s** dans le dossier des rendus, avec un fichier de sous-titres `.srt` du même nom (section 20.5).
+5. ajoute les ambiances et les bruitages (section 21), sous la musique, eux aussi baissés quand quelqu'un parle ;
+6. exporte en **1920 × 1080, 25 images/s** dans le dossier des rendus, avec un fichier de sous-titres `.srt` du même nom (section 20.5).
 
 Le premier montage d'un épisode de 7 minutes prend plusieurs minutes, selon la puissance du poste. Le journal s'affiche dans le panneau des tâches.
 
@@ -310,6 +315,7 @@ Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agis
 | Couleur | Couleur d'accent de l'interface et des logos générés |
 | Voix, débit, hauteur | Voix off (Microsoft Edge), par exemple `fr-FR-HenriNeural`, `-15%`, `-6Hz` |
 | Volume musique | 0 à 1 ; 0,47 par défaut |
+| Volume ambiances | Niveau général des ambiances et bruitages ; 0,8 par défaut (0 = aucun son d'ambiance) |
 | Livre (PDF) | Chemin du livre source, relatif au projet |
 | Style ajouté à chaque prompt | Phrase de style collée devant chaque prompt d'image (en anglais) |
 | Règles de la série pour l'IA | Ton, narration, public, direction artistique : lues par l'IA à chaque écriture |
@@ -502,7 +508,58 @@ Pour chaque langue, publiez la vidéo de cette langue comme une vidéo à part :
 
 > **Droits** : pour une adaptation d'œuvre, l'autorisation de publier peut être accordée langue par langue. Vérifiez qu'elle couvre chaque version avant de la mettre en ligne.
 
-## 21. Glossaire
+## 21. Sons : ambiances et bruitages
+
+Sous la voix et la musique, le montage ajoute une troisième couche : les **sons du monde** de la scène. Une horde qui avance ne s'entend pas comme une armée qui s'éveille ni comme une louange.
+
+### 21.1 Ambiances et bruitages
+
+![Ambiance et bruitage d'un plan dans l'éditeur](images/24_sons_plan.jpg)
+
+- Une **ambiance** couvre une scène : choisie sur un plan (*Ambiance (démarre ici)*), elle continue sur les plans suivants, avec un fondu enchaîné de 2 secondes, jusqu'au prochain changement ou jusqu'à *Couper l'ambiance*.
+- Un **bruitage** est un son ponctuel joué au début d'un plan, décalé de 0,2 seconde (champ `sfx_t` du JSON pour un autre décalage). Un plan peut en avoir plusieurs (`"sfx": ["cor", "epee"]` dans le JSON).
+- Les deux passent sous la musique et sont baissés automatiquement quand un personnage ou le narrateur parle.
+
+| Ambiances | | Bruitages | |
+|---|---|---|---|
+| `horde` | Horde démoniaque qui avance | `cor` | Cor / shofar, appel de l'armée |
+| `grondement` | Grondement lointain de l'ennemi | `rugissement` | Rugissement de la horde |
+| `marche` | Armée du Seigneur en marche | `acclamation` | Acclamation de l'armée |
+| `armee` | Camp de l'armée : murmures, armures | `epee` | Épée tirée qui résonne |
+| `eveil` | Armée qui s'éveille, voix qui montent | `fleches` | Volée de flèches |
+| `louange` | Louange : chœur lointain | `tonnerre`, `eclair` | Tonnerre, éclair |
+| `bataille` | Bataille : cris, épées, impacts | `impact` | Impact sourd |
+| `vautours` | Vautours : ailes, cris rauques | `souffle` | Passage d'un ange |
+| `prisonniers` | Chaînes, gémissements | | |
+| `brume` | Brume de condamnation, oppression | | |
+| `feu` | Soufre et feu | | |
+| `vent`, `hauteurs` | Vent sur la montagne ; air paisible des sommets | | |
+| `sacre` | Présence sacrée, silence lumineux | | |
+
+### 21.2 D'où viennent les sons
+
+1. **Un fichier du projet**, s'il existe : `bibliotheque\sons\horde.mp3` (ou `.wav`, `.ogg`, `.flac`, `.m4a`). Il est prioritaire et joué en boucle sur toute la scène. Tout fichier du dossier est utilisable par son nom, même hors catalogue (par exemple `foule_jerusalem.mp3` → ambiance `foule_jerusalem`).
+2. Sinon, une **synthèse de repli** fabriquée par l'application avec ffmpeg, sans téléchargement : disponible tout de suite, mais moins riche qu'un vrai enregistrement.
+
+![Projet › Sons et bruitages](images/23_sons.jpg)
+
+**Projet › Sons et bruitages** liste chaque son avec sa provenance (*fichier* ou *synthèse*), un bouton ▶ pour l'écouter, un **prompt anglais** à copier dans un générateur de bruitages et un bouton **Fichier…** qui enregistre un son sous le bon nom. La **fiche** de chaque épisode se termine par la liste des sons qu'il utilise, avec les mêmes prompts.
+
+Pour un rendu réaliste, remplacez les synthèses par de vrais sons, en commençant par les plus présents (`horde`, `marche`, `armee`, `bataille`) :
+
+- **enregistrements libres de droits** : banques de bruitages gratuites, en vérifiant la licence (domaine public, CC0, ou licence autorisant l'usage commercial sans crédit ; sinon, créditer dans la description de la vidéo comme la musique) ;
+- **générateur de bruitages par IA** : collez le prompt anglais de la fiche ; une boucle de 30 secondes suffit pour une ambiance ;
+- **le son de Flow** : pour un plan de foule animé, générez la vidéo avec son et cochez *Son de la vidéo · garder*.
+
+Le dossier des sons est un rôle du projet comme les autres (section 13.5) : il peut être déplacé, il est retrouvé d'après son contenu.
+
+### 21.3 Régler le volume
+
+- **Projet › Paramètres › Volume ambiances** règle l'ensemble (0,8 par défaut).
+- **Niveau ambiance** sur un plan règle une scène (1,5 pour une bataille au premier plan, 0,5 pour une horde lointaine).
+- Remonter un épisode après un changement de son ne recalcule que les sons modifiés.
+
+## 22. Glossaire
 
 | Terme | Définition |
 |---|---|
@@ -520,3 +577,6 @@ Pour chaque langue, publiez la vidéo de cette langue comme une vidéo à part :
 | Version linguistique | Langue supplémentaire de la série : mêmes plans, textes et voix traduits, vidéo séparée |
 | À revoir | Traduction écrite pour un texte d'origine qui a changé depuis |
 | SRT | Format de fichier de sous-titres accepté par YouTube et la plupart des lecteurs |
+| Ambiance | Fond sonore d'une scène (horde, armée, louange…), du plan où il est choisi jusqu'au prochain changement |
+| Bruitage | Son ponctuel au début d'un plan (cor, rugissement, tonnerre…) |
+| Synthèse de repli | Son fabriqué par l'application quand le projet n'a pas de fichier pour ce son |

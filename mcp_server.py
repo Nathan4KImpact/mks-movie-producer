@@ -105,6 +105,15 @@ def traduire_episode(ep: str, langue: str, consignes: str = "", tout: bool = Fal
 
 
 @mcp.tool()
+def catalogue_sons() -> list:
+    """Ambiances (champ "amb" d'un plan, continue jusqu'au prochain "amb" ; "aucune" coupe) et bruitages ponctuels
+    (champ "sfx", nom ou liste) disponibles, avec leur provenance (fichier du projet ou synthèse) et un prompt anglais
+    pour générer un vrai son. "son_video": true garde le son de la vidéo du plan."""
+    import sons
+    return sons.liste()
+
+
+@mcp.tool()
 def projet_actif() -> dict:
     """Nom, dossier, paramètres du projet actif (structure, style, personnages, voix) et organisation de ses dossiers."""
     return {"racine": cx.racine(), "projet": cx.projet(), "organisation": cx.organisation()}

@@ -2,7 +2,7 @@
 
 Atelier local de production de mini-séries et films narrés par IA : bible et plan des épisodes,
 scripts plan par plan, fiches de prompts pour les générateurs d'images (Google Flow, Higgsfield…),
-montage automatique (voix off, musique par scène, titres, mouvements de caméra) et suivi de production.
+montage automatique (voix off et voix des personnages, musique par scène, ambiances et bruitages, titres, mouvements de caméra) et suivi de production.
 
 Premier projet réalisé avec : **L'Ultime Assaut** (7 saisons × 7 épisodes).
 
