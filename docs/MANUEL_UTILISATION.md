@@ -147,9 +147,9 @@ L'écran se compose de cinq zones :
 | **Bibliothèque** (à gauche) | Onglets **Médias**, **Voix** et **Musiques** : tout ce qui peut être placé dans un plan, avec recherche et filtre *Cet épisode / Personnages / Tout le projet* |
 | **Moniteur** (au centre) | Aperçu de l'épisode : image ou vidéo du plan, mouvement de caméra, titre à l'écran, cartons, voix et musique. Boutons de lecture, position, cases **Voix** et **Musique** pour couper l'une ou l'autre |
 | **Inspecteur** (à droite) | Tous les réglages du plan sélectionné : image ou vidéo, mouvement, prompts, narration, titre, durée mini, voix, musique |
-| **Timeline** (en bas) | Les plans bout à bout à l'échelle du temps, sur quatre pistes : **Vidéo**, **Titres**, **Voix**, **Musique** |
+| **Timeline** (en bas) | Les plans bout à bout à l'échelle du temps, sur six pistes : **Vidéo**, **Titres**, **Voix**, **Musique**, **Ambiance** (une barre par scène, jusqu'au prochain changement) et **Bruitage** (un repère au moment où le son part) |
 
-**L'aperçu.** Il reproduit le montage : même durée de plan (narration + 1,5 s, au moins la durée mini), mêmes mouvements de caméra, même apparition des titres, mêmes fondus, musique qui baisse sous la voix. Les voix de l'aperçu sont générées en arrière-plan à l'ouverture (connexion internet nécessaire, comme pour le montage) ; tant qu'elles ne sont pas prêtes, les durées sont **estimées** (blocs hachurés sur la piste Voix) et deviennent exactes ensuite. L'aperçu est une maquette rapide : le rendu final reste celui du montage (**Enregistrer et monter**).
+**L'aperçu.** Il reproduit le montage : même durée de plan (narration + 1,5 s, au moins la durée mini), mêmes mouvements de caméra, même apparition des titres, mêmes fondus, musique, ambiances et bruitages qui baissent sous la voix. Les cases **Voix**, **Musique** et **Sons** sous le moniteur coupent chacune sa couche pendant l'écoute. Les voix de l'aperçu sont générées en arrière-plan à l'ouverture (connexion internet nécessaire, comme pour le montage) ; tant qu'elles ne sont pas prêtes, les durées sont **estimées** (blocs hachurés sur la piste Voix) et deviennent exactes ensuite. L'aperçu est une maquette rapide : le rendu final reste celui du montage (**Enregistrer et monter**).
 
 **La timeline.** Cliquer un plan le sélectionne et place la tête de lecture à son début ; cliquer ou glisser sur la règle déplace la tête de lecture. Le curseur **Zoom** élargit la timeline, **Tout voir** la remet à la largeur de l'écran. Les boutons au-dessus permettent d'ajouter un **plan** ou un **carton** après le plan sélectionné, de **dupliquer**, de **déplacer** ou de **supprimer** un plan. On peut aussi **glisser un plan** sur un autre pour changer l'ordre. Un plan sans image apparaît hachuré de rouge.
 
@@ -303,7 +303,7 @@ Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agis
 
 - **Régénérer le logo** dessine un emblème à partir du nom du projet et de sa couleur.
 - **Importer un logo** remplace le logo par votre propre image (PNG, JPG, SVG).
-- **Importer un logo animé** ajoute une version animée du logo (ex. un « sting » réalisé dans Claude Design). Il se joue une fois à l'ouverture de l'application, dans la bannière, puis reste sur sa dernière image ; le **survol** du logo le rejoue. Sur la page Projet, il se rejoue à chaque visite. Le logo fixe reste utilisé ailleurs (logo généré, exports) et reprend sa place si le navigateur ne peut pas lire l'animation. **Retirer le logo animé** revient au logo fixe (le fichier n'est pas effacé).
+- **Importer un logo animé** ajoute une version animée du logo (ex. un « sting » réalisé dans Claude Design). Il se joue une fois à l'ouverture de l'application, dans la bannière, puis reste sur sa dernière image ; il se rejoue en changeant de page (au plus une fois par minute) et au **survol** du logo. Sur la page Projet, il se rejoue à chaque visite. Le logo fixe reste utilisé ailleurs (logo généré, exports) et reprend sa place si le navigateur ne peut pas lire l'animation. **Retirer le logo animé** revient au logo fixe (le fichier n'est pas effacé).
 - **Ouvrir le dossier du projet** affiche le dossier du projet dans l'Explorateur.
 - **Exporter (zip, sans rendus)** et **Exporter avec rendus** (boutons dorés) : voir 13.4.
 
@@ -522,7 +522,7 @@ Sous la voix et la musique, le montage ajoute une troisième couche : les **sons
 - Une **ambiance** couvre une scène : choisie sur un plan (*Ambiance (démarre ici)*), elle continue sur les plans suivants, avec un fondu enchaîné de 2 secondes, jusqu'au prochain changement ou jusqu'à *Couper l'ambiance*.
 - Un **bruitage** est un son ponctuel joué au début d'un plan, décalé de 0,2 seconde (champ `sfx_t` du JSON pour un autre décalage). Un plan peut en avoir plusieurs (`"sfx": ["cor", "epee"]` dans le JSON).
 - Les deux passent sous la musique et sont baissés automatiquement quand un personnage ou le narrateur parle.
-- Dans la **vue Studio**, l'inspecteur du plan sélectionné a un bloc **Sons** avec les mêmes réglages.
+- Dans la **vue Studio**, l'inspecteur du plan sélectionné a un bloc **Sons** avec les mêmes réglages ; la timeline les montre sur les pistes **Ambiance** et **Bruitage**, et l'aperçu les fait entendre (extrait de 10 s en boucle pour une ambiance).
 
 | Ambiances | | Bruitages | |
 |---|---|---|---|

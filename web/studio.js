@@ -82,7 +82,7 @@ async function studio(ep, garder){
           <span><i style="background:#7aa6d8"></i>voix importée</span><span><i style="background:#9d86c9"></i>musique</span><span><i style="background:#5fa8a0"></i>ambiance</span><span><i style="background:#e0915a"></i>bruitage</span></div>
       </div>
       <div class="st-zone">
-        <div class="st-heads"><div style="height:25px"></div><div style="height:67px">🎞 Vidéo</div><div style="height:27px">Aa Titres</div><div style="height:35px">🎙 Voix</div><div style="height:31px">♫ Musique</div><div style="height:27px">≋ Ambiance</div><div style="height:25px">✦ Bruitages</div></div>
+        <div class="st-heads"><div style="height:25px"></div><div style="height:67px">🎞 Vidéo</div><div style="height:27px">Aa Titres</div><div style="height:35px">🎙 Voix</div><div style="height:31px">♫ Musique</div><div class="etroit" style="height:27px">≋ Ambiance</div><div class="etroit" style="height:25px">✦ Bruitage</div></div>
         <div class="st-scroll" id="stScroll"><div class="st-inner" id="stInner"></div></div>
       </div>
     </div>
@@ -155,8 +155,8 @@ function stCalcul(){
   if(cour) cour.t1 = t;
   ST.amb = amb;
   ST.sfx = [];
-  EP.shots.forEach((s, i) => [].concat(s.sfx || []).filter(Boolean).forEach((n, k) =>
-    ST.sfx.push({t: ST.segs[i].t0 + (+(s.sfx_t || 0)) + k * 0.05, nom: n, i})));
+  EP.shots.forEach((s, i) => { const n = [].concat(s.sfx || []).filter(Boolean);       // plusieurs bruitages d'un plan : un repère
+    if(n.length) ST.sfx.push({t: ST.segs[i].t0 + (+(s.sfx_t || 0)), noms: n, i}); });
   const d = $('#stDuree'); if(d) d.textContent = `${EP.shots.filter(s=>!s.card).length} plans · ${hms(ST.total)}${ST.segs.some(g=>g.v&&!g.v.exact)?' (estimée)':''}`;
 }
 const hms = (t, dix) => { t = Math.max(0, t); const m = Math.floor(t / 60), s = t - m * 60;
@@ -478,7 +478,8 @@ function stTimeline(){
     return `<div class="st-bloc m ${abs?'abs':''}" data-i="${m.i}" style="left:${m.t0 * p}px;width:${Math.max(3, (m.t1 - m.t0) * p - 2)}px" title="${esc(m.piste)}${abs?' (non installée)':''}">♫ ${esc((m.piste || 'aucune').replace(/_/g, ' '))}${m.defaut?' (par défaut)':''}${m.off?` · à ${m.off}s`:''}</div>`; }).join('');
   const libSon = n => ((SONS.sons.find(x => x.nom === n) || {}).libelle || String(n).replace(/_/g, ' '));
   const ambs = ST.amb.map(a => `<div class="st-bloc s ${a.i===sel?'sel':''}" data-i="${a.i}" style="left:${a.t0 * p}px;width:${Math.max(3, (a.t1 - a.t0) * p - 2)}px" title="Ambiance : ${esc(libSon(a.nom))} — jusqu'au prochain changement">≋ ${esc(libSon(a.nom))}${a.vol !== 1 ? ` · ${a.vol}` : ''}</div>`).join('');
-  const sfx = ST.sfx.map(x => `<div class="st-sfx ${x.i===sel?'sel':''}" data-i="${x.i}" style="left:${x.t * p}px" title="Bruitage : ${esc(libSon(x.nom))}">✦ ${esc(libSon(x.nom))}</div>`).join('');
+  const sfx = ST.sfx.map(x => { const t = x.noms.map(libSon).join(' + ');
+    return `<div class="st-sfx ${x.i===sel?'sel':''}" data-i="${x.i}" style="left:${x.t * p}px" title="Bruitage${x.noms.length > 1 ? 's' : ''} : ${esc(t)}">✦ ${esc(t)}</div>`; }).join('');
   inn.style.width = W + 'px';
   inn.innerHTML = `<div class="st-regle" id="stRegle">${regle}</div>
     <div class="st-piste v" id="stPv">${clips}</div><div class="st-piste t">${titres}</div>
@@ -659,8 +660,9 @@ function stSon(i, s, g, u){
     ST.aAmb.volume = Math.max(0, Math.min(1, +(PROJET.volume_ambiance ?? 0.8) * amb.vol * 0.6 * (parle ? 0.5 : 1) * fin));
   } else if(ST.ambCour){ ST.aAmb.pause(); ST.ambCour = ''; }
   if(ST.sonsOn) ST.sfx.forEach((x, k) => {
-    if(ST.t >= x.t && ST.t < x.t + 0.4 && !ST.sfxJoues.has(k)){ ST.sfxJoues.add(k); const u2 = stUrlSon(x.nom);
-      if(u2){ const a = new Audio(u2); a.volume = Math.min(1, +(PROJET.volume_ambiance ?? 0.8)); a.play().catch(()=>{}); } }
+    if(ST.t >= x.t && ST.t < x.t + 0.4 && !ST.sfxJoues.has(k)){ ST.sfxJoues.add(k);
+      x.noms.forEach(n => { const u2 = stUrlSon(n);
+        if(u2){ const a = new Audio(u2); a.volume = Math.min(1, +(PROJET.volume_ambiance ?? 0.8)); a.play().catch(()=>{}); } }); }
   });
 }
 // extrait d'écoute d'un son (fichier du projet ou synthèse), demandé une fois au serveur puis gardé
@@ -670,7 +672,7 @@ function stUrlSon(nom){
   api('/api/sons/essai', {method: 'POST', body: JSON.stringify({nom})}).then(r => { ST.sonUrl[nom] = r.url; }).catch(() => {});
   return '';
 }
-function stPrechargerSons(){ ST.amb.forEach(a => stUrlSon(a.nom)); ST.sfx.forEach(x => stUrlSon(x.nom)); }
+function stPrechargerSons(){ ST.amb.forEach(a => stUrlSon(a.nom)); ST.sfx.forEach(x => x.noms.forEach(stUrlSon)); }
 
 // ---------------------------------------------------------------- clavier
 addEventListener('keydown', e => {
