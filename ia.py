@@ -202,7 +202,7 @@ def ameliorer_prompts(ep, consignes=""):
     return e2
 
 
-GARDES = ("media", "voix_fichier", "mus_off", "qui", "amb", "amb_vol", "sfx", "sfx_t", "sfx_vol", "son_video", "son_video_vol", "img_url", "vid_url")
+GARDES = ("media", "voix_fichier", "mus_off", "fx", "qui", "amb", "amb_vol", "sfx", "sfx_t", "sfx_vol", "son_video", "son_video_vol", "img_url", "vid_url")
 
 
 def _garder_traductions(avant, apres):

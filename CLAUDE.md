@@ -14,6 +14,9 @@ Répondre en français à l'utilisateur.
   Timeline : pistes Vidéo, Titres, Voix, Musique, Ambiance (`ST.amb`, sections calculées dans `stCalcul` d'après `amb`) et
   Bruitage (`ST.sfx`, un repère par plan) ; l'aperçu joue les sons via l'extrait de `POST /api/sons/essai` (`stUrlSon`).
   **Toute couche ajoutée au moteur (`moteur.py`) doit avoir sa piste et son écoute dans le Studio.**
+  Effets audio (`effets.py`) : `fx.<voix|mus|amb|sfx> = {in, out, vol, effet}` sur un plan ; réglés dans l'inspecteur
+  (`blocFx`, champs `data-st="fx.<couche>.<clé>"` gérés par `stChamp`), dessinés sur les blocs (`fxDessin`), entendus
+  dans l'aperçu par WebAudio (`stRoute`/`stEffet`/`stGain`, effets approchés). Liste des effets : `GET /api/sons > effets`.
   Disposition : séparateurs `.st-gut` (glisser = largeur de la bibliothèque / de l'inspecteur, hauteur de la timeline ;
   double-clic ou bouton `.st-pli` = replier), appliquée par `stDisposer()`, gardée par poste dans `localStorage`
   (`ua_studio_dispo`) ; `stDispoDefaut()` remet les tailles d'origine. La grille `.st-body` place chaque enfant par
@@ -58,6 +61,10 @@ de la vidéo du plan. Source : `<dossier sons>/<nom>.mp3|wav…` sinon synthèse
 `aevalsrc`/`anoisesrc` ; incrémenter `VERSION` si une recette change). Mixage : voix + musique + sons, ces deux derniers
 baissés par la voix (`sidechaincompress`) ; `projet.json > volume_ambiance`. Les IA qui réécrivent le JSON recollent ces
 champs (`ia.GARDES`).
+Effets audio (`effets.py`) : `"fx": {"voix"|"mus"|"amb"|"sfx": {"in": s, "out": s, "vol": ×, "effet": clé de EFFETS}}` —
+fondus (remplacent ceux par défaut de la couche), volume, effet ffmpeg (`effets.chaine`). `mus`/`amb` valent pour la section
+qui démarre à ce plan ; le niveau d'une ambiance / d'un bruitage reste `amb_vol` / `sfx_vol`. Filtres sans hypothèse de
+fréquence (entrée ramenée à 44,1 kHz) ; `grave`/`aigu` compensent la durée (`atempo`). Les signatures des sons incluent `fx`.
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
 Champs posés par la vue Studio (facultatifs) : `media` (image/vidéo choisie, chemin relatif au projet, PRIORITAIRE sur la clé),
 `voix_fichier` (narration enregistrée/importée, remplace la synthèse pour la langue d'origine seulement), `mus_off` (décalage

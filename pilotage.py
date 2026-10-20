@@ -621,7 +621,8 @@ class H(BaseHTTPRequestHandler):
                                           "voix": lg.VOIX_PROPOSEES, "voix_defaut": lg.VOIX_DEFAUT})
             if p == "/api/sons":
                 import sons
-                return self.envoyer(200, {"sons": sons.liste(), "dossier": cx._rel(cx.dossier("sons")),
+                import effets
+                return self.envoyer(200, {"sons": sons.liste(), "effets": effets.liste(), "dossier": cx._rel(cx.dossier("sons")),
                                           "volume_ambiance": cx.projet().get("volume_ambiance", 0.8)})
             if p.startswith("/essai/"):
                 return self.fichier(os.path.join(ICI, "cache", "essais", p.split("/")[-1]), os.path.join(ICI, "cache", "essais"))

@@ -376,6 +376,7 @@ function stInsp(){
           <button class="btn small ${ST.rec?'st-rec':''}" onclick="stMicro()">${ST.rec ? '■ Arrêter l\'enregistrement' : '● Enregistrer au micro'}</button>
         </div>
         <span class="meta">La voix importée sert à la version d'origine ; les versions traduites gardent la synthèse.</span>
+        ${(s.vo || '').trim() || s.voix_fichier ? blocFx(s, 'voix', 'voix de ce plan', true) : ''}
       </div>
       ${blocMusique(s, i)}
       ${blocSons(s, i)}
@@ -386,6 +387,38 @@ function stInsp(){
     x.oninput = () => { if(ST.memoChamp){ memo(); ST.memoChamp = null; } stChamp(x.dataset.st, x.value, true); };
   });
 }
+// ---------------------------------------------------------------- effets audio (effets.py) : fx.<couche> = {in, out, vol, effet}
+const FX_DEF = {voix: ['0', '0'], mus: ['0,5 / 3', '3'], amb: ['2', '2'], sfx: ['0', '0']};
+const fxDe = (s, c) => (s && s.fx && s.fx[c]) || {};
+const fxEffets = () => SONS.effets || [];
+const fxNom = k => ((fxEffets().find(x => x.cle === k) || {}).nom || k);
+function fxTitre(f){ const t = [];
+  if(f.in != null) t.push(`fondu d'entrée ${f.in} s`); if(f.out != null) t.push(`fondu de sortie ${f.out} s`);
+  if(f.vol != null) t.push(`volume ×${f.vol}`); if(f.effet) t.push(fxNom(f.effet));
+  return t.length ? ' — ' + t.join(', ') : ''; }
+function fxDessin(f, p, L){                         // rampes de fondu et pastille d'effet sur un bloc de la timeline
+  let h = '';
+  if(f.in) h += `<i class="st-fdi" style="width:${Math.min(L, f.in) * p}px"></i>`;
+  if(f.out) h += `<i class="st-fdo" style="width:${Math.min(L, f.out) * p}px"></i>`;
+  if(f.effet || (f.vol != null && f.vol !== 1)) h += `<b class="st-fxp" title="${esc(fxTitre(f).slice(3))}">✧</b>`;
+  return h;
+}
+function blocFx(s, c, titre, avecVol){
+  const f = fxDe(s, c), [di, dout] = FX_DEF[c], ouvert = Object.keys(f).length > 0;
+  return `<details class="st-fx" ${ouvert ? 'open' : ''}><summary>✧ Effets — ${titre}${ouvert ? ` <span class="meta">${esc(fxTitre(f).slice(3))}</span>` : ''}</summary>
+    <div class="st-4">
+      <div><label>Fondu entrée (s)</label><input data-st="fx.${c}.in" type="number" min="0" step="0.1" placeholder="${di}" value="${esc(f.in ?? '')}"></div>
+      <div><label>Fondu sortie (s)</label><input data-st="fx.${c}.out" type="number" min="0" step="0.1" placeholder="${dout}" value="${esc(f.out ?? '')}"></div>
+      ${avecVol ? `<div><label>Volume (×)</label><input data-st="fx.${c}.vol" type="number" min="0" max="4" step="0.1" placeholder="1" value="${esc(f.vol ?? '')}"></div>` : ''}
+      <div style="grid-column:span ${avecVol ? 1 : 2}"><label>Effet</label><select data-st="fx.${c}.effet"><option value="">aucun</option>
+        ${fxEffets().map(x => `<option value="${x.cle}" ${f.effet === x.cle ? 'selected' : ''}>${esc(x.nom)}</option>`).join('')}</select></div>
+    </div>
+    ${ouvert ? `<button class="btn small" onclick="stFxRetirer('${c}')">Retirer les effets</button>` : ''}
+  </details>`;
+}
+function stFxRetirer(c){ const s = EP.shots[ST.sel]; if(!s || !s.fx) return; memo(); delete s.fx[c];
+  if(!Object.keys(s.fx).length) delete s.fx; stSale(); stTout(); }
+
 function blocMusique(s, i){
   const sec = [...ST.mus].reverse().find(x => x.t0 <= (ST.segs[i] || {t0: 0}).t0 + 0.001) || ST.mus[0];
   const libs = (ST.lib && ST.lib.musiques) || (PROJET.musiques || []).map(n => ({nom: n}));
@@ -397,6 +430,7 @@ function blocMusique(s, i){
       <div><label>&nbsp;</label><button class="btn small" onclick="stEcouterLib('${esc((musiqueDe(s.mus)||{}).url||'')}')">▶ Écouter la piste</button></div></div>` : ''}
     <div class="st-btns"><label class="btn small" style="margin:0;text-transform:none;letter-spacing:0">Importer une musique…<input type="file" accept="audio/*" style="display:none" onchange="stImporter(this.files,'musique',true)"></label>
       <button class="btn small" onclick="ST.onglet='musiques';stLib()">Bibliothèque</button></div>
+    ${s.mus ? blocFx(s, 'mus', 'cette musique', true) : ''}
     <span class="meta">Volume de la musique : ${PROJET.volume_musique ?? 0.47} (Projet) — elle baisse automatiquement sous la voix.</span>
   </div>`;
 }
@@ -412,6 +446,8 @@ function blocSons(s, i){                          // ambiances et bruitages (son
       <button class="btn small" title="Écouter" onclick="ecouterSon(this.previousElementSibling.value)">▶</button></div></div>
     <div class="st-2"><div><label>Niveau de l'ambiance</label><input data-st="amb_vol" type="number" min="0" step="0.1" placeholder="1" value="${esc(s.amb_vol ?? '')}"></div>
       ${s._type === 'video' ? `<div><label>Son de la vidéo</label><label style="margin:6px 0 0;display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0"><input type="checkbox" style="width:auto" ${s.son_video ? 'checked' : ''} onchange="stChamp('son_video', this.checked ? true : '')"> garder</label></div>` : '<div></div>'}</div>
+    ${s.amb && s.amb !== 'aucune' ? blocFx(s, 'amb', 'cette ambiance', false) : ''}
+    ${s.sfx && [].concat(s.sfx).length ? blocFx(s, 'sfx', 'bruitage' + ([].concat(s.sfx).length > 1 ? 's' : '') + ' de ce plan', true) : ''}
     <span class="meta">Volume des ambiances : ${PROJET.volume_ambiance ?? 0.8} (Projet) — fichiers ou synthèse, voir Projet › Sons et bruitages.</span>
   </div>`;
 }
@@ -419,6 +455,12 @@ function blocSons(s, i){                          // ambiances et bruitages (son
 function stChamp(f, v, texte){
   const s = EP.shots[ST.sel]; if(!s) return;
   if(!texte) memo();
+  if(f.startsWith('fx.')){                         // effets audio : fx.<couche>.<in|out|vol|effet>
+    const [, c, k] = f.split('.'); s.fx = s.fx || {}; const o = s.fx[c] = s.fx[c] || {};
+    if(v === '' || v === null) delete o[k]; else o[k] = k === 'effet' ? v : Math.max(0, +v);
+    if(!Object.keys(o).length) delete s.fx[c]; if(!Object.keys(s.fx).length) delete s.fx;
+    stSale(); stCalcul(); stTimeline(); ST.cur = -1; stFrame(); if(!texte) stInsp(); return;
+  }
   if(['min', 'dur', 'mus_off', 'amb_vol'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
   else if(f === 'sfx' && typeof v === 'string' && v.includes('+')) s[f] = v.split('+');
   else if(v === '' && f !== 'vo') delete s[f]; else s[f] = v;
@@ -518,14 +560,15 @@ function stTimeline(){
     return `<div class="st-clip ${g.i===sel?'sel':''}" ${commun}><div class="lb">${lb}</div><span class="du">${g.L.toFixed(1)}s</span></div>`;
   }).join('');
   const titres = ST.segs.filter(g => EP.shots[g.i].title).map(g => `<div class="st-bloc t ${g.i===sel?'sel':''}" data-i="${g.i}" style="left:${g.t0 * p}px;width:${Math.max(3, g.L * p - 2)}px" title="${esc(EP.shots[g.i].title)}">${esc(EP.shots[g.i].title)}</div>`).join('');
-  const voix = ST.segs.filter(g => g.v && g.v.d).map(g => { const s = EP.shots[g.i];
-    return `<div class="st-bloc a ${g.v.fichier?'fic':''} ${g.v.exact?'':'est'} ${g.i===sel?'sel':''}" data-i="${g.i}" style="left:${(g.t0 + 0.45) * p}px;width:${Math.max(3, g.v.d * p)}px" title="${esc(s.vo || '')}">${g.v.fichier ? '🎙 ' : ''}${esc((s.vo || s.voix_fichier || '').slice(0, 80))}</div>`; }).join('');
-  const mus = ST.mus.map(m => { const lib = musiqueDe(m.piste); const abs = !lib || !lib.url;
-    return `<div class="st-bloc m ${abs?'abs':''}" data-i="${m.i}" style="left:${m.t0 * p}px;width:${Math.max(3, (m.t1 - m.t0) * p - 2)}px" title="${esc(m.piste)}${abs?' (non installée)':''}">♫ ${esc((m.piste || 'aucune').replace(/_/g, ' '))}${m.defaut?' (par défaut)':''}${m.off?` · à ${m.off}s`:''}</div>`; }).join('');
+  const voix = ST.segs.filter(g => g.v && g.v.d).map(g => { const s = EP.shots[g.i], f = fxDe(s, 'voix');
+    return `<div class="st-bloc a ${g.v.fichier?'fic':''} ${g.v.exact?'':'est'} ${g.i===sel?'sel':''}" data-i="${g.i}" style="left:${(g.t0 + 0.45) * p}px;width:${Math.max(3, g.v.d * p)}px" title="${esc(s.vo || '')}${fxTitre(f)}">${fxDessin(f, p, g.v.d)}${g.v.fichier ? '🎙 ' : ''}${esc((s.vo || s.voix_fichier || '').slice(0, 80))}</div>`; }).join('');
+  const mus = ST.mus.map(m => { const lib = musiqueDe(m.piste); const abs = !lib || !lib.url, f = fxDe(EP.shots[m.i], 'mus');
+    return `<div class="st-bloc m ${abs?'abs':''}" data-i="${m.i}" style="left:${m.t0 * p}px;width:${Math.max(3, (m.t1 - m.t0) * p - 2)}px" title="${esc(m.piste)}${abs?' (non installée)':''}${fxTitre(f)}">${fxDessin(f, p, m.t1 - m.t0)}♫ ${esc((m.piste || 'aucune').replace(/_/g, ' '))}${m.defaut?' (par défaut)':''}${m.off?` · à ${m.off}s`:''}</div>`; }).join('');
   const libSon = n => ((SONS.sons.find(x => x.nom === n) || {}).libelle || String(n).replace(/_/g, ' '));
-  const ambs = ST.amb.map(a => `<div class="st-bloc s ${a.i===sel?'sel':''}" data-i="${a.i}" style="left:${a.t0 * p}px;width:${Math.max(3, (a.t1 - a.t0) * p - 2)}px" title="Ambiance : ${esc(libSon(a.nom))} — jusqu'au prochain changement">≋ ${esc(libSon(a.nom))}${a.vol !== 1 ? ` · ${a.vol}` : ''}</div>`).join('');
-  const sfx = ST.sfx.map(x => { const t = x.noms.map(libSon).join(' + ');
-    return `<div class="st-sfx ${x.i===sel?'sel':''}" data-i="${x.i}" style="left:${x.t * p}px" title="Bruitage${x.noms.length > 1 ? 's' : ''} : ${esc(t)}">✦ ${esc(t)}</div>`; }).join('');
+  const ambs = ST.amb.map(a => { const f = fxDe(EP.shots[a.i], 'amb');
+    return `<div class="st-bloc s ${a.i===sel?'sel':''}" data-i="${a.i}" style="left:${a.t0 * p}px;width:${Math.max(3, (a.t1 - a.t0) * p - 2)}px" title="Ambiance : ${esc(libSon(a.nom))} — jusqu'au prochain changement${fxTitre(f)}">${fxDessin(f, p, a.t1 - a.t0)}≋ ${esc(libSon(a.nom))}${a.vol !== 1 ? ` · ${a.vol}` : ''}</div>`; }).join('');
+  const sfx = ST.sfx.map(x => { const t = x.noms.map(libSon).join(' + '), f = fxDe(EP.shots[x.i], 'sfx');
+    return `<div class="st-sfx ${x.i===sel?'sel':''}" data-i="${x.i}" style="left:${x.t * p}px" title="Bruitage${x.noms.length > 1 ? 's' : ''} : ${esc(t)}${fxTitre(f)}">✦ ${f.effet ? '✧ ' : ''}${esc(t)}</div>`; }).join('');
   inn.style.width = W + 'px';
   inn.innerHTML = `<div class="st-regle" id="stRegle">${regle}</div>
     <div class="st-piste v" id="stPv">${clips}</div><div class="st-piste t">${titres}</div>
@@ -616,6 +659,7 @@ function stJouer(){
   if(!ST.segs.length) return; if(ST.t >= ST.total - 0.05) ST.t = 0;
   ST.aLib.pause(); ST.libJoue = '';
   ST.playing = true; ST.last = performance.now(); ST.voixCour = ''; ST.musCour = ''; ST.ambCour = ''; stPrechargerSons();
+  if(ST.ctx && ST.ctx.state === 'suspended') ST.ctx.resume().catch(()=>{});
   ST.sfxJoues = new Set(ST.sfx.map((x, k) => x.t < ST.t - 0.05 ? k : -1));
   $('#stPlay').textContent = '❚❚'; ST.raf = requestAnimationFrame(stBoucle);
 }
@@ -677,6 +721,39 @@ function stFrame(){
   const tete = $('#stTete'); if(tete) tete.style.left = ST.t * pps() + 'px';
   if(ST.playing) stSon(i, s, g, u);
 }
+// sortie d'un élément audio par WebAudio : effets approchés (filtres, échos) + gain (volume × fondus)
+const enveloppe = (t, L, fi, fo) => Math.max(0, Math.min(1, fi ? t / fi : 1, fo ? (L - t) / fo : 1));
+function stRoute(el){
+  if(el._g || el._sansWA) return el;
+  try { ST.ctx = ST.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    el._src = ST.ctx.createMediaElementSource(el); el._g = ST.ctx.createGain(); el._fx = '';
+    el._src.connect(el._g); el._g.connect(ST.ctx.destination); el.volume = 1;
+  } catch(e){ el._sansWA = true; }
+  return el;
+}
+function stGain(el, v){ v = Math.max(0, v); if(el._g) el._g.gain.value = v; else el.volume = Math.min(1, v); }
+function noeudsEffet(effet){
+  const c = ST.ctx, entree = c.createGain(), sortie = c.createGain();
+  const filtre = (type, f) => { const b = c.createBiquadFilter(); b.type = type; b.frequency.value = f; return b; };
+  const echo = (de, retards, gains, fb) => retards.forEach((r, k) => { const d = c.createDelay(1); d.delayTime.value = r;
+    const g = c.createGain(); g.gain.value = gains[k]; de.connect(d); d.connect(g); g.connect(sortie);
+    if(fb){ const f = c.createGain(); f.gain.value = fb; g.connect(f); f.connect(d); } });
+  if(effet === 'echo'){ entree.connect(sortie); echo(entree, [0.07, 0.14], [0.28, 0.16]); }
+  else if(effet === 'salle'){ entree.connect(sortie); echo(entree, [0.11, 0.23, 0.39], [0.4, 0.3, 0.2], 0.25); }
+  else if(effet === 'lointain' || effet === 'radio'){ const h = filtre('highpass', effet === 'radio' ? 450 : 250), l = filtre('lowpass', effet === 'radio' ? 3200 : 3500);
+    entree.connect(h); h.connect(l); l.connect(sortie); if(effet === 'lointain') echo(l, [0.04], [0.2]); else sortie.gain.value = 1.6; }
+  else if(effet === 'etouffe'){ const l = filtre('lowpass', 800); entree.connect(l); l.connect(sortie); sortie.gain.value = 1.4; }
+  else entree.connect(sortie);
+  return {entree, sortie};
+}
+function stEffet(el, effet){
+  effet = effet || ''; if(!el._src || el._fx === effet) return; el._fx = effet;
+  try { el._src.disconnect(); if(el._n) el._n.sortie.disconnect(); } catch(e){}
+  el._n = noeudsEffet(effet); el._src.connect(el._n.entree); el._n.sortie.connect(el._g);
+  // plus grave / plus aigu : approché dans l'aperçu en ralentissant / accélérant la lecture (le montage garde la durée)
+  const r = effet === 'grave' ? 0.9 : effet === 'aigu' ? 1.12 : 1;
+  el.preservesPitch = r === 1; el.playbackRate = r;
+}
 function stSon(i, s, g, u){
   // voix
   const url = !s.card && ST.voixOn ? (s.voix_fichier ? s._voix : ST.voixUrl[cleVoix(s)]) : '';
@@ -686,6 +763,8 @@ function stSon(i, s, g, u){
       try { ST.aVoix.currentTime = Math.max(0, u - 0.45); } catch(e){} ST.aVoix.play().catch(()=>{}); }
   } else if(ST.voixCour && ST.voixCour !== cle){ ST.aVoix.pause(); ST.voixCour = ''; }
   const parle = !!url && ST.voixCour === cle && !ST.aVoix.paused;
+  if(url){ const f = fxDe(s, 'voix'), d = (g.v && g.v.d) || 1; stRoute(ST.aVoix); stEffet(ST.aVoix, f.effet);
+    stGain(ST.aVoix, (f.vol ?? 1) * enveloppe(u - 0.45, d, f.in, f.out)); }
   // musique (baisse sous la voix, comme au montage)
   const sec = ST.mus.find(m => ST.t >= m.t0 && ST.t < m.t1) || ST.mus[ST.mus.length - 1];
   const lib = sec && musiqueDe(sec.piste);
@@ -696,19 +775,23 @@ function stSon(i, s, g, u){
       try { ST.aMus.currentTime = dur && isFinite(dur) ? pos % dur : pos; } catch(e){}
       ST.aMus.play().catch(()=>{}); }
     const vol = Math.min(1, +(PROJET.volume_musique ?? 0.47)), fin = Math.min(1, (ST.total - ST.t) / 5);
-    ST.aMus.volume = Math.max(0, Math.min(1, vol * (parle ? 0.45 : 1) * fin));
+    const f = fxDe(EP.shots[sec.i], 'mus'); stRoute(ST.aMus); stEffet(ST.aMus, f.effet);
+    stGain(ST.aMus, vol * (f.vol ?? 1) * (parle ? 0.45 : 1) * fin * enveloppe(ST.t - sec.t0, sec.t1 - sec.t0, f.in, f.out));
   } else if(!ST.aMus.paused){ ST.aMus.pause(); ST.musCour = ''; }
   // ambiance (extrait en boucle) et bruitages, baissés sous la voix comme la musique
   const amb = ST.sonsOn && ST.amb.find(a => ST.t >= a.t0 && ST.t < a.t1), ua = amb && stUrlSon(amb.nom);
   if(ua){
     if(ST.ambCour !== ua){ ST.ambCour = ua; ST.aAmb.src = ua; ST.aAmb.loop = true; ST.aAmb.play().catch(()=>{}); }
-    const fin = Math.min(1, (amb.t1 - ST.t) / 1.5, (ST.t - amb.t0) / 1.5 + 0.2);
-    ST.aAmb.volume = Math.max(0, Math.min(1, +(PROJET.volume_ambiance ?? 0.8) * amb.vol * 0.6 * (parle ? 0.5 : 1) * fin));
+    const f = fxDe(EP.shots[amb.i], 'amb'); stRoute(ST.aAmb); stEffet(ST.aAmb, f.effet);
+    const fi = f.in ?? 1.5, fo = f.out ?? 1.5;
+    const fin = Math.max(0, Math.min(1, fo ? (amb.t1 - ST.t) / fo : 1, fi ? (ST.t - amb.t0) / fi + (f.in == null ? 0.2 : 0) : 1));
+    stGain(ST.aAmb, +(PROJET.volume_ambiance ?? 0.8) * amb.vol * 0.6 * (parle ? 0.5 : 1) * fin);
   } else if(ST.ambCour){ ST.aAmb.pause(); ST.ambCour = ''; }
   if(ST.sonsOn) ST.sfx.forEach((x, k) => {
     if(ST.t >= x.t && ST.t < x.t + 0.4 && !ST.sfxJoues.has(k)){ ST.sfxJoues.add(k);
       x.noms.forEach(n => { const u2 = stUrlSon(n);
-        if(u2){ const a = new Audio(u2); a.volume = Math.min(1, +(PROJET.volume_ambiance ?? 0.8)); a.play().catch(()=>{}); } }); }
+        if(u2){ const a = stRoute(new Audio(u2)), sx = EP.shots[x.i], f = fxDe(sx, 'sfx'); stEffet(a, f.effet);
+          stGain(a, Math.min(2, +(PROJET.volume_ambiance ?? 0.8) * +(sx.sfx_vol ?? 1) * (f.vol ?? 1))); a.play().catch(()=>{}); } }); }
   });
 }
 // extrait d'écoute d'un son (fichier du projet ou synthèse), demandé une fois au serveur puis gardé

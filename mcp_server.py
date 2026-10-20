@@ -108,7 +108,9 @@ def traduire_episode(ep: str, langue: str, consignes: str = "", tout: bool = Fal
 def catalogue_sons() -> list:
     """Ambiances (champ "amb" d'un plan, continue jusqu'au prochain "amb" ; "aucune" coupe) et bruitages ponctuels
     (champ "sfx", nom ou liste) disponibles, avec leur provenance (fichier du projet ou synthèse) et un prompt anglais
-    pour générer un vrai son. "son_video": true garde le son de la vidéo du plan."""
+    pour générer un vrai son. "son_video": true garde le son de la vidéo du plan.
+    Effets par plan : "fx": {"voix"|"mus"|"amb"|"sfx": {"in": fondu d'entrée s, "out": fondu de sortie s, "vol": ×,
+    "effet": echo|salle|lointain|radio|etouffe|grave|aigu}}."""
     import sons
     return sons.liste()
 

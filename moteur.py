@@ -222,11 +222,15 @@ def plan(s, L, src, wd, nom, est_video):
 
 # ---------------------------------------------------------------- musique
 def musique(total, sections, wd):
-    """sections : [(debut_s, piste, decalage)] ; fondu enchaîné de 3 s entre pistes."""
+    """sections : [(debut_s, piste, decalage[, fx])] ; fondu enchaîné de 3 s entre pistes.
+    fx (effets.lire(plan, "mus")) : fondus d'entrée / de sortie, volume et effet de cette section."""
+    import effets
     XF = 3.0
     dossiers = [dossier("musique"), os.path.join(ICI, "musique")]
     entrees, chaine = [], []
-    for k, (t0, piste, off) in enumerate(sections):
+    for k, sec in enumerate(sections):
+        t0, piste, off = sec[:3]
+        fx = sec[3] if len(sec) > 3 else {}
         t1 = sections[k + 1][0] if k + 1 < len(sections) else total
         L = (t1 - t0) + (XF if k + 1 < len(sections) else 0)
         f = next((os.path.join(d, piste + ext) for d in dossiers for ext in (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac")
@@ -236,8 +240,8 @@ def musique(total, sections, wd):
             continue
         seg = f"mus{k:02d}.wav"
         fin = 0.5 if k == 0 else XF
-        run([FFMPEG, "-y", "-stream_loop", "-1", "-ss", off, "-i", f, "-t", f"{L:.2f}", "-af",
-             f"loudnorm=I=-20:TP=-2,afade=t=in:d={fin},afade=t=out:st={max(0, L - XF):.2f}:d={XF}",
+        af = ",".join(["loudnorm=I=-20:TP=-2"] + effets.chaine(fx, L=L, fin_def=fin, fout_def=XF))
+        run([FFMPEG, "-y", "-stream_loop", "-1", "-ss", off, "-i", f, "-t", f"{L:.2f}", "-af", af,
              "-ar", "44100", "-ac", "2", seg], cwd=wd)
         entrees.append((t0, seg))
     if not entrees:
@@ -313,11 +317,14 @@ def monter(ep, reprendre=True, langue=None):
         log(f"  plan {i + 1}/{len(e['shots'])} {s.get('k', '')} ok ({L:.1f} s)")
     open(os.path.join(wd, "liste.txt"), "w", encoding="utf-8").write("".join(f"file '{c}'\n" for c in clips))
     run([FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", "liste.txt", "-c", "copy", "video.mp4"], cwd=wd)
+    import effets
     parts = []
     for k, (L, a) in enumerate(segs):
         p = f"n{k:03d}.wav"
         if a:
-            run([FFMPEG, "-y", "-i", a, "-af", f"adelay=450|450,apad=whole_dur={L},atrim=0:{L}",
+            fx = effets.lire(e["shots"][k], "voix")       # fondus, volume, effet de la voix de ce plan
+            pre = effets.chaine(fx, L=duree(a)) if fx else []
+            run([FFMPEG, "-y", "-i", a, "-af", ",".join(pre + [f"adelay=450|450,apad=whole_dur={L},atrim=0:{L}"]),
                  "-ar", "44100", "-ac", "2", p], cwd=wd)
         else:
             run([FFMPEG, "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-t", str(L), p], cwd=wd)
@@ -328,10 +335,11 @@ def monter(ep, reprendre=True, langue=None):
     debuts, t = [], 0.0
     for L, _ in segs:
         debuts.append(t); t += L
-    sections = [(debuts[i], s["mus"], float(s.get("mus_off", 0))) for i, s in enumerate(e["shots"]) if s.get("mus")]
+    sections = [(debuts[i], s["mus"], float(s.get("mus_off", 0)), effets.lire(s, "mus"))
+                for i, s in enumerate(e["shots"]) if s.get("mus")]
     if not sections:
         sections = [(0.0, projet().get("musique_defaut", "Lord_of_the_Land"), 0.0)]
-    sections[0] = (0.0, sections[0][1], sections[0][2])
+    sections[0] = (0.0,) + tuple(sections[0][1:])
     musique(total, sections, wd)
     import sons
     bruits = sons.piste(e["shots"], debuts, [L for L, _ in segs], total, wd,

@@ -192,6 +192,16 @@ def _ff():
     return shutil.which("ffmpeg") or "ffmpeg"
 
 
+def _duree(f):
+    import shutil
+    r = subprocess.run([shutil.which("ffprobe") or "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                        "-of", "csv=p=0", f], capture_output=True, text=True)
+    try:
+        return float(r.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
 def _run(args, cwd=None):
     r = subprocess.run([str(x) for x in args], cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
@@ -269,8 +279,10 @@ def synthese(nom, d, dst):
     return dst
 
 
-def preparer(nom, d, dst, cible=-28.0):
-    """Écrit dans dst le son « nom » sur d secondes, normalisé en sonie (fichier du projet en boucle, sinon synthèse)."""
+def preparer(nom, d, dst, cible=-28.0, fx=None):
+    """Écrit dans dst le son « nom » sur d secondes, normalisé en sonie (fichier du projet en boucle, sinon synthèse).
+    fx : effets.lire(plan, "amb") — fondus, effet (le niveau reste amb_vol)."""
+    import effets
     f = fichier_son(nom)
     brut = dst[:-4] + "_brut.wav"
     if f:
@@ -280,8 +292,9 @@ def preparer(nom, d, dst, cible=-28.0):
     else:
         raise KeyError(nom)
     fin = min(XF, d / 3)
-    _run([_ff(), "-y", "-i", brut, "-af", f"loudnorm=I={cible}:TP=-3,afade=t=in:d={fin:.2f},"
-          f"afade=t=out:st={max(0, d - fin):.2f}:d={fin:.2f}", "-ar", "44100", "-ac", "2", dst])
+    fx = {k: v for k, v in (fx or {}).items() if k != "vol"}
+    _run([_ff(), "-y", "-i", brut, "-af", ",".join([f"loudnorm=I={cible}:TP=-3"] + effets.chaine(fx, L=d, fin_def=fin, fout_def=fin)),
+          "-ar", "44100", "-ac", "2", dst])
     os.remove(brut)
     return dst
 
@@ -289,7 +302,8 @@ def preparer(nom, d, dst, cible=-28.0):
 # ---------------------------------------------------------------- piste d'ambiance d'un épisode
 def evenements(shots, debuts, durees):
     """Découpe l'épisode en sections d'ambiance et en bruitages ponctuels.
-    Renvoie (sections [(t0, t1, nom, vol)], ponctuels [(t, nom, vol)], inconnus)."""
+    Renvoie (sections [(t0, t1, nom, vol, fx)], ponctuels [(t, nom, vol, fx)], inconnus)."""
+    import effets
     sections, ponctuels, inconnus = [], [], set()
     for i, s in enumerate(shots):
         if s.get("amb") is not None:
@@ -300,13 +314,13 @@ def evenements(shots, debuts, durees):
                 if not connu(n):
                     inconnus.add(n)
                 else:
-                    sections.append([debuts[i], None, n, float(s.get("amb_vol", 1))])
+                    sections.append([debuts[i], None, n, float(s.get("amb_vol", 1)), effets.lire(s, "amb")])
         sf = s.get("sfx")
         for n in ([sf] if isinstance(sf, str) else (sf or [])):
             n = nom_propre(n)
             if not connu(n):
                 inconnus.add(n); continue
-            ponctuels.append((debuts[i] + float(s.get("sfx_t", 0.2)), n, float(s.get("sfx_vol", 1))))
+            ponctuels.append((debuts[i] + float(s.get("sfx_t", 0.2)), n, float(s.get("sfx_vol", 1)), effets.lire(s, "sfx")))
     total = debuts[-1] + durees[-1] if debuts else 0
     for sct in sections:
         if sct[1] is None:
@@ -320,28 +334,33 @@ def piste(shots, debuts, durees, total, wd, sons_video=(), signature=None, a_jou
     for n in inconnus:
         print(f"  (son inconnu : « {n} » — ni dans le catalogue ni dans le dossier des sons, ignoré)", file=sys.stderr)
     entrees = []                                     # (début, fichier, volume)
-    for k, (t0, t1, n, vol) in enumerate(sections):
+    import effets
+    for k, (t0, t1, n, vol, fx) in enumerate(sections):
         L = (t1 - t0) + (XF if t1 < total else 0)
         seg = f"amb{k:02d}.wav"
-        sig = signature("amb", n, round(L, 2), VERSION, fichier_son(n) and os.path.getmtime(fichier_son(n))) if signature else None
+        sig = signature("amb", n, round(L, 2), VERSION, fichier_son(n) and os.path.getmtime(fichier_son(n)),
+                        effets.signature(fx)) if signature else None
         if not (a_jour and a_jour(os.path.join(wd, seg), sig)):
-            preparer(n, L, os.path.join(wd, seg))
+            preparer(n, L, os.path.join(wd, seg), fx=fx)
             if marquer:
                 marquer(os.path.join(wd, seg), sig)
         entrees.append((t0, seg, vol))
-    for k, (t, n, vol) in enumerate(ponctuels):
+    for k, (t, n, vol, fx) in enumerate(ponctuels):
         L = CATALOGUE.get(n, {}).get("duree", 5)
         seg = f"sfx{k:02d}.wav"
-        sig = signature("sfx", n, L, VERSION, fichier_son(n) and os.path.getmtime(fichier_son(n))) if signature else None
+        sig = signature("sfx", n, L, VERSION, fichier_son(n) and os.path.getmtime(fichier_son(n)),
+                        effets.signature(fx)) if signature else None
         if not (a_jour and a_jour(os.path.join(wd, seg), sig)):
             f = fichier_son(n)
+            brut = os.path.join(wd, seg + ".brut.wav")
             if f:                                        # fichier ponctuel : joué une fois, en entier
-                _run([_ff(), "-y", "-i", f, "-af", "loudnorm=I=-22:TP=-2", "-ar", "44100", "-ac", "2",
-                      os.path.join(wd, seg)])
+                _run([_ff(), "-y", "-i", f, "-ar", "44100", "-ac", "2", brut])
             else:
-                synthese(n, L, os.path.join(wd, seg + ".brut.wav"))
-                _run([_ff(), "-y", "-i", seg + ".brut.wav", "-af", "loudnorm=I=-22:TP=-2", "-ar", "44100", "-ac", "2", seg], cwd=wd)
-                os.remove(os.path.join(wd, seg + ".brut.wav"))
+                synthese(n, L, brut)
+            fxs = {k2: v for k2, v in fx.items() if k2 != "vol"}         # le niveau reste sfx_vol
+            af = ",".join(["loudnorm=I=-22:TP=-2"] + (effets.chaine(fxs, L=_duree(brut)) if fxs else []))
+            _run([_ff(), "-y", "-i", brut, "-af", af, "-ar", "44100", "-ac", "2", os.path.join(wd, seg)])
+            os.remove(brut)
             if marquer:
                 marquer(os.path.join(wd, seg), sig)
         entrees.append((t, seg, vol))

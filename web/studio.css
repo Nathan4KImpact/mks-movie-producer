@@ -133,6 +133,17 @@ body.st-tire-h,body.st-tire-h *{cursor:row-resize!important;user-select:none}
 .st-sfx{position:absolute;top:3px;height:17px;padding:0 6px 0 4px;border-left:2px solid #e0915a;background:rgba(224,145,90,.18);
   color:#f2c49e;font:600 10.5px/17px var(--sans);white-space:nowrap;border-radius:0 3px 3px 0;cursor:pointer;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 .st-sfx.sel{background:rgba(224,145,90,.4)}
+/* effets audio : rampes de fondu et pastille sur les blocs, réglages dans l'inspecteur */
+.st-fdi,.st-fdo{position:absolute;top:0;bottom:0;pointer-events:none}
+.st-fdi{left:0;background:linear-gradient(to top left,transparent 49%,rgba(10,8,14,.55) 51%)}
+.st-fdo{right:0;background:linear-gradient(to top right,transparent 49%,rgba(10,8,14,.55) 51%)}
+.st-fxp{position:absolute;top:1px;right:3px;font:700 10px/1 var(--sans);color:#fff;text-shadow:0 0 3px #000;pointer-events:auto}
+.st-fx{margin-top:6px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:rgba(255,255,255,.02)}
+.st-fx summary{cursor:pointer;font:600 11.5px var(--sans);color:var(--gold2);padding:3px 0}
+.st-fx summary .meta{font-weight:400;margin-left:4px}
+.st-fx[open] summary{margin-bottom:4px}
+.st-fx .btn{margin-top:6px}
+.st-4{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}
 .st-bloc.m.abs{background:repeating-linear-gradient(135deg,#4a3d5e 0 6px,#56476c 6px 12px);color:#ddd}
 .st-bloc.sel{box-shadow:0 0 0 2px var(--gold2) inset}
 .st-tete{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #ff6a4d;pointer-events:none;z-index:5}

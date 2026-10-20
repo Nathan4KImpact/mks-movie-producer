@@ -565,6 +565,27 @@ Le dossier des sons est un rôle du projet comme les autres (section 13.5) : il 
 - **Niveau ambiance** sur un plan règle une scène (1,5 pour une bataille au premier plan, 0,5 pour une horde lointaine).
 - Remonter un épisode après un changement de son ne recalcule que les sons modifiés.
 
+### 21.4 Effets sur les pistes audio : fondus, volume, effet
+
+Dans la **vue Studio**, chaque élément sonore d'un plan a son encadré **✧ Effets**, dans l'inspecteur :
+
+| Où | S'applique à |
+|---|---|
+| Bloc **Voix** | La voix (ou la réplique) de ce plan |
+| Bloc **Musique**, si une musique démarre à ce plan | Cette musique, jusqu'au prochain changement |
+| Bloc **Sons**, si une ambiance démarre à ce plan | Cette ambiance (son niveau reste *Niveau de l'ambiance*) |
+| Bloc **Sons**, si le plan a un bruitage | Les bruitages de ce plan |
+
+![Effets d'une voix dans l'inspecteur du Studio](images/25_effets_audio.jpg)
+
+- **Fondu entrée / Fondu sortie** (secondes) : le son monte depuis le silence, ou s'éteint, sur cette durée. Laissé vide, le fondu habituel s'applique (aucun pour une voix, 0,5 s puis 3 s de fondu enchaîné pour une musique, 2 s pour une ambiance). Un fondu de sortie de 6 s sur une musique la fait s'éteindre doucement avant la scène suivante.
+- **Volume (×)** : 1 = inchangé, 0,5 = moitié, 1,5 = plus fort (4 au maximum). La musique et les ambiances continuent de baisser automatiquement quand quelqu'un parle.
+- **Effet** : **Écho**, **Réverbération (grande salle)**, **Lointain**, **Radio / téléphone**, **Étouffé (derrière un mur)**, **Plus grave**, **Plus aigu**. Plus grave et plus aigu gardent la durée du son au montage.
+
+Sur la timeline, un fondu se voit comme une rampe sombre au début ou à la fin du bloc, et **✧** signale un effet ou un volume modifié (survolez le bloc pour le détail). L'aperçu fait entendre fondus, volumes et effets ; *Plus grave* et *Plus aigu* y sont approchés en ralentissant ou en accélérant la lecture, le montage les rend exactement. **Retirer les effets** rend à l'élément son réglage habituel.
+
+Ces réglages sont enregistrés dans le JSON de l'épisode (`"fx": {"voix": {"in": 0.5, "out": 1, "vol": 1.2, "effet": "echo"}}`) et s'appliquent aussi aux versions traduites.
+
 ## 22. Glossaire
 
 | Terme | Définition |
