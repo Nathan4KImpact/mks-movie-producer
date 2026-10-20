@@ -328,7 +328,7 @@ La recherche a lieu au lancement de `PILOTAGE.bat` et dès qu'un dossier manque.
 
 1. Sur le poste d'origine : **Projet › Exporter (zip, sans rendus)**. Le zip arrive dans `_exports\` du projet. Choisissez **Exporter avec rendus** pour emporter aussi les vidéos montées (fichier beaucoup plus gros). Vous pouvez aussi copier simplement le dossier du projet.
 2. Sur le nouveau poste : installez le logiciel (section 3), puis décompressez ou copiez le projet où vous voulez.
-3. Lancez `PILOTAGE.bat`, ouvrez **Projet › Ouvrir un dossier existant…**, naviguez jusqu'au dossier du projet (ou collez son chemin), puis **Choisir ce dossier**.
+3. Lancez `PILOTAGE.bat`, ouvrez **Projet › Ouvrir un projet existant…** (bandeau en haut de la page), naviguez jusqu'au dossier du projet (ou collez son chemin), puis **Choisir ce dossier**.
 4. L'Assistant se positionne aussitôt sur l'étape où vous en étiez.
 
 ![Choisir le dossier du projet](images/13_ouvrir_dossier.jpg)
@@ -374,7 +374,7 @@ Aucun fichier n'est perdu : en cas de doublon, la version déjà présente dans 
 | ffmpeg reste orange après installation | La fenêtre a été ouverte avant l'installation | Fermer et rouvrir `PILOTAGE.bat` |
 | Montage : erreur de voix | Pas d'Internet (Edge TTS est en ligne) | Vérifier la connexion, relancer le montage (il reprend où il s'était arrêté) |
 | « Échec du test » dans Réglages | Clé, nom de modèle ou URL incorrects | Recoller la clé ; vérifier le nom exact du modèle |
-| Projet « introuvable » dans la liste | Dossier déplacé ou disque débranché | Projet › Ouvrir un dossier existant, puis retirer l'ancienne entrée (✕) |
+| Projet « introuvable » dans la liste | Dossier déplacé ou disque débranché | Projet › Ouvrir un projet existant, puis retirer l'ancienne entrée (✕) |
 | Titres sans la police Cinzel | Police non téléchargée | Relancer `INSTALLER.bat` |
 | Après un rangement du projet, des épisodes, le livre ou une référence n'apparaissent plus | Dossier déplacé sans contenu reconnaissable, ou fichier renommé | Projet › Organisation du projet › **Rechercher les dossiers déplacés** ; sinon **Choisir…** le bon dossier pour ce rôle |
 | Les nouvelles images n'apparaissent pas | Images enregistrées dans un dossier qui n'est pas celui du projet | Vérifier le dossier indiqué en tête de la fiche de prompts |

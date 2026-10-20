@@ -299,6 +299,12 @@ L'onglet Projet réunit tout ce qui définit l'œuvre ouverte.
 
 ![Paramètres du projet](images/10_projet.jpg)
 
+En haut de la page, le bandeau doré **Projets sur ce poste** montre le projet actif et les autres projets déjà ouverts sur ce PC, avec les deux actions qui démarrent un travail :
+
+- **📂 Ouvrir un projet existant…** : reprendre un projet déjà commencé — copié d'un autre poste, dézippé, déplacé. Naviguez jusqu'à son dossier (ou collez son chemin), puis **Choisir ce dossier**. Si le dossier n'est pas encore un projet, l'application propose de l'initialiser.
+- **✚ Nouveau projet…** : démarrer une nouvelle œuvre (section 14).
+- Un clic sur le nom d'un autre projet de la liste bascule dessus ; **✕** le retire de la liste, sans rien supprimer sur le disque. Un projet dont le dossier est introuvable apparaît grisé.
+
 ### 13.1 Identité, logo et actions du projet
 
 Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agissent sur le projet entier :
@@ -342,14 +348,12 @@ Chaque personnage a un **tag** (ex. `VOYANT`), un nom, une **description en angl
 
 Pour une série conversationnelle, déclarez les personnages qui parlent avant d'écrire les épisodes : l'IA d'écriture utilise leurs tags pour faire parler chacun avec sa voix.
 
-### 13.4 Sources, export et projets du poste
+### 13.4 Sources et export
 
-![Sources et projets du poste](images/11_projet_sources.jpg)
+![Sources du projet](images/11_projet_sources.jpg)
 
 - **Sources du projet** : livre, scripts, notes, documents de référence. Formats lus par l'IA : PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain, CSV, JSON. **Ajouter des fichiers** les copie dans le dossier des sources.
 - **Exporter (zip, sans rendus)** ou **Exporter avec rendus** (cadre *Actions du projet*, sous le logo) : crée un zip du projet dans le dossier des exports, pour l'archiver ou le transférer sur un autre poste.
-- **Projets sur ce poste** : la liste des projets déjà ouverts ; **Ouvrir** bascule sur un autre projet, **✕** le retire de la liste (sans rien supprimer sur le disque).
-- **Ouvrir un dossier existant…** ouvre un projet copié ou transféré. Si le dossier n'est pas encore un projet, l'application propose de l'initialiser.
 
 ### 13.5 Organisation du projet
 
@@ -372,7 +376,7 @@ Ce tableau indique, pour chaque **rôle**, le dossier du projet que l'applicatio
 
 1. **Projet › Nouveau projet…** Indiquez le nom, le sous-titre, le dossier où le créer, le nombre de saisons, d'épisodes et leur durée, la couleur, la voix, le narrateur éventuel, le style visuel et les règles de la série. **Créer le projet**.
    Le dossier est créé avec sa structure (`bibliotheque` et `production`), son logo et un plan vide, et devient le projet actif.
-   Variante : copiez le dossier `modele-projet` du logiciel, renommez-le, puis **Projet › Ouvrir un dossier existant…**
+   Variante : copiez le dossier `modele-projet` du logiciel, renommez-le, puis **Projet › Ouvrir un projet existant…**
 2. **Sources** : ajoutez le livre, le script de film ou de série, vos notes et documents de référence.
 3. **Personnages** : décrivez le narrateur et les personnages récurrents ; générez puis déposez leur image de référence.
 4. **Bible et plan** : suivez l'Assistant, **Générer la bible et le plan (IA)**, ou écrivez-les dans l'onglet Bible. Relisez et corrigez la bible : elle guide toute la suite.

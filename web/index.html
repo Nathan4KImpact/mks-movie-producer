@@ -40,6 +40,22 @@ h2{font:700 22px var(--serif);letter-spacing:.05em;color:var(--gold2);margin:0 0
 .actions-projet .titre{grid-column:1/-1;color:var(--gold2);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;text-align:left}
 .actions-projet .btn{margin:0;padding:10px 12px;font-size:13.5px;text-align:center;white-space:normal;text-transform:none;letter-spacing:0;border-color:#4a3f2c}
 .actions-projet .btn.gold{border:0}
+.actions-projet .btn.discret{padding:7px 10px;font-size:12.5px;background:none;border-color:var(--line);color:var(--muted)}
+.actions-projet .btn.discret:hover{color:var(--text);border-color:#4a3f2c}
+.card.bandeau-projets{display:flex;flex-direction:row;align-items:center;justify-content:space-between;text-align:left;gap:18px;flex-wrap:wrap;margin-bottom:16px;border-color:var(--gold);
+  background:linear-gradient(180deg,rgba(216,180,106,.10),rgba(216,180,106,.03))}
+.bandeau-projets .bp-g{flex:1;min-width:260px;display:flex;flex-direction:column;gap:6px}
+.bandeau-projets .titre{color:var(--gold2);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase}
+.bandeau-projets .bp-actif{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bandeau-projets .bp-autres{display:flex;gap:6px;flex-wrap:wrap}
+.bp-autre{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:14px;padding:1px 4px 1px 10px;font-size:12.5px}
+.bp-autre .lien{background:none;border:0;color:var(--text);cursor:pointer;padding:3px 2px;font:inherit}
+.bp-autre .lien:hover{color:var(--gold2)}
+.bp-autre .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 5px}
+.bp-autre.perdu{opacity:.55}
+.bandeau-projets .bp-actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn.grand{padding:12px 18px;font-size:14.5px;text-transform:none;letter-spacing:0;margin:0}
+.btn.contour{background:none;border:1px solid var(--gold);color:var(--gold2)}
 .actions-projet .plein{grid-column:1/-1}
 @media(max-width:520px){.actions-projet{grid-template-columns:1fr}}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
@@ -596,7 +612,22 @@ async function chargerProjet(){
 async function projet(){
   await chargerProjet(); const [src, org, sonsP] = await Promise.all([api('/api/sources'), api('/api/organisation'), api('/api/sons').catch(()=>({sons:[]}))]); const pj = PROJET;
   const persos = pj.personnages || [];
+  const autres = INFOS.projets.filter(x => x.chemin !== INFOS.racine);
   $('#main').innerHTML = `
+  <div class="card bandeau-projets">
+    <div class="bp-g">
+      <div class="titre">Projets sur ce poste</div>
+      <div class="bp-actif"><span class="okc">●</span> <b>${esc(pj.nom)}</b> <span class="pill ok">actif</span>
+        <span class="meta" style="word-break:break-all">${esc(INFOS.racine)}</span></div>
+      ${autres.length ? `<div class="bp-autres">${autres.map(x => `<span class="bp-autre ${x.existe?'':'perdu'}" title="${esc(x.chemin)}${x.existe?'':' — introuvable'}">
+        <button class="lien" ${x.existe?'':'disabled'} onclick="ouvrirProjet('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">○ ${esc(x.nom)}</button>
+        <button class="x" title="Retirer de la liste (le dossier n'est pas effacé)" onclick="oublier('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">✕</button></span>`).join('')}</div>` : ''}
+    </div>
+    <div class="bp-actions">
+      <button class="btn gold grand" onclick="choisirDossier(c=>ouvrirProjet(c),'Ouvrir un dossier de projet')" title="Reprendre un projet déjà commencé (copié d'un autre poste, dézippé, déplacé…)">📂 Ouvrir un projet existant…</button>
+      <button class="btn grand contour" onclick="nouveauProjet()">✚ Nouveau projet…</button>
+    </div>
+  </div>
   <div class="grid" style="grid-template-columns:minmax(320px,1fr) 2fr">
     <div class="card" style="align-items:center;text-align:center">
       <span class="logo-box" id="logoProjet" title="${INFOS.logo_anime?'Survoler pour rejouer l\'animation':''}"></span>
@@ -604,15 +635,15 @@ async function projet(){
       <div class="meta" style="word-break:break-all">${esc(INFOS.racine)}</div>
       <div class="actions-projet">
         <div class="titre">Actions du projet</div>
-        <button class="btn" onclick="regenLogo(false)">🎨 Régénérer le logo</button>
-        <label class="btn">🖼 Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
-        <label class="btn ${INFOS.logo_anime?'':'plein'}">✨ ${INFOS.logo_anime?'Changer le logo animé':'Importer un logo animé'}<input type="file" accept="video/webm,video/mp4,image/gif,image/webp,image/png,image/svg+xml" style="display:none" onchange="envoyerLogoAnime(this.files[0])"></label>
-        ${INFOS.logo_anime?'<button class="btn" onclick="retirerLogoAnime()">✕ Retirer le logo animé</button>':''}
+        <button class="btn discret" onclick="regenLogo(false)">🎨 Régénérer le logo</button>
+        <label class="btn discret">🖼 Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
+        <label class="btn discret ${INFOS.logo_anime?'':'plein'}">✨ ${INFOS.logo_anime?'Changer le logo animé':'Importer un logo animé'}<input type="file" accept="video/webm,video/mp4,image/gif,image/webp,image/png,image/svg+xml" style="display:none" onchange="envoyerLogoAnime(this.files[0])"></label>
+        ${INFOS.logo_anime?'<button class="btn discret" onclick="retirerLogoAnime()">✕ Retirer le logo animé</button>':''}
         <button class="btn plein" onclick="ouvrir('projet')">📂 Ouvrir le dossier du projet</button>
         <button class="btn gold" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
         <button class="btn gold" onclick="exporter(true)">🎬 Exporter avec rendus</button>
       </div>
-      <p class="meta">Pour continuer sur un autre poste : copie ce dossier (ou le zip), installe le logiciel, puis Projet › Ouvrir un dossier. L'avancement est recalculé à partir des fichiers.</p>
+      <p class="meta">Pour continuer sur un autre poste : copie ce dossier (ou le zip), installe le logiciel, puis <b>Ouvrir un projet existant…</b> en haut de cette page. L'avancement est recalculé à partir des fichiers.</p>
     </div>
     <div class="card"><h3>Paramètres du projet</h3>
       <div class="fields">
@@ -669,17 +700,12 @@ async function projet(){
     <div class="row"><button class="btn small" onclick="ajoutVersion()">+ Ajouter une langue</button><div class="sp"></div><button class="btn gold" onclick="sauverProjet()">Enregistrer le projet</button></div>
     <p class="meta">Ensuite : Production › Traduire (IA), relecture dans l'éditeur (Version linguistique › côte à côte), puis Monter. Les vidéos traduites vont dans <code>${esc(win(INFOS.dossiers.rendus))}\\&lt;langue&gt;</code> avec leurs sous-titres .srt.</p>
   </div>
-  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
+  <div style="margin-top:16px">
     <div class="card"><h3>Sources du projet <span class="meta">(livre, script, notes, documents de référence — lues par l'IA)</span></h3>
       ${src.length?src.map(s=>`<div class="check"><span class="okc">■</span><div style="flex:1">${esc(s.nom)}${s.livre?' <span class="pill wait">livre</span>':''}</div><span class="meta">${s.mo} Mo</span></div>`).join(''):'<p class="meta">Aucune source pour l\'instant.</p>'}
       <div class="row" style="margin-top:8px"><label class="btn gold" style="margin:0;text-transform:none;letter-spacing:0">Ajouter des fichiers<input type="file" multiple style="display:none" onchange="envoyerSources(this.files)"></label>
         <button class="btn small" onclick="ouvrir('sources')">Ouvrir le dossier des sources</button></div>
       <p class="meta">PDF, Word (.docx), texte, Markdown, sous-titres (.srt), Fountain… ainsi que des images de référence.</p>
-    </div>
-    <div class="card"><h3>Projets sur ce poste</h3>
-      ${INFOS.projets.map(x=>`<div class="check"><span class="${x.chemin===INFOS.racine?'okc':''}">${x.chemin===INFOS.racine?'●':'○'}</span><div style="flex:1"><b>${esc(x.nom)}</b><br><span class="meta" style="word-break:break-all">${esc(x.chemin)}${x.existe?'':' — introuvable'}</span></div>
-        ${x.chemin===INFOS.racine?'<span class="pill ok">actif</span>':`<button class="btn small" onclick="ouvrirProjet('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">Ouvrir</button><button class="btn small" onclick="oublier('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">✕</button>`}</div>`).join('')}
-      <div class="row" style="margin-top:10px"><button class="btn" onclick="choisirDossier(c=>ouvrirProjet(c),'Ouvrir un dossier de projet')">Ouvrir un dossier existant…</button><button class="btn gold" onclick="nouveauProjet()">Nouveau projet…</button></div>
     </div>
   </div>
   <div class="card" style="margin-top:16px" id="organisation">${vueOrganisation(org)}</div>`;

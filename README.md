@@ -49,7 +49,7 @@ Le projet se range **librement** : seuls `projet.json` et `suivi.json` restent �
 déplacé est retrouvé d'après son contenu (*Projet › Organisation du projet*).
 
 - **Changer de poste** : copier le dossier du projet (ou *Projet › Exporter* en zip), installer le logiciel,
-  puis *Projet › Ouvrir un dossier existant*. L'avancement est recalculé à partir des fichiers.
+  puis *Projet › Ouvrir un projet existant*. L'avancement est recalculé à partir des fichiers.
 - **Nouveau projet** : *Projet › Nouveau projet*, ajouter les sources, puis suivre l'Assistant
   (bible et plan par IA, épisodes, images, montage, validation).
 - **Autres langues** : *Projet › Versions linguistiques* (ex. anglais, titre et voix), puis *Traduire* et
