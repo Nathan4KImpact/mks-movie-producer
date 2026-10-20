@@ -54,7 +54,8 @@ h2{font:700 22px var(--serif);letter-spacing:.05em;color:var(--gold2);margin:0 0
 .bp-autre .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 5px}
 .bp-autre.perdu{opacity:.55}
 .bandeau-projets .bp-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn.grand{padding:12px 18px;font-size:14.5px;text-transform:none;letter-spacing:0;margin:0}
+.btn.grand{padding:12px 18px;font-size:14.5px;text-transform:none;letter-spacing:0;margin:0;display:inline-flex;align-items:center;gap:8px}
+.btn.grand .ico{width:20px;height:20px;flex:none}
 .btn.contour{background:none;border:1px solid var(--gold);color:var(--gold2)}
 .actions-projet .plein{grid-column:1/-1}
 @media(max-width:520px){.actions-projet{grid-template-columns:1fr}}
@@ -624,7 +625,7 @@ async function projet(){
         <button class="x" title="Retirer de la liste (le dossier n'est pas effacé)" onclick="oublier('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">✕</button></span>`).join('')}</div>` : ''}
     </div>
     <div class="bp-actions">
-      <button class="btn gold grand" onclick="choisirDossier(c=>ouvrirProjet(c),'Ouvrir un dossier de projet')" title="Reprendre un projet déjà commencé (copié d'un autre poste, dézippé, déplacé…)">📂 Ouvrir un projet existant…</button>
+      <button class="btn gold grand" onclick="choisirDossier(c=>ouvrirProjet(c),'Ouvrir un dossier de projet')" title="Reprendre un projet déjà commencé (copié d'un autre poste, dézippé, déplacé…)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2h8.8A1.5 1.5 0 0 1 21 8.5V9H6.6a1.5 1.5 0 0 0-1.4 1L3 16.5z" fill="currentColor" opacity=".55"/><path d="M5.2 10.2A1.5 1.5 0 0 1 6.6 9.2h14.6a1 1 0 0 1 .95 1.3l-2.2 7.1a1.5 1.5 0 0 1-1.43 1.06H4.2a1 1 0 0 1-.95-1.3z" fill="currentColor"/></svg> Ouvrir un projet existant…</button>
       <button class="btn grand contour" onclick="nouveauProjet()">✚ Nouveau projet…</button>
     </div>
   </div>
@@ -635,13 +636,13 @@ async function projet(){
       <div class="meta" style="word-break:break-all">${esc(INFOS.racine)}</div>
       <div class="actions-projet">
         <div class="titre">Actions du projet</div>
-        <button class="btn discret" onclick="regenLogo(false)">🎨 Régénérer le logo</button>
-        <label class="btn discret">🖼 Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
-        <label class="btn discret ${INFOS.logo_anime?'':'plein'}">✨ ${INFOS.logo_anime?'Changer le logo animé':'Importer un logo animé'}<input type="file" accept="video/webm,video/mp4,image/gif,image/webp,image/png,image/svg+xml" style="display:none" onchange="envoyerLogoAnime(this.files[0])"></label>
-        ${INFOS.logo_anime?'<button class="btn discret" onclick="retirerLogoAnime()">✕ Retirer le logo animé</button>':''}
+        <button class="btn" onclick="regenLogo(false)">🎨 Régénérer le logo</button>
+        <label class="btn">🖼 Importer un logo<input type="file" accept="image/*" style="display:none" onchange="envoyerLogo(this.files[0])"></label>
+        <label class="btn ${INFOS.logo_anime?'':'plein'}">✨ ${INFOS.logo_anime?'Changer le logo animé':'Importer un logo animé'}<input type="file" accept="video/webm,video/mp4,image/gif,image/webp,image/png,image/svg+xml" style="display:none" onchange="envoyerLogoAnime(this.files[0])"></label>
+        ${INFOS.logo_anime?'<button class="btn" onclick="retirerLogoAnime()">✕ Retirer le logo animé</button>':''}
         <button class="btn plein" onclick="ouvrir('projet')">📂 Ouvrir le dossier du projet</button>
-        <button class="btn gold" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
-        <button class="btn gold" onclick="exporter(true)">🎬 Exporter avec rendus</button>
+        <button class="btn discret" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
+        <button class="btn discret" onclick="exporter(true)">🎬 Exporter avec rendus</button>
       </div>
       <p class="meta">Pour continuer sur un autre poste : copie ce dossier (ou le zip), installe le logiciel, puis <b>Ouvrir un projet existant…</b> en haut de cette page. L'avancement est recalculé à partir des fichiers.</p>
     </div>
