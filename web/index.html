@@ -641,8 +641,8 @@ async function projet(){
         <label class="btn ${INFOS.logo_anime?'':'plein'}">✨ ${INFOS.logo_anime?'Changer le logo animé':'Importer un logo animé'}<input type="file" accept="video/webm,video/mp4,image/gif,image/webp,image/png,image/svg+xml" style="display:none" onchange="envoyerLogoAnime(this.files[0])"></label>
         ${INFOS.logo_anime?'<button class="btn" onclick="retirerLogoAnime()">✕ Retirer le logo animé</button>':''}
         <button class="btn plein" onclick="ouvrir('projet')">📂 Ouvrir le dossier du projet</button>
-        <button class="btn discret" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
-        <button class="btn discret" onclick="exporter(true)">🎬 Exporter avec rendus</button>
+        <button class="btn contour" onclick="exporter(false)">📦 Exporter (zip, sans rendus)</button>
+        <button class="btn contour" onclick="exporter(true)">🎬 Exporter avec rendus</button>
       </div>
       <p class="meta">Pour continuer sur un autre poste : copie ce dossier (ou le zip), installe le logiciel, puis <b>Ouvrir un projet existant…</b> en haut de cette page. L'avancement est recalculé à partir des fichiers.</p>
     </div>
