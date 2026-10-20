@@ -14,6 +14,10 @@ Répondre en français à l'utilisateur.
   Timeline : pistes Vidéo, Titres, Voix, Musique, Ambiance (`ST.amb`, sections calculées dans `stCalcul` d'après `amb`) et
   Bruitage (`ST.sfx`, un repère par plan) ; l'aperçu joue les sons via l'extrait de `POST /api/sons/essai` (`stUrlSon`).
   **Toute couche ajoutée au moteur (`moteur.py`) doit avoir sa piste et son écoute dans le Studio.**
+  Disposition : séparateurs `.st-gut` (glisser = largeur de la bibliothèque / de l'inspecteur, hauteur de la timeline ;
+  double-clic ou bouton `.st-pli` = replier), appliquée par `stDisposer()`, gardée par poste dans `localStorage`
+  (`ua_studio_dispo`) ; `stDispoDefaut()` remet les tailles d'origine. La grille `.st-body` place chaque enfant par
+  `grid-column` explicite (un panneau replié est en `display:none`).
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections

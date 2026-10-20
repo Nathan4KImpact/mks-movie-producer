@@ -45,6 +45,7 @@ async function studio(ep, garder){
     </div>
     <div class="st-body" id="stBody">
       <aside class="st-pane st-lib" id="stLib"></aside>
+      <div class="st-gut v" data-g="l" title="Glisser pour élargir ou réduire · double-clic : replier"><button class="st-pli" data-p="l" title="Replier / déplier la bibliothèque"></button></div>
       <section class="st-pane st-mon">
         <div class="st-wrap" id="stWrap"><div class="st-stage" id="stStage">
           <img class="ly" id="stImg" alt=""><video class="ly" id="stVid" muted playsinline preload="auto"></video>
@@ -65,9 +66,11 @@ async function studio(ep, garder){
           <div class="sp"></div><span class="st-etat" id="stEtat"></span>
         </div>
       </section>
+      <div class="st-gut v" data-g="r" title="Glisser pour élargir ou réduire · double-clic : replier"><button class="st-pli" data-p="r" title="Replier / déplier l'inspecteur"></button></div>
       <aside class="st-pane st-insp" id="stInsp"></aside>
     </div>
-    <div class="st-tl">
+    <div class="st-gut h" data-g="t" title="Glisser pour agrandir ou réduire la timeline · double-clic : replier"><button class="st-pli" data-p="t" title="Replier / déplier la timeline"></button></div>
+    <div class="st-tl" id="stTl">
       <div class="st-tl-bar">
         <button class="btn small" onclick="stAjouter(false)" title="Nouveau plan après le plan sélectionné">＋ Plan</button>
         <button class="btn small" onclick="stAjouter(true)" title="Nouveau carton (titre sur fond noir)">＋ Carton</button>
@@ -77,6 +80,7 @@ async function studio(ep, garder){
         <button class="btn small" onclick="stSupprimer()" title="Supprimer le plan (Suppr)">Supprimer</button>
         <span class="meta" style="margin-left:8px">Zoom</span><input type="range" min="0" max="100" value="${ST.zoom?Math.round(Math.log(ST.zoom/2)/Math.log(100)*100):0}" oninput="stZoom(+this.value)">
         <button class="btn small" onclick="stZoom(0);this.previousElementSibling.value=0">Tout voir</button>
+        <button class="btn small" onclick="stDispoDefaut()" title="Remettre les panneaux à leur taille d'origine et tout déplier">⟲ Disposition</button>
         <div class="st-legende">
           <span><i style="background:#6fbf8a"></i>voix de synthèse</span><span><i style="background:repeating-linear-gradient(135deg,#4c8a62 0 3px,#5a9c71 3px 6px)"></i>durée estimée</span>
           <span><i style="background:#7aa6d8"></i>voix importée</span><span><i style="background:#9d86c9"></i>musique</span><span><i style="background:#5fa8a0"></i>ambiance</span><span><i style="background:#e0915a"></i>bruitage</span></div>
@@ -89,6 +93,7 @@ async function studio(ep, garder){
   </div>`;
   const vid = $('#stVid'); vid.onloadedmetadata = () => stFrame();
   window.onresize = stTaille;
+  stDisposer(); stPanneaux();
   stTaille(); stCalcul(); stTimeline(); stInsp(); stFrame();
   try { ST.lib = await api('/api/bibliotheque?ep=' + encodeURIComponent(ep)); } catch(e){ ST.lib = {medias: [], audios: [], musiques: [], dossiers: {}}; }
   stLib(); stMesurerFichiers(); stTimeline();
@@ -102,6 +107,47 @@ function studioQuitter(){
   $('#main').classList.remove('large');
   if(window.onresize === stTaille) window.onresize = null;
 }
+
+// ---------------------------------------------------------------- disposition : panneaux réglables et repliables
+// largeurs de la bibliothèque et de l'inspecteur, hauteur de la timeline, panneaux repliés : gardés sur ce poste
+const DISPO_DEF = {wl: 290, wr: 340, ht: 0, fl: false, fr: false, ft: false};
+function stDispo(){ if(!ST.dispo){ let d = {}; try { d = JSON.parse(localStorage.getItem('ua_studio_dispo') || '{}'); } catch(e){}
+  ST.dispo = {...DISPO_DEF, ...d}; } return ST.dispo; }
+function stDispoGarder(){ try { localStorage.setItem('ua_studio_dispo', JSON.stringify(ST.dispo)); } catch(e){} }
+function stDisposer(){
+  const d = stDispo(), b = $('#stBody'), tl = $('#stTl'); if(!b || !tl) return;
+  b.style.gridTemplateColumns = `${d.fl ? 0 : d.wl}px 10px minmax(0,1fr) 10px ${d.fr ? 0 : d.wr}px`;
+  $('#stLib').classList.toggle('ferme', d.fl); $('#stInsp').classList.toggle('ferme', d.fr);
+  tl.classList.toggle('ferme', d.ft); tl.style.height = !d.ft && d.ht ? d.ht + 'px' : '';
+  const pl = (p, ouvert, a, b2) => { const x = document.querySelector(`.st-pli[data-p="${p}"]`); if(x) x.textContent = ouvert ? a : b2; };
+  pl('l', !d.fl, '‹', '›'); pl('r', !d.fr, '›', '‹'); pl('t', !d.ft, '▾', '▴');
+}
+function stReplier(p){ const d = stDispo(), k = 'f' + p; d[k] = !d[k]; stDispoGarder(); stDisposer(); stTaille(); }
+function stPanneaux(){
+  document.querySelectorAll('.st-pli').forEach(x => { x.onmousedown = e => e.stopPropagation();
+    x.onclick = e => { e.stopPropagation(); stReplier(x.dataset.p); }; });
+  document.querySelectorAll('.st-gut').forEach(g => {
+    const p = g.dataset.g;
+    g.ondblclick = () => stReplier(p);
+    g.onmousedown = e => {
+      e.preventDefault(); const d = stDispo();
+      if(d['f' + p]){ d['f' + p] = false; stDisposer(); }                    // tirer un panneau replié le rouvre
+      const x0 = e.clientX, y0 = e.clientY, wl = d.wl, wr = d.wr, ht = $('#stTl').getBoundingClientRect().height;
+      const larg = $('#stBody').getBoundingClientRect().width;
+      document.body.classList.add(p === 't' ? 'st-tire-h' : 'st-tire-v'); g.classList.add('on');
+      const bouge = ev => {
+        if(p === 'l') d.wl = Math.round(Math.max(180, Math.min(larg - d.wr - 320, wl + ev.clientX - x0)));
+        if(p === 'r') d.wr = Math.round(Math.max(240, Math.min(larg - d.wl - 320, wr - (ev.clientX - x0))));
+        if(p === 't') d.ht = Math.round(Math.max(110, Math.min(innerHeight * 0.75, ht - (ev.clientY - y0))));
+        stDisposer(); stTaille();
+      };
+      const fin = () => { removeEventListener('mousemove', bouge); removeEventListener('mouseup', fin);
+        document.body.classList.remove('st-tire-h', 'st-tire-v'); g.classList.remove('on'); stDispoGarder(); };
+      addEventListener('mousemove', bouge); addEventListener('mouseup', fin);
+    };
+  });
+}
+function stDispoDefaut(){ ST.dispo = {...DISPO_DEF}; stDispoGarder(); stDisposer(); stTaille(); }
 
 function stTaille(){
   const studio = $('.studio'); if(!studio) return;
