@@ -21,6 +21,9 @@ Répondre en français à l'utilisateur.
   double-clic ou bouton `.st-pli` = replier), appliquée par `stDisposer()`, gardée par poste dans `localStorage`
   (`ua_studio_dispo`) ; `stDispoDefaut()` remet les tailles d'origine. La grille `.st-body` place chaque enfant par
   `grid-column` explicite (un panneau replié est en `display:none`).
+  Favicon de l'application : `web/img/favicon.svg` (source, dessin 64×64), `favicon.ico` (16/32/48) et
+  `apple-touch-icon.png` (180) qui en sont tirés ; servis par `/web/img/…` et `/favicon.ico`. Redessiner les deux images
+  si le SVG change.
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections

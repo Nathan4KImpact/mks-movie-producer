@@ -13,7 +13,8 @@ sys.path.insert(0, ICI)
 import contexte as cx
 
 for _t, _e in (("text/javascript", ".js"), ("text/css", ".css"), ("audio/mp4", ".m4a"), ("audio/webm", ".weba"),
-                 ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx")):
+                 ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+                 ("image/x-icon", ".ico")):
     mimetypes.add_type(_t, _e)      # le registre Windows peut associer d'autres types (ex. .js en text/plain)
 PORT = int(os.environ.get("ATELIER_PORT", "8765"))
 EP_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
@@ -606,6 +607,10 @@ class H(BaseHTTPRequestHandler):
                 return self.envoyer(200, media_info(ep, {"k": q.get("k", [""])[0]}))
             if p.startswith("/web/") and p.endswith((".js", ".css")):
                 return self.fichier(os.path.join(ICI, "web", p.split("/")[-1]), os.path.join(ICI, "web"))
+            if p.startswith("/web/img/") and p.endswith((".svg", ".png", ".ico")):          # favicon et icônes de l'application
+                return self.fichier(os.path.join(ICI, "web", "img", p.split("/")[-1]), os.path.join(ICI, "web", "img"))
+            if p == "/favicon.ico":
+                return self.fichier(os.path.join(ICI, "web", "img", "favicon.ico"), os.path.join(ICI, "web", "img"))
             if p == "/api/bibliotheque":
                 return self.envoyer(200, bibliotheque(q.get("ep", [""])[0]))
             if p.startswith("/musique/"):
