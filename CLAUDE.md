@@ -77,6 +77,9 @@ fondus (remplacent ceux par défaut de la couche), volume, effet ffmpeg (`effets
 qui démarre à ce plan ; le niveau d'une ambiance / d'un bruitage reste `amb_vol` / `sfx_vol`. Filtres sans hypothèse de
 fréquence (entrée ramenée à 44,1 kHz) ; `grave`/`aigu` compensent la durée (`atempo`). Les signatures des sons incluent `fx`.
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
+Transition : `"fondu": "noir"|"aucun"` sur un plan, sinon `projet.json > fondu_plans` (défaut `noir` = fondu au noir 0,35 s à
+l'entrée et à la sortie ; `aucun` = coupe franche) — `moteur.fondu_de()`, dans la signature du plan seulement si ≠ `noir`
+(les caches existants restent valides) ; reproduit par l'aperçu du Studio, réglé dans l'inspecteur et dans Projet.
 Champs posés par la vue Studio (facultatifs) : `media` (image/vidéo choisie, chemin relatif au projet, PRIORITAIRE sur la clé),
 `voix_fichier` (narration enregistrée/importée, remplace la synthèse pour la langue d'origine seulement), `mus_off` (décalage
 en s dans la piste `mus`). Les résoudre par `contexte.fichier(rel)` ; `ia._garder_traductions` les recolle après une réécriture IA.
@@ -84,9 +87,13 @@ en s dans la piste `mus`). Les résoudre par `contexte.fichier(rel)` ; `ia._gard
 ## Versions linguistiques (`langues.py`)
 Une seule série, plusieurs langues : plans, images et musiques communs ; textes et voix par langue, une vidéo par langue.
 `projet.json > langue` (origine) et `versions` : `{"en": {"titre": "The Final Quest", "voix": {"nom", "debit", "hauteur"}}}`.
-Traductions DANS le JSON de l'épisode : `"versions": {"en": {"vo", "title", "de"}}` sur chaque plan, `{"card", "sub", "de"}`
+Traductions DANS le JSON de l'épisode : `"versions": {"en": {"vo", "title", "de", "media"?}}` sur chaque plan, `{"card", "sub", "de"}`
 sur les cartons, `{"title", "de"}` sur l'épisode. `de` = empreinte du texte d'origine traduit (`langues.empreinte`) :
 si l'origine change, statut `a_revoir`. Toujours écrire une traduction via `langues.poser()` (calcule `de`).
+`versions.<langue>.media` = image/vidéo propre à la langue (texte incrusté) : `localiser()` la substitue à `media`, elle
+**ne compte pas comme une traduction** (`langues.a_du_texte` ; `statut`, `poser` qui la conserve, `sauver_episode` qui ne
+pose pas `de` pour elle seule) ; écrite par `langues.poser_media()` ou le bouton « Choisir pour EN » de l'inspecteur
+(`ST.cibleLangue` → `stAppliquer`).
 `ia.traduire_episode` est incrémental (manquantes + à revoir). `moteur.monter(ep, langue="en")` : `localiser()` refuse
 un épisode incomplet, travail dans `travail/<projet>/<EP>.en`, sortie `<rendus>/en/<ID>_<titre>_EN.mp4`. Chaque montage
 écrit un `.srt` calé sur la voix (`langues.srt`). L'éditeur envoie `_retouche: ["en"]` pour une traduction corrigée à la

@@ -201,10 +201,20 @@ def carton(principal, sous, L, wd, nom):
          "-pix_fmt", "yuv420p", nom + ".mp4"], cwd=wd)
 
 
-def plan(s, L, src, wd, nom, est_video):
+FONDUS = ("noir", "aucun")
+
+
+def fondu_de(s, pj=None):
+    """Transition d'un plan : « noir » (fondu au noir à l'entrée et à la sortie, par défaut) ou « aucun » (coupe franche,
+    pour des diapositives ou des étapes d'apparition qui se suivent). Champ « fondu » du plan, sinon projet.json > fondu_plans."""
+    f = s.get("fondu") or (pj if pj is not None else projet()).get("fondu_plans") or "noir"
+    return f if f in FONDUS else "noir"
+
+
+def plan(s, L, src, wd, nom, est_video, fondu_plan="noir"):
     frames = int(round(L * FPS))
     tf = titre(s.get("title", ""), L, wd, nom)
-    fondu = f",fade=t=in:st=0:d=0.35,fade=t=out:st={L-0.35:.2f}:d=0.35"
+    fondu = f",fade=t=in:st=0:d=0.35,fade=t=out:st={L-0.35:.2f}:d=0.35" if fondu_plan == "noir" else ""
     eq = ",eq=contrast=1.05:saturation=1.12:brightness=0.03"
     if est_video:
         vitesse = max(1.0, L / duree(src))
@@ -299,14 +309,16 @@ def monter(ep, reprendre=True, langue=None):
             a = voix(vo, os.path.join(wd, nom + ".mp3"), lg.voix_plan(s, langue, pj)); d = duree(a)
         L = round(max(float(s.get("min", 4.0)), d + float(s.get("pad", 1.5))), 2)
         src, est_video = trouver_media(ep, s, wd)
-        sig = signature("plan", L, empreinte_media(src), est_video, s.get("m", s.get("motion", "in")), s.get("title", ""))
+        fd = fondu_de(s, pj)
+        sig = signature("plan", L, empreinte_media(src), est_video, s.get("m", s.get("motion", "in")), s.get("title", ""),
+                        *([fd] if fd != "noir" else []))
         if src is None:
             manquants.append(s.get("k"))
         if not a_jour(os.path.join(wd, nom + ".mp4"), sig):
             if src is None:
                 carton("", f"[plan manquant : {s.get('k')}]", L, wd, nom)
             else:
-                plan(s, L, src, wd, nom, est_video)
+                plan(s, L, src, wd, nom, est_video, fd)
             marquer(os.path.join(wd, nom + ".mp4"), sig)
         clips.append(nom + ".mp4"); segs.append((L, a)); textes[len(segs) - 1] = (vo, d)
         if s.get("son_video") and est_video and src and a_un_son(src):     # son de la vidéo gardé (horde générée avec son…)

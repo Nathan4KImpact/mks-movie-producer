@@ -38,6 +38,12 @@ VOIX_PROPOSEES = {
 CODE_RE = re.compile(r"^[a-z]{2,3}(-[A-Za-z]{2,4})?$")
 CHAMPS_PLAN = ("vo", "title")
 CHAMPS_CARTON = ("card", "sub")
+CHAMPS_MEDIA = ("media",)          # image ou vidéo propre à une langue (texte incrusté) : pas du texte à traduire
+
+
+def a_du_texte(t):
+    """Vrai si une entrée de versions porte une traduction (et pas seulement un média propre à la langue)."""
+    return any(c not in ("de",) + CHAMPS_MEDIA for c in (t or {}))
 
 
 def nom_langue(code):
@@ -134,7 +140,7 @@ def statut(element, langue):
     if not a_traduire(element):
         return "rien"
     t = (element.get("versions") or {}).get(langue)
-    if not t:
+    if not a_du_texte(t):
         return "manquante"
     return "ok" if t.get("de") == empreinte(element) else "a_revoir"
 
@@ -163,7 +169,25 @@ def poser(element, langue, valeurs):
     champs = ("title",) if "shots" in element else (CHAMPS_CARTON if element.get("card") is not None else CHAMPS_PLAN)
     t = {c: (valeurs.get(c) or "").strip() for c in champs if element.get(c) or valeurs.get(c)}
     t["de"] = empreinte(element)
+    avant = (element.get("versions") or {}).get(langue) or {}
+    for c in CHAMPS_MEDIA:                  # le média propre à la langue survit à une nouvelle traduction
+        if avant.get(c):
+            t[c] = avant[c]
     element.setdefault("versions", {})[langue] = t
+
+
+def poser_media(element, langue, rel):
+    """Image ou vidéo propre à une langue (rel relatif au projet ; vide = reprendre le média commun)."""
+    vs = element.setdefault("versions", {})
+    t = vs.setdefault(langue, {})
+    if rel:
+        t["media"] = rel
+    else:
+        t.pop("media", None)
+        if not t:
+            vs.pop(langue)
+    if not vs:
+        element.pop("versions")
 
 
 def localiser(e, langue, pj, strict=True):
@@ -180,7 +204,7 @@ def localiser(e, langue, pj, strict=True):
     for el in [out] + out.get("shots", []):
         t = (el.get("versions") or {}).get(langue)
         if t:
-            for c, v in t.items():
+            for c, v in t.items():       # textes traduits, et « media » : l'image propre à cette langue
                 if c != "de":
                     el[c] = v
     if et["a_revoir"]:

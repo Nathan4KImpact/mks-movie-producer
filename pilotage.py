@@ -184,8 +184,10 @@ def sauver_episode(ep, e):
             if t is not None:
                 for c in [c for c in t if c != "de" and not str(t[c]).strip()]:
                     t.pop(c)
-                if any(c != "de" for c in t):
+                if lg.a_du_texte(t):
                     t["de"] = lg.empreinte(el)
+                elif t.get("media"):             # plus de texte traduit, mais l'image propre à la langue reste
+                    t.pop("de", None)
                 else:
                     el["versions"].pop(l)
         if el.get("versions") == {}:
