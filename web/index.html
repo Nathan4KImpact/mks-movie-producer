@@ -102,6 +102,9 @@ textarea.vo{min-height:64px;font-size:14px}
 .job .hd{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--panel);cursor:pointer}
 .job pre{margin:0;max-height:220px;overflow:auto;padding:8px 12px;font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfc6b8;white-space:pre-wrap}
 .job.min pre{display:none}
+.job .stop{margin:0;padding:3px 9px;font-size:11.5px;text-transform:none;letter-spacing:0;border-color:#6b3a33;color:#e9a99c}
+.job .stop:hover{background:#3a1f1b;border-color:#c0584a;color:#fff}
+.job.flash{box-shadow:0 0 0 2px var(--gold)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:30}
 .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(900px,94vw);max-height:88vh;overflow:auto;padding:20px}
 .prompt{background:#0f0d13;border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;font-size:12.5px}
@@ -880,17 +883,34 @@ async function action(cmd, args){
   if(cmd==='monter' && $('#neuf')?.checked) args = [...args, '--neuf'];
   if(cmd==='ecrire' && (!args[0]||!args[1]||!args[2])) return toast('Code, titre et pages sont nécessaires');
   const lang = cmd==='traduire' ? args[1] : (args.includes('--langue') ? args[args.indexOf('--langue')+1] : '');
-  const j = await api('/api/action', {method:'POST', body:JSON.stringify({cmd, args})}); suivre(j.id, `${NOMS[cmd]} ${args[0]||''}${lang?' · '+lang.toUpperCase():''}`);
+  const j = await api('/api/action', {method:'POST', body:JSON.stringify({cmd, args})});
+  const titre = `${NOMS[cmd]} ${args[0]||''}${lang?' · '+lang.toUpperCase():''}`;
+  if(j.deja){                                     // même tâche déjà en cours : on la montre au lieu d'en lancer une seconde
+    toast(titre + ' est déjà en cours');
+    const el = document.querySelector(`.job[data-id="${j.id}"]`);
+    if(el){ el.classList.remove('min'); el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 1200); }
+    else suivre(j.id, titre);
+    return;
+  }
+  suivre(j.id, titre);
+}
+async function arreterTache(id, titre, e){
+  e.stopPropagation();
+  if(!confirm(`Arrêter « ${titre} » ?\nCe qui est déjà calculé est gardé : relancer reprendra là où la tâche s'est arrêtée.`)) return;
+  const r = await api('/api/job/'+id+'/arreter', {method:'POST', body:'{}'}); toast(r.ok ? 'Arrêt demandé' : 'Tâche déjà terminée');
 }
 function suivre(id, titre){
-  const el = document.createElement('div'); el.className = 'job';
-  el.innerHTML = `<div class="hd"><b>${esc(titre)}</b><span class="pill wait">en cours</span><div class="sp"></div><span class="meta">▾</span></div><pre></pre>`;
+  const el = document.createElement('div'); el.className = 'job'; el.dataset.id = id;
+  el.innerHTML = `<div class="hd"><b>${esc(titre)}</b><span class="pill wait">en cours</span><div class="sp"></div>
+    <button class="btn small stop" title="Arrêter cette tâche">■ Arrêter</button><span class="meta">▾</span></div><pre></pre>`;
   el.querySelector('.hd').onclick = () => el.classList.toggle('min');
+  el.querySelector('.stop').onclick = e => arreterTache(id, titre, e);
   $('#jobs').appendChild(el);
   const t = setInterval(async () => {
     const j = await api('/api/job/'+id); const pre = el.querySelector('pre');
     pre.textContent = j.log.split('\n').slice(-60).join('\n'); pre.scrollTop = pre.scrollHeight;
     if(j.etat !== 'en cours'){ clearInterval(t); const p = el.querySelector('.pill'); p.textContent = j.etat; p.className = 'pill ' + (j.etat==='terminé'?'ok':'');
+      el.querySelector('.stop')?.remove(); if(j.etat === 'arrêté'){ toast(titre + ' : arrêté'); setTimeout(()=>el.classList.add('min'), 4000); }
       if(j.etat==='terminé'){ toast(titre + ' : terminé'); setTimeout(()=>el.classList.add('min'), 4000); if(location.hash.startsWith('#saison')||!location.hash) saison();
         else if(location.hash.startsWith('#episode/') && EP && !DIRTY && ['traduire','prompts'].includes(j.cmd)) episode(EP._ep); } }
   }, 1500);

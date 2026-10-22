@@ -213,7 +213,7 @@ def _score(role, d, sous, fichiers, pj):
     if role == "rendus":
         if CODE_EP.match(os.path.basename(d)):
             return 0                                   # sous-dossier d'images d'un épisode
-        n = sum(f.endswith(VID) for f in low)
+        n = sum(f.endswith(VID) and not f.startswith("logo") for f in low)   # le logo animé n'est pas un rendu
         return n + 3 * bonus if n else 0
     if role == "sources":
         livre = os.path.basename(pj.get("livre", "") or "").lower()
