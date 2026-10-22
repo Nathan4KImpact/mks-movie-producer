@@ -467,24 +467,68 @@ def parcourir(c):
 
 
 # ---------------------------------------------------------------- tâches de fond
+PROCS = {}       # id de tâche -> processus (hors de JOBS, qui est renvoyé en JSON)
+
+
+def _cle_tache(cmd, args):
+    return (cmd, tuple(a for a in args if a != "--neuf"))
+
+
 def lancer(cmd, args):
+    # même tâche déjà en cours sur ce projet (double clic, deuxième onglet) : on ne la relance pas
+    for j in JOBS.values():
+        if j["etat"] == "en cours" and j["projet"] == cx.racine() and _cle_tache(j["cmd"], j["args"]) == _cle_tache(cmd, args):
+            return dict(j, deja=True)
     jid = uuid.uuid4().hex[:8]
     job = {"id": jid, "cmd": cmd, "args": args, "etat": "en cours", "log": "", "debut": time.time(), "projet": cx.racine()}
     JOBS[jid] = job
 
     def tourner():
         env = dict(os.environ, PYTHONIOENCODING="utf-8", STUDIO_PROJET=job["projet"])
+        groupe = {"creationflags": 0x00000200} if os.name == "nt" else {"start_new_session": True}   # arrêt de tout l'arbre
         p = subprocess.Popen([sys.executable, os.path.join(ICI, "atelier.py"), cmd] + args, cwd=ICI,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                             errors="replace", env=env)
+                             errors="replace", env=env, **groupe)
+        PROCS[jid] = p
         for ligne in p.stdout:
             job["log"] += ligne
         p.wait()
-        job["etat"] = "terminé" if p.returncode == 0 and "!! Erreur" not in job["log"] else "erreur"
+        PROCS.pop(jid, None)
+        if job.get("arrete"):
+            job["etat"] = "arrêté"
+            job["log"] += "\n— Tâche arrêtée à la demande. Les plans déjà calculés sont gardés : relancer reprend là où elle s'est arrêtée.\n"
+        else:
+            job["etat"] = "terminé" if p.returncode == 0 and "!! Erreur" not in job["log"] else "erreur"
         job["fin"] = time.time()
 
     threading.Thread(target=tourner, daemon=True).start()
     return job
+
+
+def arreter(jid):
+    """Arrête une tâche en cours et tous ses sous-processus (ffmpeg, voix…)."""
+    job, p = JOBS.get(jid), PROCS.get(jid)
+    if not job or job["etat"] != "en cours" or not p:
+        return False
+    job["arrete"] = True
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/PID", str(p.pid), "/T", "/F"], capture_output=True)
+    else:
+        import signal
+        try:
+            os.killpg(p.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return True
+
+        def achever():
+            time.sleep(3)
+            if p.poll() is None:
+                try:
+                    os.killpg(p.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        threading.Thread(target=achever, daemon=True).start()
+    return True
 
 
 def essai_voix(c):
@@ -799,6 +843,8 @@ class H(BaseHTTPRequestHandler):
         p = urllib.parse.urlparse(self.path).path
         try:
             c = self.corps()
+            if p.startswith("/api/job/") and p.endswith("/arreter"):
+                return self.envoyer(200, {"ok": arreter(p.split("/")[-2])})
             if p == "/api/action":
                 if c.get("cmd") not in ("monter", "etat", "fiche", "lots", "ecrire", "prompts", "verifier", "bible", "exporter", "traduire"):
                     return self.envoyer(400, {"erreur": "commande inconnue"})

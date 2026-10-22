@@ -24,7 +24,10 @@ Répondre en français à l'utilisateur.
   Favicon de l'application : `web/img/favicon.svg` (source, dessin 64×64), `favicon.ico` (16/32/48) et
   `apple-touch-icon.png` (180) qui en sont tirés ; servis par `/web/img/…` et `/favicon.ico`. Redessiner les deux images
   si le SVG change.
-  Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
+  Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET` (`lancer`), dans leur propre
+  groupe de processus pour pouvoir les arrêter avec leurs enfants (`arreter` : `taskkill /T /F` sous Windows, `killpg`
+  ailleurs ; `POST /api/job/<id>/arreter`, état « arrêté »). Une tâche identique déjà en cours sur le projet n'est pas relancée
+  (`deja: true`). Le rendu final est écrit en `.mp4.part` puis renommé : un montage interrompu ne laisse rien de tronqué.
 - `adresses.py` : adresse dédiée par projet. `GET /<adresse>/` (tout serveur) → `demarrer()` lance au besoin
   `pilotage.py --projet <dossier> --port <p> --parent <port>` sans fenêtre, puis redirige vers `http://localhost:<p>/`.
   Adresse = `projet.json > adresse` (validée par `valider` : `RESERVES`, unicité) sinon `slug(nom)` ; port mémorisé dans

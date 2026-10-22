@@ -55,6 +55,9 @@ Chaque projet a sa propre adresse, par exemple **`http://localhost:8765/finalque
 
 Les opérations longues (montage, écriture par l'IA, export…) tournent en arrière-plan. Un panneau apparaît en bas à droite avec leur journal en direct. Cliquez sur son titre pour le replier. Vous pouvez continuer à travailler pendant ce temps, et lancer plusieurs tâches à la suite.
 
+- **■ Arrêter**, sur le panneau d'une tâche en cours, l'interrompt après confirmation (avec tous ses calculs : voix, ffmpeg…). Ce qui est déjà calculé est gardé : relancer la même tâche reprend là où elle s'était arrêtée. Un montage arrêté ne laisse pas de vidéo incomplète dans les rendus.
+- Relancer une tâche **déjà en cours** (double clic, deuxième onglet) ne la démarre pas une seconde fois : l'application le signale et montre le panneau de la tâche en cours.
+
 ![Une tâche terminée, en bas à droite](images/15_taches.jpg)
 
 ## 4. Assistant
