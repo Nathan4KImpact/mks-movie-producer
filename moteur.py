@@ -367,8 +367,10 @@ def monter(ep, reprendre=True, langue=None):
         while os.path.exists(f"{base}_v{n}.mp4"):
             n += 1
         sortie = f"{base}_v{n}.mp4"
+    partiel = sortie + ".part"           # un montage arrêté en cours de route ne laisse pas de vidéo tronquée dans les rendus
     run([FFMPEG, "-y", "-i", "video.mp4", "-i", "mix.wav", "-map", "0:v", "-map", "1:a", "-c:v", "copy",
-         "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", sortie], cwd=wd)
+         "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", "-f", "mp4", partiel], cwd=wd)
+    os.replace(partiel, sortie)
     # sous-titres calés sur la voix (la narration démarre 0,45 s après le début du plan)
     segments = [(debuts[k] + 0.45, textes[k][1], textes[k][0]) for k in sorted(textes)]
     sous_titres = sortie[:-4] + ".srt"
