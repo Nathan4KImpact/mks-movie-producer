@@ -32,6 +32,16 @@ L'**Assistant** suit cette chaîne épisode par épisode, dans l'ordre du plan, 
 
 Pour quitter : fermez l'onglet puis la fenêtre noire. Rien n'est perdu : tout est enregistré dans les fichiers du projet au fur et à mesure.
 
+### Une adresse par projet
+
+Chaque projet a sa propre adresse, par exemple **`http://localhost:8765/finalquest/`**. Ouverte dans le navigateur (tapée, en favori ou en raccourci), elle ouvre ce projet dans son onglet, sur un port qui lui est réservé sur ce PC (8766, 8767…), sans changer le projet actif des autres onglets : on peut ainsi travailler sur deux projets en même temps.
+
+- L'adresse se règle dans **Projet › Paramètres › Adresse dédiée** (lettres, chiffres et tirets) ; sans réglage, elle est tirée du nom du projet. Le bandeau **Projets sur ce poste** l'affiche, et le lien **↗** à côté de chaque projet l'ouvre dans un nouvel onglet.
+- Le serveur du projet démarre tout seul, sans fenêtre, au premier accès à son adresse ; il s'arrête une minute environ après la fermeture de la fenêtre noire de `PILOTAGE.bat`. **La fenêtre noire doit donc rester ouverte.**
+- Dans l'onglet d'un projet, **Ouvrir un projet existant…** et **Nouveau projet…** ouvrent l'autre projet à sa propre adresse.
+- Pour lancer directement un projet, avec sa propre fenêtre noire : `PILOTAGE.bat finalquest` (l'adresse ou le dossier du projet). Un raccourci Windows vers `PILOTAGE.bat` avec l'adresse en argument fait une icône de bureau par projet.
+- L'adresse fonctionne sur ce PC seulement, et pour les projets déjà ouverts une fois sur ce poste.
+
 ## 3. L'écran principal
 
 ![Bannière, menu et bandeau de l'étape actuelle](images/00_banniere.jpg)

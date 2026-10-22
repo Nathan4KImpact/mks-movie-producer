@@ -82,14 +82,22 @@ def racine():
     return os.path.dirname(APP)
 
 
-def definir_projet_actif(chemin):
+def ajouter_au_poste(chemin, actif=False):
+    """Inscrit (ou met à jour) le projet dans la liste du poste, en tête ; actif=True en fait le projet actif.
+    Les autres réglages de l'entrée (port de son adresse dédiée…) sont conservés."""
     chemin = os.path.abspath(chemin)
     d = poste()
-    d["projet_actif"] = chemin
+    if actif:
+        d["projet_actif"] = chemin
     nom = projet(chemin).get("nom", os.path.basename(chemin))
+    ancien = next((x for x in d.get("projets", []) if os.path.abspath(x["chemin"]) == chemin), {})
     d["projets"] = [x for x in d.get("projets", []) if os.path.abspath(x["chemin"]) != chemin]
-    d["projets"].insert(0, {"nom": nom, "chemin": chemin})
+    d["projets"].insert(0, dict(ancien, nom=nom, chemin=chemin))
     sauver_poste(d)
+
+
+def definir_projet_actif(chemin):
+    ajouter_au_poste(chemin, actif=True)
 
 
 def chemin(*parties):

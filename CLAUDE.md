@@ -25,6 +25,14 @@ Répondre en français à l'utilisateur.
   `apple-touch-icon.png` (180) qui en sont tirés ; servis par `/web/img/…` et `/favicon.ico`. Redessiner les deux images
   si le SVG change.
   Les tâches longues lancent `atelier.py <commande>` en sous-processus avec `STUDIO_PROJET`.
+- `adresses.py` : adresse dédiée par projet. `GET /<adresse>/` (tout serveur) → `demarrer()` lance au besoin
+  `pilotage.py --projet <dossier> --port <p> --parent <port>` sans fenêtre, puis redirige vers `http://localhost:<p>/`.
+  Adresse = `projet.json > adresse` (validée par `valider` : `RESERVES`, unicité) sinon `slug(nom)` ; port mémorisé dans
+  `poste.json > projets[].port`. Un serveur lancé avec `STUDIO_PROJET`/`--projet` est **dédié** (`DEDIE`) : il ne change
+  jamais `projet_actif` (`cx.ajouter_au_poste`), et y ouvrir/créer un autre projet renvoie son `url`. `--parent` : arrêt
+  quand le serveur parent ne répond plus (`surveiller_parent`). `GET /api/identite` dit quel projet sert un port.
+  `PILOTAGE.bat <adresse|dossier>` démarre un projet dédié. Tout nouveau premier segment d'URL de l'application doit
+  entrer dans `adresses.RESERVES`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
 - `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
   (champ `mus` d'un plan = changement de piste), plans recalculés seulement si leur empreinte change (`.sig`), sortie dans le dossier des rendus (jamais d'écrasement).

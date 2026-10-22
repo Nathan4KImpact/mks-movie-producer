@@ -51,6 +51,9 @@ h2{font:700 22px var(--serif);letter-spacing:.05em;color:var(--gold2);margin:0 0
 .bandeau-projets .titre{color:var(--gold2);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase}
 .bandeau-projets .bp-actif{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .bandeau-projets .bp-autres{display:flex;gap:6px;flex-wrap:wrap}
+.bandeau-projets .bp-adr{font-size:12.5px;color:var(--muted)}
+.bandeau-projets .bp-adr a{color:var(--gold2);text-decoration:none}.bandeau-projets .bp-adr a:hover{text-decoration:underline}
+.bp-autre a.x{text-decoration:none}
 .bp-autre{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:14px;padding:1px 4px 1px 10px;font-size:12.5px}
 .bp-autre .lien{background:none;border:0;color:var(--text);cursor:pointer;padding:3px 2px;font:inherit}
 .bp-autre .lien:hover{color:var(--gold2)}
@@ -621,10 +624,13 @@ async function projet(){
   <div class="card bandeau-projets">
     <div class="bp-g">
       <div class="titre">Projets sur ce poste</div>
-      <div class="bp-actif"><span class="okc">●</span> <b>${esc(pj.nom)}</b> <span class="pill ok">actif</span>
+      <div class="bp-actif"><span class="okc">●</span> <b>${esc(pj.nom)}</b> <span class="pill ok">${INFOS.dedie ? 'ouvert ici' : 'actif'}</span>
         <span class="meta" style="word-break:break-all">${esc(INFOS.racine)}</span></div>
+      <div class="bp-adr">Adresse dédiée : <a href="${esc(INFOS.url)}" target="_blank" title="Ouvrir ce projet dans son propre onglet (son serveur démarre sur son port)">${esc(INFOS.url.replace(/^http:\/\//,''))} ↗</a>
+        ${INFOS.dedie ? `<span class="meta">· servi sur le port ${INFOS.port}</span>` : ''}</div>
       ${autres.length ? `<div class="bp-autres">${autres.map(x => `<span class="bp-autre ${x.existe?'':'perdu'}" title="${esc(x.chemin)}${x.existe?'':' — introuvable'}">
         <button class="lien" ${x.existe?'':'disabled'} onclick="ouvrirProjet('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">○ ${esc(x.nom)}</button>
+        ${x.url ? `<a class="x" href="${esc(x.url)}" target="_blank" title="Ouvrir dans un nouvel onglet, à son adresse dédiée : ${esc(x.url)}">↗</a>` : ''}
         <button class="x" title="Retirer de la liste (le dossier n'est pas effacé)" onclick="oublier('${esc(x.chemin.replace(/\\/g,'\\\\'))}')">✕</button></span>`).join('')}</div>` : ''}
     </div>
     <div class="bp-actions">
@@ -653,6 +659,8 @@ async function projet(){
       <div class="fields">
         <div><label>Nom du projet (bannière)</label><input id="p_nom" value="${esc(pj.nom)}"></div>
         <div><label>Sous-titre</label><input id="p_sous" value="${esc(pj.sous_titre||'')}"></div>
+        <div class="full"><label>Adresse dédiée (onglet propre à ce projet)</label><div class="row" style="flex-wrap:nowrap;gap:6px;align-items:center">
+          <span class="meta" style="white-space:nowrap">localhost:${INFOS.port_principal}/</span><input id="p_adr" value="${esc(pj.adresse||'')}" placeholder="${esc(INFOS.adresse)}" style="max-width:260px"><span class="meta">/</span></div></div>
         <div class="mini full">
           <div><label>Saisons</label><input id="p_s" type="number" min="1" value="${pj.saisons}"></div>
           <div><label>Épisodes / saison</label><input id="p_e" type="number" min="1" value="${pj.episodes_par_saison}"></div>
@@ -764,6 +772,7 @@ function quiOptions(qui){ const ps = PROJET.personnages||[];
 async function sauverProjet(silencieux){
   lirePersos(); const pj = PROJET;
   pj.nom = $('#p_nom').value.trim()||pj.nom; pj.sous_titre = $('#p_sous').value.trim();
+  if($('#p_adr')) pj.adresse = $('#p_adr').value.trim();
   pj.saisons = +$('#p_s').value; pj.episodes_par_saison = +$('#p_e').value; pj.duree_min = +$('#p_d').value; pj.couleur = $('#p_c').value;
   pj.voix = {nom:$('#p_vn').value.trim(), debit:$('#p_vd').value.trim(), hauteur:$('#p_vh').value.trim()};
   pj.volume_musique = +$('#p_vol').value; pj.volume_ambiance = +$('#p_vamb').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
@@ -825,6 +834,7 @@ function exporter(r){ action('exporter', r?['--rendus']:[]); toast('Export lanc�
 async function ouvrirProjet(c, init){
   const r = await api('/api/projet/ouvrir',{method:'POST',body:JSON.stringify({chemin:c, initialiser:!!init})});
   if(r.a_initialiser){ if(confirm('Ce dossier n\'est pas encore un projet. L\'initialiser comme projet (création de projet.json) ?')) return ouvrirProjet(c, true); return; }
+  if(INFOS.dedie && r.url){ toast('Ouverture à son adresse dédiée…'); location.href = r.url; return; }   // ce serveur ne sert qu'un projet
   toast('Projet ouvert'); await chargerProjet(); go('assistant');
 }
 async function oublier(c){ if(!confirm('Retirer ce projet de la liste ? (aucun fichier supprimé)')) return; await api('/api/projet/oublier',{method:'POST',body:JSON.stringify({chemin:c})}); projet(); }
@@ -858,7 +868,9 @@ async function creerProjet(){
     saisons:$('#n_s').value, episodes_par_saison:$('#n_e').value, duree_min:$('#n_d').value, couleur:$('#n_c').value,
     voix:$('#n_v').value.trim(), narrateur:$('#n_nar').value.trim(), style_image:$('#n_sty').value, regles_ia:$('#n_reg').value};
   if(!d.nom) return toast('Donne un nom au projet');
-  try { await api('/api/projet/nouveau',{method:'POST',body:JSON.stringify(d)}); document.querySelectorAll('.modal').forEach(m=>m.remove()); toast('Projet créé'); await chargerProjet(); go('projet'); }
+  try { const r = await api('/api/projet/nouveau',{method:'POST',body:JSON.stringify(d)}); document.querySelectorAll('.modal').forEach(m=>m.remove()); toast('Projet créé');
+    if(INFOS.dedie && r.url){ location.href = r.url; return; }
+    await chargerProjet(); go('projet'); }
   catch(e){ toast(e.message); }
 }
 

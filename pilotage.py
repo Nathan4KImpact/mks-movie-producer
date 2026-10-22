@@ -16,7 +16,29 @@ for _t, _e in (("text/javascript", ".js"), ("text/css", ".css"), ("audio/mp4", "
                  ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
                  ("image/x-icon", ".ico")):
     mimetypes.add_type(_t, _e)      # le registre Windows peut associer d'autres types (ex. .js en text/plain)
-PORT = int(os.environ.get("ATELIER_PORT", "8765"))
+
+
+# ---------------------------------------------------------------- lancement : projet du poste, ou projet dédié sur son port
+def _opt(nom):
+    if nom in sys.argv and sys.argv.index(nom) + 1 < len(sys.argv):
+        return sys.argv[sys.argv.index(nom) + 1]
+    return None
+
+
+_demande = _opt("--projet") or next((a for a in sys.argv[1:2] if not a.startswith("-")), None) if __name__ == "__main__" else None
+if _demande:                             # pilotage.py --projet <dossier ou adresse>  (ou PILOTAGE.bat finalquest)
+    import adresses
+    _x = _demande if os.path.isdir(_demande) else (adresses.trouver(cx.slug(_demande)) or {}).get("chemin")
+    if not _x:
+        sys.exit(f"Projet introuvable : « {_demande} » (ni un dossier, ni l'adresse d'un projet de ce poste)")
+    os.environ["STUDIO_PROJET"] = os.path.abspath(_x)
+DEDIE = bool(os.environ.get("STUDIO_PROJET"))       # ce serveur sert un seul projet (son adresse dédiée)
+if _opt("--port"):
+    PORT = int(_opt("--port"))
+elif _demande:
+    PORT = adresses.port_de(os.environ["STUDIO_PROJET"])
+else:
+    PORT = int(os.environ.get("ATELIER_PORT", "8765"))
 EP_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG")
 VID_EXT = (".mp4", ".mov", ".webm")
@@ -375,7 +397,13 @@ def infos_projet():
     projets = [dict(x, existe=os.path.isdir(x["chemin"])) for x in ps.get("projets", [])]
     dossiers = {r: cx._rel(cx.dossier(r)) for r in cx.ROLES}
     anime = cx.fichier(pj.get("logo_anime", "")) if pj.get("logo_anime") else ""
+    import adresses
+    for x in projets:
+        x["adresse"] = adresses.adresse(x["chemin"]) if x["existe"] else ""
+        x["url"] = adresses.url(x["chemin"]) if x["existe"] else ""
     return {"projet": cx.projet(), "racine": cx.racine(), "projets": projets, "logiciel": cx.NOM_LOGICIEL, "app": ICI,
+            "dedie": DEDIE, "port": PORT, "adresse": adresses.adresse(cx.racine()), "url": adresses.url(cx.racine()),
+            "port_principal": adresses.PORT_PRINCIPAL,
             "est_projet": cx.est_projet(cx.racine()), "dossiers": dossiers,
             "logo_anime": {"type": "video" if anime.lower().endswith(LOGO_VIDEO) else "image",
                            "v": int(os.path.getmtime(anime))} if anime else None}
@@ -416,7 +444,10 @@ def creer_projet(d):
         plan = [{"code": f"E{s}{e:02d}", "saison": s, "titre_saison": f"Saison {s}", "num": f"{s}.{e}",
                  "titre": f"Épisode {s}.{e}", "resume": "", "pages": ""} for s in range(1, S + 1) for e in range(1, E + 1)]
         json.dump(plan, open(os.path.join(bible, "plan.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    cx.definir_projet_actif(rac)
+    if DEDIE:                            # serveur d'un seul projet : le nouveau s'ouvre à sa propre adresse
+        cx.ajouter_au_poste(rac)
+    else:
+        cx.definir_projet_actif(rac)
     return rac
 
 
@@ -494,6 +525,33 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corps)
 
+    def page(self, code, titre, texte):
+        html_ = (f"<!doctype html><meta charset='utf-8'><title>{titre}</title><link rel='icon' href='/web/img/favicon.svg'>"
+                 f"<body style='font:15px system-ui;background:#0d0b10;color:#e8e2d6;padding:40px'><h2 style='color:#d8b46a'>"
+                 f"{titre}</h2>{texte}<p><a style='color:#d8b46a' href='/'>Revenir à l'application</a></p></body>")
+        self.envoyer(code, html_, "text/html; charset=utf-8")
+
+    def vers_projet(self, adr):
+        """/<adresse>/ : ouvre le projet dans son propre serveur (démarré au besoin), sur son port."""
+        import adresses, html
+        x = adresses.trouver(adr)
+        if not x:
+            liste = "".join(f"<li><a style='color:#d8b46a' href='/{adresses.adresse(y['chemin'])}/'>/{adresses.adresse(y['chemin'])}/</a>"
+                            f" — {html.escape(y.get('nom', ''))}</li>" for y in cx.poste().get("projets", []) if os.path.isdir(y["chemin"]))
+            return self.page(404, "Projet introuvable", f"<p>Aucun projet de ce poste n'a l'adresse « {html.escape(adr)} ».</p>"
+                             f"<ul>{liste}</ul><p>L'adresse d'un projet se règle dans Projet › Paramètres.</p>")
+        if DEDIE and adresses._meme(x["chemin"], cx.racine()):
+            port = PORT
+        else:
+            try:
+                port = adresses.demarrer(x["chemin"], parent=PORT)
+            except Exception as ex:
+                return self.page(500, "Ouverture impossible", f"<p>{html.escape(str(ex))}</p>")
+        self.send_response(302)
+        self.send_header("Location", f"http://localhost:{port}/")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def fichier(self, chemin, base, telecharger=""):
         chemin = os.path.realpath(chemin)
         if not chemin.startswith(os.path.realpath(base) + os.sep) or not os.path.isfile(chemin):
@@ -542,6 +600,11 @@ class H(BaseHTTPRequestHandler):
         p = urllib.parse.unquote(u.path)
         q = urllib.parse.parse_qs(u.query)
         try:
+            if p == "/api/identite":             # qui sert ce port ? (adresses dédiées)
+                return self.envoyer(200, {"racine": cx.racine(), "dedie": DEDIE, "port": PORT, "logiciel": cx.NOM_LOGICIEL})
+            m = re.match(r"^/([a-z0-9][a-z0-9-]{0,47})/?$", p)
+            if m and m.group(1) not in __import__("adresses").RESERVES:      # adresse dédiée d'un projet
+                return self.vers_projet(m.group(1))
             if p in ("/", "/index.html"):
                 return self.envoyer(200, open(os.path.join(ICI, "web", "index.html"), encoding="utf-8").read(),
                                     "text/html; charset=utf-8")
@@ -682,8 +745,16 @@ class H(BaseHTTPRequestHandler):
                 for k in ("logo_anime",):          # posé par un import : une page ouverte avant ne doit pas l'effacer
                     if k not in pj and actuel.get(k):
                         pj[k] = actuel[k]
+                if pj.get("adresse"):              # adresse dédiée : normalisée, unique sur le poste
+                    import adresses
+                    try:
+                        pj["adresse"] = adresses.valider(pj["adresse"], cx.racine())
+                    except ValueError as ex:
+                        return self.envoyer(400, {"erreur": str(ex)})
+                else:
+                    pj.pop("adresse", None)
                 cx.sauver_projet(pj)
-                cx.definir_projet_actif(cx.racine())
+                cx.ajouter_au_poste(cx.racine(), actif=not DEDIE)
                 return self.envoyer(200, {"ok": True})
             if p == "/api/reglages":
                 r = self.corps(); r.pop("_taches", None)
@@ -749,8 +820,12 @@ class H(BaseHTTPRequestHandler):
                         return self.envoyer(200, {"ok": False, "a_initialiser": True, "chemin": rac})
                     pj = dict(cx.DEFAUT_PROJET, nom=os.path.basename(rac))
                     cx.sauver_projet(pj, rac)
+                import adresses
+                if DEDIE:                        # serveur d'un seul projet : l'autre projet s'ouvre à sa propre adresse
+                    cx.ajouter_au_poste(rac)
+                    return self.envoyer(200, {"ok": True, "chemin": rac, "url": adresses.url(rac)})
                 cx.definir_projet_actif(rac)
-                return self.envoyer(200, {"ok": True, "chemin": rac})
+                return self.envoyer(200, {"ok": True, "chemin": rac, "url": adresses.url(rac)})
             if p == "/api/organisation":
                 if c.get("vers"):
                     rel = cx.deplacer_dossier(c["role"], c["vers"])
@@ -766,7 +841,9 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/organisation/rechercher":
                 return self.envoyer(200, {"ok": True, "trouves": cx.rechercher(), "organisation": cx.organisation()})
             if p == "/api/projet/nouveau":
-                return self.envoyer(200, {"ok": True, "chemin": creer_projet(c)})
+                import adresses
+                rac = creer_projet(c)
+                return self.envoyer(200, {"ok": True, "chemin": rac, "url": adresses.url(rac)})
             if p == "/api/projet/oublier":
                 d = cx.poste()
                 d["projets"] = [x for x in d.get("projets", []) if x["chemin"] != c["chemin"]]
@@ -844,9 +921,14 @@ if __name__ == "__main__":
         print("Migration vers le format projet :", ", ".join(fait))
     if cx.est_projet(cx.racine()):
         cx.rechercher()           # dossiers et fichiers déplacés depuis la dernière session
+    if DEDIE:
+        cx.ajouter_au_poste(cx.racine())
+    if _opt("--parent"):                 # lancé par un autre serveur : s'arrête avec lui
+        import adresses
+        adresses.surveiller_parent(int(_opt("--parent")))
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     url = f"http://localhost:{PORT}"
-    print(f"{cx.NOM_LOGICIEL} — projet « {cx.projet()['nom']} » ({cx.racine()})")
+    print(f"{cx.NOM_LOGICIEL} — projet « {cx.projet()['nom']} » ({cx.racine()})" + (" — serveur dédié à ce projet" if DEDIE else ""))
     print(f"Interface : {url}  (laisser cette fenêtre ouverte, Ctrl+C pour arrêter)")
     if "--sans-navigateur" not in sys.argv:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
