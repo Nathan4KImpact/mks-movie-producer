@@ -201,20 +201,48 @@ def carton(principal, sous, L, wd, nom):
          "-pix_fmt", "yuv420p", nom + ".mp4"], cwd=wd)
 
 
-FONDUS = ("noir", "aucun")
+FONDUS = ("noir", "aucun", "enchaine")
 
 
 def fondu_de(s, pj=None):
-    """Transition d'un plan : « noir » (fondu au noir à l'entrée et à la sortie, par défaut) ou « aucun » (coupe franche,
-    pour des diapositives ou des étapes d'apparition qui se suivent). Champ « fondu » du plan, sinon projet.json > fondu_plans."""
+    """Transition d'un plan : « noir » (fondu au noir à l'entrée et à la sortie, par défaut), « aucun » (coupe franche)
+    ou « enchaine » (fondu enchaîné depuis la dernière image du plan précédent, durée « fondu_d », 0,5 s par défaut :
+    diapositives, étapes d'apparition d'un texte). Champ « fondu » du plan, sinon projet.json > fondu_plans."""
     f = s.get("fondu") or (pj if pj is not None else projet()).get("fondu_plans") or "noir"
     return f if f in FONDUS else "noir"
 
 
-def plan(s, L, src, wd, nom, est_video, fondu_plan="noir"):
+def duree_fondu(s, L):
+    """Durée du fondu enchaîné d'un plan (bornée pour laisser le plan lisible)."""
+    try:
+        d = float(s.get("fondu_d", 0.5))
+    except (TypeError, ValueError):
+        d = 0.5
+    return round(max(0.1, min(d, 3.0, L * 0.6)), 2)
+
+
+def enchainer(wd, nom, precedent, d):
+    """Fondu enchaîné : les d premières secondes du plan « nom » passent de la dernière image du clip précédent
+    à son image (durée du plan inchangée : la voix et la musique restent calées). Sans clip précédent : fondu depuis le noir."""
+    clip = os.path.join(wd, nom + ".mp4")
+    if not precedent:
+        run([FFMPEG, "-y", "-i", nom + ".mp4", "-vf", f"fade=t=in:st=0:d={d}", "-c:v", "libx264", "-preset", "veryfast",
+             "-crf", "19", "-pix_fmt", "yuv420p", nom + "_x.mp4"], cwd=wd)
+    else:
+        run([FFMPEG, "-y", "-sseof", "-0.2", "-i", precedent, "-update", "1", "-q:v", "2", nom + "_avant.png"], cwd=wd)
+        fc = (f"[0:v]scale={W}:{H},fps={FPS},format=yuv420p,setsar=1[a];[1:v]fps={FPS},format=yuv420p,setsar=1[b];"
+              f"[a][b]xfade=transition=fade:duration={d}:offset=0[v]")
+        run([FFMPEG, "-y", "-loop", "1", "-t", f"{d}", "-i", nom + "_avant.png", "-i", nom + ".mp4", "-filter_complex", fc,
+             "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", nom + "_x.mp4"], cwd=wd)
+    os.replace(os.path.join(wd, nom + "_x.mp4"), clip)
+
+
+def plan(s, L, src, wd, nom, est_video, fondu_plan="noir", dernier=False):
     frames = int(round(L * FPS))
     tf = titre(s.get("title", ""), L, wd, nom)
     fondu = f",fade=t=in:st=0:d=0.35,fade=t=out:st={L-0.35:.2f}:d=0.35" if fondu_plan == "noir" else ""
+    if fondu_plan == "enchaine" and dernier:                # fin du film : fondu au noir de sortie
+        fondu = f",fade=t=out:st={max(0, L - 0.8):.2f}:d=0.8"
     eq = ",eq=contrast=1.05:saturation=1.12:brightness=0.03"
     if est_video:
         vitesse = max(1.0, L / duree(src))
@@ -287,6 +315,7 @@ def monter(ep, reprendre=True, langue=None):
         shutil.rmtree(wd)
     os.makedirs(wd, exist_ok=True)
     clips, segs, manquants, textes, sons_video = [], [], [], {}, []
+    prec_sig = None                                  # signature du clip précédent (fondu enchaîné)
     for i, s in enumerate(e["shots"]):
         nom = f"p{i:03d}"
         if s.get("card"):
@@ -295,7 +324,7 @@ def monter(ep, reprendre=True, langue=None):
             if not a_jour(os.path.join(wd, nom + ".mp4"), sig):
                 carton(s["card"], s.get("sub", ""), L, wd, nom)
                 marquer(os.path.join(wd, nom + ".mp4"), sig)
-            clips.append(nom + ".mp4"); segs.append((L, None)); continue
+            clips.append(nom + ".mp4"); segs.append((L, None)); prec_sig = sig; continue
         vo = s.get("vo", "").strip()
         a, d = None, 0.0
         if s.get("voix_fichier") and not langue:     # narration enregistrée ou importée (langue d'origine seulement)
@@ -310,16 +339,23 @@ def monter(ep, reprendre=True, langue=None):
         L = round(max(float(s.get("min", 4.0)), d + float(s.get("pad", 1.5))), 2)
         src, est_video = trouver_media(ep, s, wd)
         fd = fondu_de(s, pj)
+        dernier = i == len(e["shots"]) - 1
+        extra = [] if fd == "noir" else [fd]
+        if fd == "enchaine":                         # dépend aussi de l'image de fin du plan précédent
+            extra += [duree_fondu(s, L), prec_sig, dernier]
         sig = signature("plan", L, empreinte_media(src), est_video, s.get("m", s.get("motion", "in")), s.get("title", ""),
-                        *([fd] if fd != "noir" else []))
+                        *extra)
         if src is None:
             manquants.append(s.get("k"))
         if not a_jour(os.path.join(wd, nom + ".mp4"), sig):
             if src is None:
                 carton("", f"[plan manquant : {s.get('k')}]", L, wd, nom)
             else:
-                plan(s, L, src, wd, nom, est_video, fd)
+                plan(s, L, src, wd, nom, est_video, fd, dernier)
+                if fd == "enchaine":
+                    enchainer(wd, nom, clips[-1] if clips else None, duree_fondu(s, L))
             marquer(os.path.join(wd, nom + ".mp4"), sig)
+        prec_sig = sig
         clips.append(nom + ".mp4"); segs.append((L, a)); textes[len(segs) - 1] = (vo, d)
         if s.get("son_video") and est_video and src and a_un_son(src):     # son de la vidéo gardé (horde générée avec son…)
             sv = f"sv{i:03d}.wav"

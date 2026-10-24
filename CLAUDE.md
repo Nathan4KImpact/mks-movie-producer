@@ -77,9 +77,12 @@ fondus (remplacent ceux par défaut de la couche), volume, effet ffmpeg (`effets
 qui démarre à ce plan ; le niveau d'une ambiance / d'un bruitage reste `amb_vol` / `sfx_vol`. Filtres sans hypothèse de
 fréquence (entrée ramenée à 44,1 kHz) ; `grave`/`aigu` compensent la durée (`atempo`). Les signatures des sons incluent `fx`.
 Médias : `<dossier images>/E104/E104-01.png` (ou `.mp4`, prioritaire), sinon même nom ailleurs dans le projet ; à défaut `img_url`/`vid_url`.
-Transition : `"fondu": "noir"|"aucun"` sur un plan, sinon `projet.json > fondu_plans` (défaut `noir` = fondu au noir 0,35 s à
-l'entrée et à la sortie ; `aucun` = coupe franche) — `moteur.fondu_de()`, dans la signature du plan seulement si ≠ `noir`
-(les caches existants restent valides) ; reproduit par l'aperçu du Studio, réglé dans l'inspecteur et dans Projet.
+Transition : `"fondu": "noir"|"enchaine"|"aucun"` sur un plan, sinon `projet.json > fondu_plans` (défaut `noir` = fondu au noir
+0,35 s à l'entrée et à la sortie ; `aucun` = coupe franche ; `enchaine` = fondu enchaîné de `fondu_d` s, 0,5 par défaut,
+depuis la dernière image du clip précédent : `moteur.enchainer()` refait les premières secondes du clip par `xfade`, durée
+du plan inchangée, signature = celle du plan précédent incluse ; fondu au noir de sortie sur le dernier plan) —
+`moteur.fondu_de()`, dans la signature du plan seulement si ≠ `noir` (les caches existants restent valides) ; reproduit par
+l'aperçu du Studio (`#stImg2` = image du plan précédent sous l'image courante), réglé dans l'inspecteur et dans Projet.
 Champs posés par la vue Studio (facultatifs) : `media` (image/vidéo choisie, chemin relatif au projet, PRIORITAIRE sur la clé),
 `voix_fichier` (narration enregistrée/importée, remplace la synthèse pour la langue d'origine seulement), `mus_off` (décalage
 en s dans la piste `mus`). Les résoudre par `contexte.fichier(rel)` ; `ia._garder_traductions` les recolle après une réécriture IA.

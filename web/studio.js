@@ -48,7 +48,7 @@ async function studio(ep, garder){
       <div class="st-gut v" data-g="l" title="Glisser pour élargir ou réduire · double-clic : replier"><button class="st-pli" data-p="l" title="Replier / déplier la bibliothèque"></button></div>
       <section class="st-pane st-mon">
         <div class="st-wrap" id="stWrap"><div class="st-stage" id="stStage">
-          <img class="ly" id="stImg" alt=""><video class="ly" id="stVid" muted playsinline preload="auto"></video>
+          <img class="ly2" id="stImg2" alt=""><img class="ly" id="stImg" alt=""><video class="ly" id="stVid" muted playsinline preload="auto"></video>
           <div class="ly st-manque" id="stManque"></div>
           <div class="ly st-card" id="stCard"><div class="c1"></div><div class="c2"></div></div>
           <div class="st-tit" id="stTit"></div>
@@ -357,7 +357,8 @@ function stInsp(){
           ${s.media || s.img_url || s.vid_url ? `<button class="btn small" onclick="stRetirerMedia()" title="Revenir au fichier nommé d'après la clé">Retirer le choix</button>` : ''}
         </div>
         ${blocLangues(s)}
-        <div><label>Transition du plan</label><div class="st-seg st-seg3">${[['', 'Projet (' + (PROJET.fondu_plans === 'aucun' ? 'coupe' : 'fondu') + ')'], ['noir', 'Fondu au noir'], ['aucun', 'Coupe franche']].map(([v, lib]) => `<button class="${(s.fondu || '') === v ? 'on' : ''}" onclick="stChamp('fondu','${v}')">${lib}</button>`).join('')}</div></div>
+        <div><label>Transition du plan</label><div class="st-seg st-seg4">${[['', 'Projet (' + ({aucun: 'coupe', enchaine: 'enchaîné'}[PROJET.fondu_plans] || 'noir') + ')'], ['noir', 'Fondu au noir'], ['enchaine', 'Fondu enchaîné'], ['aucun', 'Coupe franche']].map(([v, lib]) => `<button class="${(s.fondu || '') === v ? 'on' : ''}" onclick="stChamp('fondu','${v}')">${lib}</button>`).join('')}</div></div>
+        ${(s.fondu || PROJET.fondu_plans) === 'enchaine' ? champ('fondu_d', 'Durée du fondu enchaîné (s)', 'number', 'step="0.1" min="0.1" max="3" placeholder="0.5"') : ''}
         <div><label>Mouvement de caméra (images)</label><div class="st-seg">${MOUV.map(m => `<button class="${(s.m||'in')===m?'on':''}" title="${LIB_MOUV[m]}" onclick="stChamp('m','${m}')">${ICONES[m]}</button>`).join('')}</div></div>
         <div><label>Prompt image ${persos.map(x => `<span class="pill wait">${esc(x.tag)}</span>`).join(' ')}</label><textarea data-st="p" rows="3">${esc(s.p)}</textarea></div>
         <div class="st-btns"><button class="btn small" onclick="copier(${i})">Copier le prompt</button></div>
@@ -466,7 +467,7 @@ function stChamp(f, v, texte){
     if(!Object.keys(o).length) delete s.fx[c]; if(!Object.keys(s.fx).length) delete s.fx;
     stSale(); stCalcul(); stTimeline(); ST.cur = -1; stFrame(); if(!texte) stInsp(); return;
   }
-  if(['min', 'dur', 'mus_off', 'amb_vol'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
+  if(['min', 'dur', 'mus_off', 'amb_vol', 'fondu_d'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
   else if(f === 'sfx' && typeof v === 'string' && v.includes('+')) s[f] = v.split('+');
   else if(v === '' && f !== 'vo') delete s[f]; else s[f] = v;
   if(f === 'mus' && !v) delete s.mus_off;
@@ -717,8 +718,14 @@ function stFrame(){
   }
   // fondus (seulement pendant la lecture : à l'arrêt, le plan reste lisible)
   const fIn = s.card ? 0.5 : 0.35, fOut = s.card ? 0.6 : 0.35;
-  const coupe = !s.card && (s.fondu || PROJET.fondu_plans) === 'aucun';    // « Coupe franche » : pas de fondu au noir
-  const op = ST.playing && !coupe ? Math.max(0, Math.min(1, u / fIn, (L - u) / fOut)) : 1;
+  const fd = s.card ? 'noir' : (s.fondu || PROJET.fondu_plans || 'noir');   // « aucun » / « enchaine » : pas de fondu au noir
+  let op = ST.playing && fd === 'noir' ? Math.max(0, Math.min(1, u / fIn, (L - u) / fOut)) : 1;
+  const img2 = $('#stImg2'), p = EP.shots[i - 1], dE = Math.max(0.1, Math.min(+(s.fondu_d || 0.5), 3, L * 0.6));
+  if(fd === 'enchaine' && ST.playing && u < dE){                      // fondu enchaîné depuis le plan précédent
+    if(p && !p.card && p._media && p._type !== 'video'){ if(img2.getAttribute('src') !== p._media) img2.src = p._media;
+      img2.style.transform = img.style.transform; img2.style.display = 'block'; } else img2.style.display = 'none';
+    op = u / dE;
+  } else img2.style.display = 'none';
   stage.querySelectorAll('.ly').forEach(x => x.style.opacity = op);
   // mouvement de caméra (zoompan du moteur)
   if(!s.card && s._media && s._type !== 'video'){

@@ -126,7 +126,7 @@ Le choix est mémorisé : le prochain épisode ouvert s'affiche dans la même vu
 | **Niveau ambiance** | Volume de l'ambiance qui démarre à ce plan (1 = normal, 1,5 = plus fort, 0,5 = plus discret) |
 | **Son de la vidéo · garder** | Garde le son de la vidéo du plan (par exemple une horde générée **avec** son par Flow) ; il s'ajoute à l'ambiance |
 | **Prompt vidéo** | Description du mouvement si le plan doit être animé (section 7.3) |
-| **Transition** (vue Studio) | *Fondu au noir* (par défaut) ou *Coupe franche* : sans fondu, l'image passe directement à celle du plan suivant. Sans choix, le plan suit le réglage du projet (section 13.2) |
+| **Transition** (vue Studio) | *Fondu au noir* (par défaut), *Fondu enchaîné* (l'image du plan se fond dans celle du plan précédent, sans passer par le noir ; durée réglable, 0,5 s par défaut) ou *Coupe franche* (passage direct). Sans choix, le plan suit le réglage du projet (section 13.2) |
 
 | Mouvement | Effet |
 |---|---|
@@ -338,7 +338,7 @@ Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agis
 | Voix, débit, hauteur | Voix off (Microsoft Edge), par exemple `fr-FR-HenriNeural`, `-15%`, `-6Hz` |
 | Volume musique | 0 à 1 ; 0,47 par défaut |
 | Volume ambiances | Niveau général des ambiances et bruitages ; 0,8 par défaut (0 = aucun son d'ambiance) |
-| Transition entre plans | *Fondu au noir* (par défaut : chaque plan s'ouvre et se ferme sur un court fondu) ou *Coupe franche* (les plans s'enchaînent sans passer par le noir, utile pour des diapositives ou des apparitions de texte successives). Un plan peut choisir autrement dans la vue Studio |
+| Transition entre plans | *Fondu au noir* (par défaut : chaque plan s'ouvre et se ferme sur un court fondu), *Fondu enchaîné* (chaque plan se fond dans le précédent : idéal pour des diapositives qui se complètent ligne après ligne) ou *Coupe franche* (passage direct). La durée du plan ne change pas : la voix reste calée. Un plan peut choisir autrement dans la vue Studio |
 | Livre (PDF) | Chemin du livre source, relatif au projet |
 | Style ajouté à chaque prompt | Phrase de style collée devant chaque prompt d'image (en anglais) |
 | Règles de la série pour l'IA | Ton, narration, public, direction artistique : lues par l'IA à chaque écriture |
