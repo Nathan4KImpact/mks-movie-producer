@@ -56,7 +56,8 @@ body.st-tire-h,body.st-tire-h *{cursor:row-resize!important;user-select:none}
 .st-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:10px}
 .st-stage{position:relative;overflow:hidden;background:#000;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.6);--sh:300px}
 .st-stage .ly{position:absolute;inset:0}
-.st-stage img.ly,.st-stage video.ly{width:100%;height:100%;object-fit:cover;transform-origin:50% 50%;will-change:transform}
+.st-stage img.ly2{position:absolute;inset:0;display:none}
+.st-stage img.ly,.st-stage img.ly2,.st-stage video.ly{width:100%;height:100%;object-fit:cover;transform-origin:50% 50%;will-change:transform}
 .st-card{display:none;background:#07060a}
 .st-card .c1,.st-card .c2,.st-tit{position:absolute;left:4%;right:4%;text-align:center;font-family:'Cinzel',Georgia,serif;text-shadow:calc(var(--sh)*.003) calc(var(--sh)*.003) 0 rgba(0,0,0,.8)}
 .st-card .c1{top:40%;font-size:calc(var(--sh)*.089);color:#E8D9A8;line-height:1.1}
@@ -86,6 +87,8 @@ body.st-tire-h,body.st-tire-h *{cursor:row-resize!important;user-select:none}
 .st-btns .btn{margin:0;text-transform:none;letter-spacing:0}
 .st-seg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .st-seg button{background:#0f0d13;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:5px 0;cursor:pointer;font-size:13px}
+.st-seg4{grid-template-columns:repeat(4,1fr)}
+.st-seg4 button{font-size:11px;padding:5px 2px;line-height:1.15}
 .st-seg button.on{background:var(--gold);color:#1b1408;border-color:var(--gold)}
 .st-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .st-choix{display:flex;flex-direction:column;gap:6px}

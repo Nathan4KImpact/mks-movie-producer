@@ -669,7 +669,7 @@ async function projet(){
         </div>
         <div><label>Voix (Edge TTS)</label>${choixVoix('id="p_vn"', LANGS.source, pj.voix.nom)}</div>
         <div class="mini"><div><label>Débit</label><input id="p_vd" value="${esc(pj.voix.debit)}"></div><div><label>Hauteur</label><input id="p_vh" value="${esc(pj.voix.hauteur)}"></div>
-          <div><label>Vol. musique</label><input id="p_vol" type="number" step="0.01" value="${pj.volume_musique}"></div><div><label>Vol. ambiances</label><input id="p_vamb" type="number" step="0.05" value="${pj.volume_ambiance??0.8}"></div><div><label>Livre (PDF)</label><input id="p_livre" value="${esc(pj.livre||'')}" placeholder="sources/…pdf"></div></div>
+          <div><label>Vol. musique</label><input id="p_vol" type="number" step="0.01" value="${pj.volume_musique}"></div><div><label>Vol. ambiances</label><input id="p_vamb" type="number" step="0.05" value="${pj.volume_ambiance??0.8}"></div><div><label>Transition entre plans</label><select id="p_fondu"><option value="noir">Fondu au noir</option><option value="enchaine" ${pj.fondu_plans==='enchaine'?'selected':''}>Fondu enchaîné</option><option value="aucun" ${pj.fondu_plans==='aucun'?'selected':''}>Coupe franche</option></select></div><div><label>Livre (PDF)</label><input id="p_livre" value="${esc(pj.livre||'')}" placeholder="sources/…pdf"></div></div>
         <div class="full"><label>Style ajouté à chaque prompt image (anglais)</label><textarea id="p_sty" rows="2">${esc(pj.style_image)}</textarea></div>
         <div class="full"><label>Règles de la série pour l'IA (ton, narration, direction artistique)</label><textarea id="p_reg" rows="5">${esc(pj.regles_ia||'')}</textarea></div>
       </div>
@@ -775,7 +775,7 @@ async function sauverProjet(silencieux){
   if($('#p_adr')) pj.adresse = $('#p_adr').value.trim();
   pj.saisons = +$('#p_s').value; pj.episodes_par_saison = +$('#p_e').value; pj.duree_min = +$('#p_d').value; pj.couleur = $('#p_c').value;
   pj.voix = {nom:$('#p_vn').value.trim(), debit:$('#p_vd').value.trim(), hauteur:$('#p_vh').value.trim()};
-  pj.volume_musique = +$('#p_vol').value; pj.volume_ambiance = +$('#p_vamb').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
+  pj.volume_musique = +$('#p_vol').value; pj.volume_ambiance = +$('#p_vamb').value; pj.fondu_plans = $('#p_fondu').value; pj.livre = $('#p_livre').value.trim(); pj.style_image = $('#p_sty').value; pj.regles_ia = $('#p_reg').value;
   if($('#versions')){ const vs = {}; document.querySelectorAll('#versions .prof').forEach(r => { const g = k => r.querySelector(`[data-k=${k}]`).value.trim();
     vs[r.dataset.l] = {titre:g('titre'), voix:{nom:g('nom'), debit:g('debit'), hauteur:g('hauteur')}}; }); pj.versions = vs; }
   await api('/api/projet',{method:'PUT',body:JSON.stringify(pj)}); if(!silencieux) toast('Projet enregistré'); await chargerProjet();

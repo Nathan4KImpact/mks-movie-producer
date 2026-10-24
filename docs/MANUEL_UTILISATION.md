@@ -126,6 +126,7 @@ Le choix est mémorisé : le prochain épisode ouvert s'affiche dans la même vu
 | **Niveau ambiance** | Volume de l'ambiance qui démarre à ce plan (1 = normal, 1,5 = plus fort, 0,5 = plus discret) |
 | **Son de la vidéo · garder** | Garde le son de la vidéo du plan (par exemple une horde générée **avec** son par Flow) ; il s'ajoute à l'ambiance |
 | **Prompt vidéo** | Description du mouvement si le plan doit être animé (section 7.3) |
+| **Transition** (vue Studio) | *Fondu au noir* (par défaut), *Fondu enchaîné* (l'image du plan se fond dans celle du plan précédent, sans passer par le noir ; durée réglable, 0,5 s par défaut) ou *Coupe franche* (passage direct). Sans choix, le plan suit le réglage du projet (section 13.2) |
 
 | Mouvement | Effet |
 |---|---|
@@ -156,7 +157,7 @@ L'écran se compose de cinq zones :
 | **Barre du haut** | Titre de l'épisode (modifiable), durée totale, **↶ Annuler / ↷ Rétablir**, Fiche Flow, Rafraîchir, Enregistrer, Enregistrer et monter |
 | **Bibliothèque** (à gauche) | Onglets **Médias**, **Voix** et **Musiques** : tout ce qui peut être placé dans un plan, avec recherche et filtre *Cet épisode / Personnages / Tout le projet* |
 | **Moniteur** (au centre) | Aperçu de l'épisode : image ou vidéo du plan, mouvement de caméra, titre à l'écran, cartons, voix et musique. Boutons de lecture, position, cases **Voix** et **Musique** pour couper l'une ou l'autre |
-| **Inspecteur** (à droite) | Tous les réglages du plan sélectionné : image ou vidéo, mouvement, prompts, narration, titre, durée mini, voix, musique |
+| **Inspecteur** (à droite) | Tous les réglages du plan sélectionné : image ou vidéo (et image propre à une langue), transition, mouvement, prompts, narration, titre, durée mini, voix, musique |
 | **Timeline** (en bas) | Les plans bout à bout à l'échelle du temps, sur six pistes : **Vidéo**, **Titres**, **Voix**, **Musique**, **Ambiance** (une barre par scène, jusqu'au prochain changement) et **Bruitage** (un repère au moment où le son part) |
 
 **Disposition des panneaux.** Les séparateurs entre la bibliothèque, le moniteur et l'inspecteur, et celui au-dessus de la timeline, se **glissent** pour élargir ou réduire chaque panneau. Les petits boutons **‹ ›** et **▾ ▴** posés sur ces séparateurs (ou un **double-clic** sur le séparateur) **replient** la bibliothèque, l'inspecteur ou la timeline, pour laisser toute la place au moniteur ; un nouveau clic les rouvre. La disposition est mémorisée sur ce poste. **⟲ Disposition**, dans la barre de la timeline, remet tout à la taille d'origine.
@@ -337,6 +338,7 @@ Sous le logo, le cadre doré **Actions du projet** regroupe les boutons qui agis
 | Voix, débit, hauteur | Voix off (Microsoft Edge), par exemple `fr-FR-HenriNeural`, `-15%`, `-6Hz` |
 | Volume musique | 0 à 1 ; 0,47 par défaut |
 | Volume ambiances | Niveau général des ambiances et bruitages ; 0,8 par défaut (0 = aucun son d'ambiance) |
+| Transition entre plans | *Fondu au noir* (par défaut : chaque plan s'ouvre et se ferme sur un court fondu), *Fondu enchaîné* (chaque plan se fond dans le précédent : idéal pour des diapositives qui se complètent ligne après ligne) ou *Coupe franche* (passage direct). La durée du plan ne change pas : la voix reste calée. Un plan peut choisir autrement dans la vue Studio |
 | Livre (PDF) | Chemin du livre source, relatif au projet |
 | Style ajouté à chaque prompt | Phrase de style collée devant chaque prompt d'image (en anglais) |
 | Règles de la série pour l'IA | Ton, narration, public, direction artistique : lues par l'IA à chaque écriture |
@@ -466,6 +468,8 @@ Si une image a été **choisie dans la vue Studio** pour ce plan, c'est elle qui
 Une série peut exister en plusieurs langues sans regénérer une seule image : les plans (clés, images, vidéos, mouvements, musiques) sont **communs** à toutes les langues ; seuls changent la narration, les mots à l'écran, les cartons, le titre de l'épisode et la voix. Chaque langue donne **sa propre vidéo**, avec ses sous-titres.
 
 > Les images doivent rester **sans texte** (c'est le rôle de « no text » dans le style du projet) : c'est ce qui permet de les réutiliser dans toutes les langues. Tout texte visible est ajouté au montage, dans la bonne langue.
+
+> **Images avec du texte incrusté** (diapositives, cartes, captures) : donnez à chaque plan **une image par langue**. Dans la vue Studio, l'inspecteur du plan affiche *Image propre à une langue* : **Choisir pour EN**, puis cliquez une vignette de la bibliothèque (importez d'abord les images anglaises si besoin). Le montage EN utilise cette image ; les autres langues gardent l'image commune. **Retirer** revient à l'image commune. Ce choix ne compte pas comme une traduction : le texte du plan reste *à traduire* tant que sa narration ne l'est pas.
 
 ### 20.1 Déclarer une langue
 

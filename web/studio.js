@@ -48,7 +48,7 @@ async function studio(ep, garder){
       <div class="st-gut v" data-g="l" title="Glisser pour élargir ou réduire · double-clic : replier"><button class="st-pli" data-p="l" title="Replier / déplier la bibliothèque"></button></div>
       <section class="st-pane st-mon">
         <div class="st-wrap" id="stWrap"><div class="st-stage" id="stStage">
-          <img class="ly" id="stImg" alt=""><video class="ly" id="stVid" muted playsinline preload="auto"></video>
+          <img class="ly2" id="stImg2" alt=""><img class="ly" id="stImg" alt=""><video class="ly" id="stVid" muted playsinline preload="auto"></video>
           <div class="ly st-manque" id="stManque"></div>
           <div class="ly st-card" id="stCard"><div class="c1"></div><div class="c2"></div></div>
           <div class="st-tit" id="stTit"></div>
@@ -293,6 +293,9 @@ function stAppliquer(json, i = ST.sel){
   if(!s) return;
   if(s.card && x.sorte !== 'musique') return toast('Sélectionnez un plan (pas un carton)');
   memo();
+  if(x.sorte === 'media' && ST.cibleLangue){        // image propre à une langue (bouton « Choisir pour EN »)
+    const l = ST.cibleLangue; ST.cibleLangue = null; s.versions = s.versions || {}; (s.versions[l] = s.versions[l] || {}).media = x.rel;
+    toast(`${x.type === 'video' ? 'Vidéo' : 'Image'} utilisée pour la version ${l.toUpperCase()} du plan ${numPlan(i)}`); stSale(); ST.sel = i; stTout(); return; }
   if(x.sorte === 'media'){ s.media = x.rel; s._media = x.url; s._type = x.type; s._rel = x.rel; delete s.img_url; delete s.vid_url;
     toast(`${x.type === 'video' ? 'Vidéo' : 'Image'} appliquée au plan ${numPlan(i)} — Ctrl+Z pour annuler`); }
   else if(x.sorte === 'voix'){ s.voix_fichier = x.rel; s._voix = x.url; stMesurer(x.url); toast(`Voix importée utilisée pour le plan ${numPlan(i)}`); }
@@ -353,6 +356,9 @@ function stInsp(){
           <button class="btn small" onclick="stUrl()">Adresse web…</button>
           ${s.media || s.img_url || s.vid_url ? `<button class="btn small" onclick="stRetirerMedia()" title="Revenir au fichier nommé d'après la clé">Retirer le choix</button>` : ''}
         </div>
+        ${blocLangues(s)}
+        <div><label>Transition du plan</label><div class="st-seg st-seg4">${[['', 'Projet (' + ({aucun: 'coupe', enchaine: 'enchaîné'}[PROJET.fondu_plans] || 'noir') + ')'], ['noir', 'Fondu au noir'], ['enchaine', 'Fondu enchaîné'], ['aucun', 'Coupe franche']].map(([v, lib]) => `<button class="${(s.fondu || '') === v ? 'on' : ''}" onclick="stChamp('fondu','${v}')">${lib}</button>`).join('')}</div></div>
+        ${(s.fondu || PROJET.fondu_plans) === 'enchaine' ? champ('fondu_d', 'Durée du fondu enchaîné (s)', 'number', 'step="0.1" min="0.1" max="3" placeholder="0.5"') : ''}
         <div><label>Mouvement de caméra (images)</label><div class="st-seg">${MOUV.map(m => `<button class="${(s.m||'in')===m?'on':''}" title="${LIB_MOUV[m]}" onclick="stChamp('m','${m}')">${ICONES[m]}</button>`).join('')}</div></div>
         <div><label>Prompt image ${persos.map(x => `<span class="pill wait">${esc(x.tag)}</span>`).join(' ')}</label><textarea data-st="p" rows="3">${esc(s.p)}</textarea></div>
         <div class="st-btns"><button class="btn small" onclick="copier(${i})">Copier le prompt</button></div>
@@ -461,7 +467,7 @@ function stChamp(f, v, texte){
     if(!Object.keys(o).length) delete s.fx[c]; if(!Object.keys(s.fx).length) delete s.fx;
     stSale(); stCalcul(); stTimeline(); ST.cur = -1; stFrame(); if(!texte) stInsp(); return;
   }
-  if(['min', 'dur', 'mus_off', 'amb_vol'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
+  if(['min', 'dur', 'mus_off', 'amb_vol', 'fondu_d'].includes(f)){ if(v === '' || v === null) delete s[f]; else s[f] = +v; }
   else if(f === 'sfx' && typeof v === 'string' && v.includes('+')) s[f] = v.split('+');
   else if(v === '' && f !== 'vo') delete s[f]; else s[f] = v;
   if(f === 'mus' && !v) delete s.mus_off;
@@ -475,6 +481,20 @@ function stInspMaj(){ const a = document.activeElement, f = a && a.dataset && a.
 function stVoixFichier(){ ST.onglet = 'audios'; stLib(); stInsp();
   if(!EP.shots[ST.sel].voix_fichier) toast('Choisissez un fichier dans l\'onglet Voix de la bibliothèque, importez-le ou enregistrez-le au micro'); }
 function stVoixSynthese(){ const s = EP.shots[ST.sel]; if(!s.voix_fichier) return; memo(); delete s.voix_fichier; delete s._voix; stSale(); stTout(); if(ST.voixOn) stVoixGen(); }
+// image ou vidéo propre à une langue (texte incrusté) : versions.<langue>.media, utilisée par le montage de cette langue
+function blocLangues(s){
+  const ls = Object.keys(PROJET.versions || {}); if(!ls.length) return '';
+  return `<div><label>Image propre à une langue (texte incrusté dans l'image)</label>${ls.map(l => { const m = ((s.versions || {})[l] || {}).media, L = l.toUpperCase();
+    return `<div class="st-origine">${L} : ${m ? `<b>${esc(m)}</b>` : 'même média que l\'original'}${ST.cibleLangue === l ? ' — <b>cliquez une vignette</b>' : ''}</div>
+      <div class="st-btns"><button class="btn small" onclick="stCibleLangue('${l}')">Choisir pour ${L}</button>${m ? `<button class="btn small" onclick="stRetirerMediaLangue('${l}')">Retirer</button>` : ''}</div>`; }).join('')}</div>`;
+}
+function stCibleLangue(l){ ST.cibleLangue = l; ST.onglet = 'medias'; stLib(); stInsp();
+  toast(`Cliquez une vignette de la bibliothèque : elle servira à la version ${l.toUpperCase()} de ce plan`); }
+function stRetirerMediaLangue(l){
+  const s = EP.shots[ST.sel], t = s && (s.versions || {})[l]; if(!t) return; memo(); delete t.media;
+  if(!Object.keys(t).length) delete s.versions[l]; if(s.versions && !Object.keys(s.versions).length) delete s.versions;
+  stSale(); stTout();
+}
 async function stRetirerMedia(){
   const s = EP.shots[ST.sel]; memo(); delete s.media; delete s.img_url; delete s.vid_url; delete s._media; delete s._type; delete s._rel;
   try { const m = await api(`/api/media?ep=${encodeURIComponent(EP._ep)}&k=${encodeURIComponent(s.k || '')}`);
@@ -647,7 +667,7 @@ function stSupprimer(){
 }
 function stChoisir(i, sansInsp){
   if(i < 0 || i >= EP.shots.length) return;
-  const change = ST.sel !== i; ST.sel = i;
+  const change = ST.sel !== i; ST.sel = i; if(change) ST.cibleLangue = null;
   document.querySelectorAll('#stInner .sel').forEach(x => x.classList.remove('sel'));
   document.querySelectorAll(`#stInner [data-i="${i}"]`).forEach(x => x.classList.add('sel'));
   if(change && !sansInsp){ stInsp(); stLib(); }
@@ -698,7 +718,14 @@ function stFrame(){
   }
   // fondus (seulement pendant la lecture : à l'arrêt, le plan reste lisible)
   const fIn = s.card ? 0.5 : 0.35, fOut = s.card ? 0.6 : 0.35;
-  const op = ST.playing ? Math.max(0, Math.min(1, u / fIn, (L - u) / fOut)) : 1;
+  const fd = s.card ? 'noir' : (s.fondu || PROJET.fondu_plans || 'noir');   // « aucun » / « enchaine » : pas de fondu au noir
+  let op = ST.playing && fd === 'noir' ? Math.max(0, Math.min(1, u / fIn, (L - u) / fOut)) : 1;
+  const img2 = $('#stImg2'), p = EP.shots[i - 1], dE = Math.max(0.1, Math.min(+(s.fondu_d || 0.5), 3, L * 0.6));
+  if(fd === 'enchaine' && ST.playing && u < dE){                      // fondu enchaîné depuis le plan précédent
+    if(p && !p.card && p._media && p._type !== 'video'){ if(img2.getAttribute('src') !== p._media) img2.src = p._media;
+      img2.style.transform = img.style.transform; img2.style.display = 'block'; } else img2.style.display = 'none';
+    op = u / dE;
+  } else img2.style.display = 'none';
   stage.querySelectorAll('.ly').forEach(x => x.style.opacity = op);
   // mouvement de caméra (zoompan du moteur)
   if(!s.card && s._media && s._type !== 'video'){
