@@ -447,6 +447,8 @@ Les commandes agissent sur le projet actif. Pour viser un autre projet, définis
 
 Si une image a été **choisie dans la vue Studio** pour ce plan, c'est elle qui est utilisée : cliquez **Retirer le choix** dans l'inspecteur pour revenir au fichier nommé d'après la clé.
 
+**Le montage s'arrête sur « Voix Edge indisponible » / « No audio was received ».** Le service de voix de Microsoft refuse parfois une requête après une longue série de voix (un épisode de plus de 100 plans, par exemple). L'application réessaie d'elle-même six fois en espaçant les essais (environ 1 min 30) avant d'abandonner. Si elle abandonne, **relancez simplement le montage** : les voix et les plans déjà calculés sont gardés, il reprend au plan qui a échoué. Si l'erreur revient sur toutes les voix : vérifiez la connexion internet, puis mettez la voix à jour (`python -m pip install -U edge-tts` dans une invite de commandes).
+
 **Dans le Studio, la piste Voix est hachurée.** Les voix de l'aperçu ne sont pas encore prêtes (ou la connexion internet manque) : les durées affichées sont estimées d'après le nombre de mots. Le montage, lui, calcule toujours les durées exactes.
 
 **L'Assistant reste sur un épisode que je veux sauter.** Il suit l'ordre du plan. Vous pouvez travailler sur n'importe quel épisode depuis Production ou Plan ; l'Assistant se mettra à jour.

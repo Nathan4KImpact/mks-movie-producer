@@ -34,7 +34,8 @@ Répondre en français à l'utilisateur.
   `PILOTAGE.bat <adresse|dossier>` démarre un projet dédié. Tout nouveau premier segment d'URL de l'application doit
   entrer dans `adresses.RESERVES`.
 - `atelier.py` : CLI — `monter [--langue en]`, `etat`, `fiche`, `lots`, `ecrire`, `prompts`, `verifier`, `bible`, `traduire`, `exporter`.
-- `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts`, musique par sections
+- `moteur.py` : montage ffmpeg (arguments en listes, jamais de shell), voix `edge_tts` (`voix()` : 6 essais espacés de 0 à 40 s,
+  fichier vide = échec, car le service refuse parfois une requête au bout d'une longue série — « NoAudioReceived »), musique par sections
   (champ `mus` d'un plan = changement de piste), plans recalculés seulement si leur empreinte change (`.sig`), sortie dans le dossier des rendus (jamais d'écrasement).
 - `ia.py` : appels modèles (Anthropic ou compatible OpenAI) selon `reglages.json > ia > par_tache`,
   lecture des sources (PDF, docx, txt…), génération bible/plan/épisodes, relecture d'images.

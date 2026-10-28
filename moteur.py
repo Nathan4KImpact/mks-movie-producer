@@ -7,7 +7,7 @@ Sortie  : <dossier des rendus>/<ID>_<titre>.mp4 (+ .srt) ; version traduite : <r
 Pas de shell : toutes les commandes ffmpeg sont passées en listes d'arguments,
 ce qui évite les problèmes d'apostrophes et d'espaces dans les chemins Windows.
 """
-import hashlib, json, os, re, subprocess, sys, shutil, urllib.request, unicodedata
+import hashlib, json, os, re, subprocess, sys, shutil, time, urllib.request, unicodedata
 
 ICI = os.path.dirname(os.path.abspath(__file__))          # dossier du logiciel
 sys.path.insert(0, ICI)
@@ -142,18 +142,39 @@ def voix(texte, dst, v=None):
     txt = dst + ".txt"
     open(txt, "w", encoding="utf-8").write(texte)
     brut = dst[:-4] + "_brut.mp3" if v.get("effet") else dst
-    for _ in range(3):
-        r = subprocess.run([sys.executable, "-m", "edge_tts", "--voice", v["nom"],
-                            f"--rate={v.get('debit', '+0%')}", f"--pitch={v.get('hauteur', '+0Hz')}",
-                            "-f", txt, "--write-media", brut], capture_output=True, text=True)
-        if r.returncode == 0 and os.path.exists(brut):
+    # Le service Edge refuse parfois une requête (« No audio was received ») après une longue série de voix :
+    # on réessaie en espaçant les essais (≈ 1 min 30 au total) avant d'abandonner.
+    attentes = [0, 3, 8, 15, 25, 40]
+    for k, attente in enumerate(attentes):
+        if attente:
+            log(f"  voix refusée par le service Edge ({_raison(r.stderr)}) — nouvel essai dans {attente} s ({k + 1}/{len(attentes)})")
+            time.sleep(attente)
+        if os.path.exists(brut):
+            os.remove(brut)                 # fichier vide ou partiel d'un essai précédent
+        try:
+            r = subprocess.run([sys.executable, "-m", "edge_tts", "--voice", v["nom"],
+                                f"--rate={v.get('debit', '+0%')}", f"--pitch={v.get('hauteur', '+0Hz')}",
+                                "-f", txt, "--write-media", brut], capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            r = subprocess.CompletedProcess([], 1, "", "délai dépassé (120 s)")
+        if "No module named edge_tts" in (r.stderr or ""):
+            raise RuntimeError("module edge-tts absent : lancer INSTALLER.bat")
+        if r.returncode == 0 and os.path.exists(brut) and os.path.getsize(brut) > 0:
             if brut != dst:                 # effet de voix (écho du Seigneur…)
                 from langues import EFFETS
                 run([FFMPEG, "-y", "-i", brut, "-af", EFFETS.get(v["effet"], "anull"), dst])
                 os.remove(brut)
             marquer(dst, sig)
             return dst
-    raise RuntimeError("Voix Edge indisponible (connexion internet ?) : " + r.stderr[-300:])
+    raise RuntimeError(f"Voix Edge indisponible après {len(attentes)} essais ({_raison(r.stderr)}). Les plans déjà calculés "
+                       "sont gardés : relancer le montage reprend à ce plan. Si l'erreur persiste : vérifier la connexion "
+                       "internet, puis mettre edge-tts à jour (python -m pip install -U edge-tts).")
+
+
+def _raison(stderr):
+    """Dernière ligne utile d'une erreur edge-tts (« No audio was received… », délai…)."""
+    lignes = [l.strip() for l in (stderr or "").splitlines() if l.strip()]
+    return (lignes[-1] if lignes else "aucun message")[-160:]
 
 
 # ---------------------------------------------------------------- image
